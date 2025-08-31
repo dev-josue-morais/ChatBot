@@ -97,6 +97,16 @@ app.post('/webhook', async (req, res) => {
           eventDate.setHours(8, 0, 0, 0);
         }
 
+        // --- PATCH: tentar capturar hora manualmente se chrono falhar ---
+        const hourMatch = text.match(/(?:às|as)?\s*(\d{1,2})(?:[:h](\d{2}))?\s*h?/i);
+        if (hourMatch) {
+          let hours = parseInt(hourMatch[1], 10);
+          let minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
+          if (hours >= 0 && hours <= 23) {
+            eventDate.setHours(hours, minutes, 0, 0);
+          }
+        }
+
         // Salvar no Supabase (UTC)
         const { error } = await supabase.from('events').insert([{
           title: clientName,
