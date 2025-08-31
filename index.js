@@ -94,16 +94,19 @@ app.post('/webhook', async (req, res) => {
 
       // Criar evento
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
+        // Extrair nome do cliente
         let nameText = text.replace(/(amanh[ãa]|hoje|daqui a \d+\s*min|\d{1,2}[:h]\d{0,2})/gi, '');
         const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        // Extrair data/hora com chrono.pt
+        // Extrair data/hora
         let eventDate = null;
         const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
 
         if (results.length > 0) {
           eventDate = results[0].start.date();
+
+          // Se hora não tiver sido especificada, fallback para 08:00
           if (!results[0].start.isCertain('hour')) {
             eventDate.setHours(8, 0, 0, 0);
           }
@@ -122,14 +125,10 @@ app.post('/webhook', async (req, res) => {
           eventDate.setHours(hours, minutes, 0, 0);
         }
 
-        // --- CONVERTER PARA UTC CORRETAMENTE ---
-        // Trata eventDate como BRT, converte para UTC
-        const eventDateUTC = new Date(eventDate.getTime() - (3 * 60 * 60 * 1000));
-
-        // Salvar no Supabase
+        // Salvar direto no Supabase sem converter
         const { error } = await supabase.from('events').insert([{
           title: clientName,
-          date: eventDateUTC
+          date: eventDate
         }]);
 
         if (error) {
