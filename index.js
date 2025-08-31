@@ -82,7 +82,6 @@ app.post('/webhook', async (req, res) => {
 
         // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
-          user_id: DESTINO_FIXO, // modo teste
           title: clientName,
           date: eventDate
         }]);
