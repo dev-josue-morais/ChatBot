@@ -124,7 +124,7 @@ app.post('/webhook', async (req, res) => {
           let minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
           eventDate.setHours(hours, minutes, 0, 0);
         }
-
+        eventDate.setHours(eventDate.getHours() + 3);
         // Salvar direto no Supabase sem converter
         const { error } = await supabase.from('events').insert([{
           title: clientName,
