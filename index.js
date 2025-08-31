@@ -12,6 +12,11 @@ app.use(express.json());
 // Número fixo para envio de mensagens (modo teste)
 const DESTINO_FIXO = '5564992869608';
 
+// Função para exibir datas no fuso correto
+function formatLocal(date) {
+  return new Date(date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
 // Função para enviar mensagem pelo WhatsApp
 async function sendWhatsAppMessage(to, message) {
   try {
@@ -67,8 +72,8 @@ app.post('/webhook', async (req, res) => {
 
       // Criar evento
       if (/cria.*atendimento/i.test(text)) {
-        // Extrair nome do cliente sem incluir a data/hora
-        const nameMatch = text.match(/atendimento para ([\p{L}\s]+?)(?: amanhã| hoje| \d{1,2}[\/-]\d{1,2}| às)/iu);
+        // Extrair nome do cliente
+        const nameMatch = text.match(/atendimento para ([\p{L}\s]+?)(?: amanhã| hoje| \d{1,2}[\/-]\d{1,2}| às|$)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         // Extrair data/hora do texto
@@ -76,10 +81,10 @@ app.post('/webhook', async (req, res) => {
         let eventDate = new Date();
 
         if (results.length > 0) {
-          eventDate = results[0].start.date(); // sempre UTC
+          eventDate = results[0].start.date(); // UTC
         }
 
-        // Se a hora não estiver definida, define 08:00 por padrão
+        // Se não tiver hora, define 08:00 padrão
         if (eventDate.getHours() === 0 && eventDate.getMinutes() === 0) {
           eventDate.setHours(8, 0, 0, 0);
         }
@@ -99,7 +104,7 @@ app.post('/webhook', async (req, res) => {
         } else {
           await sendWhatsAppMessage(
             DESTINO_FIXO,
-            `✅ Evento criado: "${clientName}" em ${eventDate.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+            `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
           );
         }
       }
@@ -107,8 +112,10 @@ app.post('/webhook', async (req, res) => {
       // Listar eventos do dia
       if (/eventos de hoje/i.test(text)) {
         const today = new Date();
-        const start = new Date(today.setHours(0, 0, 0, 0));
-        const end = new Date(today.setHours(23, 59, 59, 999));
+        const start = new Date(today);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(today);
+        end.setHours(23, 59, 59, 999);
 
         const { data: events, error } = await supabase
           .from('events')
@@ -124,7 +131,7 @@ app.post('/webhook', async (req, res) => {
           await sendWhatsAppMessage(DESTINO_FIXO, 'Você não tem eventos hoje.');
         } else {
           const list = events.map(e =>
-            `- ${e.title} às ${new Date(e.date).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+            `- ${e.title} às ${formatLocal(e.date)}`
           ).join('\n');
           await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
         }
@@ -147,7 +154,7 @@ cron.schedule('*/5 * * * *', async () => {
     .from('events')
     .select('*')
     .gte('date', new Date(now.getTime() + 30 * 60 * 1000).toISOString())
-    .lte(new Date(now.getTime() + 35 * 60 * 1000).toISOString());
+    .lte('date', new Date(now.getTime() + 35 * 60 * 1000).toISOString()); // <-- corrigido
 
   if (error) {
     console.error('Erro ao buscar eventos para alerta:', error);
@@ -161,14 +168,11 @@ cron.schedule('*/5 * * * *', async () => {
 
   for (let event of events) {
     const eventTime = new Date(event.date);
-    const alertTime = new Date(eventTime.getTime() - 30 * 60 * 1000);
 
-    if (alertTime <= now) {
-      await sendWhatsAppMessage(
-        DESTINO_FIXO,
-        `⏰ Lembrete: "${event.title}" às ${eventTime.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
-      );
-    }
+    await sendWhatsAppMessage(
+      DESTINO_FIXO,
+      `⏰ Lembrete: "${event.title}" às ${formatLocal(eventTime)}`
+    );
   }
 }, { timezone: "America/Sao_Paulo" });
 
@@ -176,8 +180,10 @@ cron.schedule('*/5 * * * *', async () => {
 cron.schedule('0 7 * * *', async () => {
   console.log('Rodando cron job diário das 7h...');
   const today = new Date();
-  const start = new Date(today.setHours(0, 0, 0, 0));
-  const end = new Date(today.setHours(23, 59, 59, 999));
+  const start = new Date(today);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(today);
+  end.setHours(23, 59, 59, 999);
 
   const { data: events, error } = await supabase
     .from('events')
@@ -196,7 +202,7 @@ cron.schedule('0 7 * * *', async () => {
   }
 
   const list = events.map(e =>
-    `- ${e.title} às ${new Date(e.date).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+    `- ${e.title} às ${formatLocal(e.date)}`
   ).join('\n');
 
   await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
