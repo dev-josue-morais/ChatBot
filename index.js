@@ -9,6 +9,9 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const app = express();
 app.use(express.json());
 
+// Número fixo para envio de mensagens (modo teste)
+const DESTINO_FIXO = '5564992869608';
+
 // Função para enviar mensagem pelo WhatsApp
 async function sendWhatsAppMessage(to, message) {
   try {
@@ -27,6 +30,7 @@ async function sendWhatsAppMessage(to, message) {
         }
       }
     );
+    console.log(`Mensagem enviada para ${to}: ${message}`);
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
   }
@@ -56,26 +60,24 @@ app.post('/webhook', async (req, res) => {
     if (!messages) return res.sendStatus(200);
 
     for (let msg of messages) {
-      const from = msg.from;
       const text = msg.text?.body || '';
       const name = value.contacts[0].profile.name;
 
-      console.log(`Mensagem de ${name} (${from}): ${text}`);
+      console.log(`Mensagem de ${name}: ${text}`);
 
       // Criar evento
       if (/cria.*atendimento/i.test(text)) {
-        // Extrair data/hora da mensagem
         const parsedDate = chrono.pt.parseDate(text);
         const eventDate = parsedDate || new Date();
 
         // Salvar no Supabase
         await supabase.from('events').insert([{
-          user_id: from,
+          user_id: DESTINO_FIXO, // usar número fixo
           title: text,
           date: eventDate
         }]);
 
-        await sendWhatsAppMessage(from, `✅ Evento criado: "${text}" em ${eventDate.toLocaleString()}`);
+        await sendWhatsAppMessage(DESTINO_FIXO, `✅ Evento criado: "${text}" em ${eventDate.toLocaleString()}`);
       }
 
       // Listar eventos do dia
@@ -87,15 +89,15 @@ app.post('/webhook', async (req, res) => {
         const { data: events } = await supabase
           .from('events')
           .select('*')
-          .eq('user_id', from)
+          .eq('user_id', DESTINO_FIXO)
           .gte('date', start.toISOString())
           .lte('date', end.toISOString());
 
         if (!events || events.length === 0) {
-          await sendWhatsAppMessage(from, 'Você não tem eventos hoje.');
+          await sendWhatsAppMessage(DESTINO_FIXO, 'Você não tem eventos hoje.');
         } else {
           const list = events.map(e => `- ${e.title} às ${new Date(e.date).toLocaleTimeString()}`).join('\n');
-          await sendWhatsAppMessage(from, `📅 Seus eventos de hoje:\n${list}`);
+          await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
         }
       }
     }
@@ -114,24 +116,18 @@ cron.schedule('*/5 * * * *', async () => {
   const alertWindowStart = new Date(now.getTime());
   const alertWindowEnd = new Date(now.getTime() + 5 * 60 * 1000); // próximos 5 minutos
 
-  // Buscar todos os usuários
-  const { data: users } = await supabase.from('users').select('id, phone_number');
-  for (let user of users) {
-    const { data: events } = await supabase
-      .from('events')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('date', alertWindowStart.toISOString())
-      .lte(new Date(alertWindowStart.getTime() + 30*60*1000).toISOString()); // 30 min antes do evento
+  const { data: events } = await supabase
+    .from('events')
+    .select('*')
+    .gte('date', new Date(now.getTime() + 30*60*1000).toISOString())
+    .lte(new Date(now.getTime() + 35*60*1000).toISOString()); // janela de 5 min para alerta
 
-    for (let event of events) {
-      const eventTime = new Date(event.date);
-      const alertTime = new Date(eventTime.getTime() - 30*60*1000);
+  for (let event of events) {
+    const eventTime = new Date(event.date);
+    const alertTime = new Date(eventTime.getTime() - 30*60*1000);
 
-      // Se estamos dentro da janela de 5 min, envia alerta
-      if (alertTime >= alertWindowStart && alertTime <= alertWindowEnd) {
-        await sendWhatsAppMessage(user.phone_number, `⏰ Lembrete: "${event.title}" às ${eventTime.toLocaleTimeString()}`);
-      }
+    if (alertTime >= alertWindowStart && alertTime <= alertWindowEnd) {
+      await sendWhatsAppMessage(DESTINO_FIXO, `⏰ Lembrete: "${event.title}" às ${eventTime.toLocaleTimeString()}`);
     }
   }
 }, { timezone: "America/Sao_Paulo" });
@@ -143,19 +139,15 @@ cron.schedule('0 7 * * *', async () => {
   const start = new Date(today.setHours(0,0,0,0));
   const end = new Date(today.setHours(23,59,59,999));
 
-  const { data: users } = await supabase.from('users').select('id, phone_number');
-  for (let user of users) {
-    const { data: events } = await supabase
-      .from('events')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('date', start.toISOString())
-      .lte('date', end.toISOString());
+  const { data: events } = await supabase
+    .from('events')
+    .select('*')
+    .gte('date', start.toISOString())
+    .lte('date', end.toISOString());
 
-    if (events && events.length > 0) {
-      const list = events.map(e => `- ${e.title} às ${new Date(e.date).toLocaleTimeString()}`).join('\n');
-      await sendWhatsAppMessage(user.phone_number, `📅 Seus eventos de hoje:\n${list}`);
-    }
+  if (events && events.length > 0) {
+    const list = events.map(e => `- ${e.title} às ${new Date(e.date).toLocaleTimeString()}`).join('\n');
+    await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
   }
 }, { timezone: "America/Sao_Paulo" });
 
