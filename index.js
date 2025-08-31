@@ -94,45 +94,69 @@ app.post('/webhook', async (req, res) => {
 
       // Criar evento
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
-        const nameMatch = text.match(
-          /(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+?)(?=\s+(?:amanhã|hoje|\d{1,2}[\/-]\d{1,2}|às|daqui a|\d+h|$))/iu
-        );
-        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
+    // Extrair nome do cliente de forma flexível
+    let nameText = text.replace(/(amanh[ãa]|hoje|daqui a \d+\s*min|\d{1,2}[:h]\d{0,2})/gi, '');
+    const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
+    const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        let eventDate = null;
-        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
+    // Extrair data/hora do texto com chrono.pt
+    let eventDate = null;
+    const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
 
-        if (results.length > 0) {
-          eventDate = results[0].start.date();
-          if (!results[0].start.isCertain('hour')) {
-            eventDate.setHours(8, 0, 0, 0);
-          }
-        }
-
-        if (!eventDate) {
-          eventDate = new Date();
-          eventDate.setHours(8, 0, 0, 0);
-        }
-
-        // Patch: tentar capturar hora manualmente se chrono falhar
-        const hourMatch = text.match(/(?:às|as)?\s*(\d{1,2})(?:[:h](\d{2}))?\s*h?/i);
-        if (hourMatch) {
-          let hours = parseInt(hourMatch[1], 10);
-          let minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
-          if (hours >= 0 && hours <= 23) {
-            eventDate.setHours(hours, minutes, 0, 0);
-          }
-        }
-
-        const { error } = await supabase.from('events').insert([{ title: clientName, date: eventDate }]);
-
-        if (error) {
-          console.error('Erro ao salvar evento:', error);
-          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`);
-        } else {
-          await sendWhatsAppMessage(DESTINO_FIXO, `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`);
-        }
+    if (results.length > 0) {
+      eventDate = results[0].start.date();
+      if (!results[0].start.isCertain('hour')) {
+        eventDate.setHours(8, 0, 0, 0);
       }
+    }
+
+    if (!eventDate) {
+      eventDate = new Date();
+      eventDate.setHours(8, 0, 0, 0);
+    }
+
+    // Patch: capturar hora manualmente se chrono falhar
+    const hourMatch = text.match(/(?:às|as)?\s*(\d{1,2})(?:[:h](\d{2}))?\s*h?/i);
+    if (hourMatch) {
+      let hours = parseInt(hourMatch[1], 10);
+      let minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
+      if (hours >= 0 && hours <= 23) {
+        eventDate.setHours(hours, minutes, 0, 0);
+      }
+    }
+
+    // --- CONVERTENDO PARA UTC ANTES DE SALVAR ---
+    const eventDateUTC = new Date(Date.UTC(
+      eventDate.getFullYear(),
+      eventDate.getMonth(),
+      eventDate.getDate(),
+      eventDate.getHours(),
+      eventDate.getMinutes(),
+      eventDate.getSeconds(),
+      eventDate.getMilliseconds()
+    ));
+
+    // Salvar no Supabase
+    const { error } = await supabase.from('events').insert([{
+      title: clientName,
+      date: eventDateUTC
+    }]);
+
+    if (error) {
+      console.error('Erro ao salvar evento:', error);
+      await sendWhatsAppMessage(
+        DESTINO_FIXO,
+        `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`
+      );
+    } else {
+      // Exibir em horário local BRT
+      await sendWhatsAppMessage(
+        DESTINO_FIXO,
+        `✅ Evento criado: "${clientName}" em ${formatLocal(eventDateUTC)}`
+      );
+    }
+  }
+
 
       // Listar eventos (flexível: hoje, amanhã, data específica ou dia da semana)
       if (/(eventos|agenda|compromissos|lembretes|atendimentos)/i.test(text)) {
