@@ -12,9 +12,6 @@ app.use(express.json());
 // Número fixo para envio de mensagens (modo teste)
 const DESTINO_FIXO = '5564992869608';
 
-// Mapeamento do número fixo para user_id no Supabase
-const FIXED_USER_ID = 'coloque-aqui-o-uuid-do-usuario'; // ⚠️ Coloque o UUID real do usuário
-
 // Função para enviar mensagem pelo WhatsApp
 async function sendWhatsAppMessage(to, message) {
   try {
@@ -75,31 +72,20 @@ app.post('/webhook', async (req, res) => {
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         // Extrair data/hora do texto
-        let parsedDate = chrono.pt.parseDate(text);
-        if (parsedDate) {
-          // Se a hora não estiver definida, definir 8h da manhã
-          if (parsedDate.getHours() === 0 && parsedDate.getMinutes() === 0 && !/0\d?:\d{2}/.test(text)) {
-            parsedDate.setHours(8, 0, 0, 0);
-          }
-        } else {
-          // Se não conseguiu interpretar, colocar amanhã às 8h
-          parsedDate = new Date();
-          parsedDate.setDate(parsedDate.getDate() + 1);
-          parsedDate.setHours(8, 0, 0, 0);
-        }
+        const parsedDate = chrono.pt.parseDate(text);
+        const eventDate = parsedDate || new Date();
 
         // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
-          user_id: FIXED_USER_ID,
           title: clientName,
-          date: parsedDate
+          date: eventDate
         }]);
 
         if (error) {
           console.error('Erro ao salvar evento:', error);
           await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`);
         } else {
-          await sendWhatsAppMessage(DESTINO_FIXO, `✅ Evento criado: "${clientName}" em ${parsedDate.toLocaleString()}`);
+          await sendWhatsAppMessage(DESTINO_FIXO, `✅ Evento criado: "${clientName}" em ${eventDate.toLocaleString()}`);
         }
       }
 
@@ -112,7 +98,6 @@ app.post('/webhook', async (req, res) => {
         const { data: events, error } = await supabase
           .from('events')
           .select('*')
-          .eq('user_id', FIXED_USER_ID)
           .gte('date', start.toISOString())
           .lte('date', end.toISOString());
 
@@ -141,15 +126,13 @@ cron.schedule('*/5 * * * *', async () => {
   console.log('Rodando cron job de alertas 30 minutos antes...');
   const now = new Date();
   const alertWindowStart = now;
-  const alertWindowEnd = new Date(now.getTime() + 5 * 60 * 1000);
+  const alertWindowEnd = new Date(now.getTime() + 5 * 60 * 1000); // próximos 5 minutos
 
   const { data: events, error } = await supabase
     .from('events')
     .select('*')
-    .eq('user_id', FIXED_USER_ID)
     .gte('date', new Date(now.getTime() + 30*60*1000).toISOString())
-    .lte(new Date(now.getTime() + 35*60*1000).toISOString())
-    .eq('notified', false);
+    .lte(new Date(now.getTime() + 35*60*1000).toISOString());
 
   if (error) {
     console.error('Erro ao buscar eventos para alerta:', error);
@@ -167,8 +150,6 @@ cron.schedule('*/5 * * * *', async () => {
 
     if (alertTime >= alertWindowStart && alertTime <= alertWindowEnd) {
       await sendWhatsAppMessage(DESTINO_FIXO, `⏰ Lembrete: "${event.title}" às ${eventTime.toLocaleTimeString()}`);
-      // Marcar como notificado
-      await supabase.from('events').update({ notified: true }).eq('id', event.id);
     }
   }
 }, { timezone: "America/Sao_Paulo" });
@@ -183,7 +164,6 @@ cron.schedule('0 7 * * *', async () => {
   const { data: events, error } = await supabase
     .from('events')
     .select('*')
-    .eq('user_id', FIXED_USER_ID)
     .gte('date', start.toISOString())
     .lte('date', end.toISOString());
 
