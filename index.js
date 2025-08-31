@@ -52,16 +52,16 @@ app.get('/webhook', (req, res) => {
 // Receber mensagens do WhatsApp
 app.post('/webhook', async (req, res) => {
   try {
-    const entry = req.body.entry[0];
-    const change = entry.changes[0];
-    const value = change.value;
-    const messages = value.messages;
+    const entry = req.body.entry?.[0];
+    const change = entry?.changes?.[0];
+    const value = change?.value;
+    const messages = value?.messages;
 
     if (!messages) return res.sendStatus(200);
 
     for (let msg of messages) {
       const text = msg.text?.body || '';
-      const name = value.contacts[0].profile.name;
+      const name = value.contacts?.[0]?.profile?.name || 'Usuário';
 
       console.log(`Mensagem de ${name}: ${text}`);
 
@@ -71,11 +71,13 @@ app.post('/webhook', async (req, res) => {
         const eventDate = parsedDate || new Date();
 
         // Salvar no Supabase
-        await supabase.from('events').insert([{
+        const { error } = await supabase.from('events').insert([{
           user_id: DESTINO_FIXO, // usar número fixo
           title: text,
           date: eventDate
         }]);
+
+        if (error) console.error('Erro ao salvar evento:', error);
 
         await sendWhatsAppMessage(DESTINO_FIXO, `✅ Evento criado: "${text}" em ${eventDate.toLocaleString()}`);
       }
@@ -86,12 +88,16 @@ app.post('/webhook', async (req, res) => {
         const start = new Date(today.setHours(0,0,0,0));
         const end = new Date(today.setHours(23,59,59,999));
 
-        const { data: events } = await supabase
+        const { data: events, error } = await supabase
           .from('events')
           .select('*')
           .eq('user_id', DESTINO_FIXO)
           .gte('date', start.toISOString())
           .lte('date', end.toISOString());
+
+        if (error) {
+          console.error('Erro ao buscar eventos:', error);
+        }
 
         if (!events || events.length === 0) {
           await sendWhatsAppMessage(DESTINO_FIXO, 'Você não tem eventos hoje.');
@@ -116,11 +122,21 @@ cron.schedule('*/5 * * * *', async () => {
   const alertWindowStart = new Date(now.getTime());
   const alertWindowEnd = new Date(now.getTime() + 5 * 60 * 1000); // próximos 5 minutos
 
-  const { data: events } = await supabase
+  const { data: events, error } = await supabase
     .from('events')
     .select('*')
     .gte('date', new Date(now.getTime() + 30*60*1000).toISOString())
     .lte(new Date(now.getTime() + 35*60*1000).toISOString()); // janela de 5 min para alerta
+
+  if (error) {
+    console.error('Erro ao buscar eventos para alerta:', error);
+    return;
+  }
+
+  if (!events || events.length === 0) {
+    console.log('Nenhum evento para alerta neste intervalo.');
+    return;
+  }
 
   for (let event of events) {
     const eventTime = new Date(event.date);
@@ -139,16 +155,24 @@ cron.schedule('0 7 * * *', async () => {
   const start = new Date(today.setHours(0,0,0,0));
   const end = new Date(today.setHours(23,59,59,999));
 
-  const { data: events } = await supabase
+  const { data: events, error } = await supabase
     .from('events')
     .select('*')
     .gte('date', start.toISOString())
     .lte('date', end.toISOString());
 
-  if (events && events.length > 0) {
-    const list = events.map(e => `- ${e.title} às ${new Date(e.date).toLocaleTimeString()}`).join('\n');
-    await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
+  if (error) {
+    console.error('Erro ao buscar eventos para resumo diário:', error);
+    return;
   }
+
+  if (!events || events.length === 0) {
+    console.log('Nenhum evento para o resumo diário.');
+    return;
+  }
+
+  const list = events.map(e => `- ${e.title} às ${new Date(e.date).toLocaleTimeString()}`).join('\n');
+  await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
 }, { timezone: "America/Sao_Paulo" });
 
 const PORT = process.env.PORT || 3000;
