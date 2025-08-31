@@ -72,44 +72,40 @@ app.post('/webhook', async (req, res) => {
 
       // Criar evento
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
-        // Extrair nome do cliente
-        const nameMatch = text.match(/atendimento para ([\p{L}\s]+?)(?: amanhã| hoje| \d{1,2}[\/-]\d{1,2}| às| daq[u]i a \d+|$)/iu);
-        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
+  // Extrair nome do cliente de forma flexível
+  const nameMatch = text.match(
+    /(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+?)(?:\s+amanhã|\s+hoje|\s+\d{1,2}[\/-]\d{1,2}|\s+às|\s+daqui a|\s+\d+h|$)/iu
+  );
+  const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        // Extrair data/hora do texto
-        let eventDate = chrono.pt.parseDate(text, new Date(), { forwardDate: true });
+  // Extrair data/hora do texto com chrono.pt
+  let eventDate = chrono.pt.parseDate(text, new Date(), { forwardDate: true });
 
-        // Se não encontrou, tenta parse completo com resultados
-        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
-        if (results.length > 0) {
-          eventDate = results[0].start.date(); // usa a data/hora detectada
-        }
+  // Se chrono não conseguiu detectar, fallback para 08:00
+  if (!eventDate) {
+    eventDate = new Date();
+    eventDate.setHours(8, 0, 0, 0);
+  }
 
-        // Se ainda não tiver hora, fallback 08:00
-        if (!eventDate) {
-          eventDate = new Date();
-          eventDate.setHours(8, 0, 0, 0);
-        }
+  // Salvar no Supabase (UTC)
+  const { error } = await supabase.from('events').insert([{
+    title: clientName,
+    date: eventDate
+  }]);
 
-        // Salvar no Supabase (UTC)
-        const { error } = await supabase.from('events').insert([{
-          title: clientName,
-          date: eventDate
-        }]);
-
-        if (error) {
-          console.error('Erro ao salvar evento:', error);
-          await sendWhatsAppMessage(
-            DESTINO_FIXO,
-            `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`
-          );
-        } else {
-          await sendWhatsAppMessage(
-            DESTINO_FIXO,
-            `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
-          );
-        }
-      }
+  if (error) {
+    console.error('Erro ao salvar evento:', error);
+    await sendWhatsAppMessage(
+      DESTINO_FIXO,
+      `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`
+    );
+  } else {
+    await sendWhatsAppMessage(
+      DESTINO_FIXO,
+      `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
+    );
+  }
+}
 
       // Listar eventos do dia
       if (/eventos de hoje/i.test(text)) {
