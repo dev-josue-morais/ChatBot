@@ -94,57 +94,48 @@ app.post('/webhook', async (req, res) => {
 
       // Criar evento
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
-        // Extrair nome do cliente de forma flexível
         let nameText = text.replace(/(amanh[ãa]|hoje|daqui a \d+\s*min|\d{1,2}[:h]\d{0,2})/gi, '');
         const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        // Extrair data/hora do texto com chrono.pt
+        // Extrair data/hora com chrono.pt
         let eventDate = null;
         const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
 
         if (results.length > 0) {
           eventDate = results[0].start.date();
-
-          // Se hora não estiver definida, fallback 08:00
           if (!results[0].start.isCertain('hour')) {
             eventDate.setHours(8, 0, 0, 0);
           }
         }
 
-        // Se chrono não achou nada, fallback para hoje às 08:00
         if (!eventDate) {
           eventDate = new Date();
           eventDate.setHours(8, 0, 0, 0);
         }
 
-        // Patch: capturar hora manualmente se chrono falhar
+        // Patch: capturar hora manualmente
         const hourMatch = text.match(/(?:às|as)?\s*(\d{1,2})(?:[:h](\d{2}))?\s*h?/i);
         if (hourMatch) {
           let hours = parseInt(hourMatch[1], 10);
           let minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
-          if (hours >= 0 && hours <= 23) {
-            eventDate.setHours(hours, minutes, 0, 0);
-          }
+          eventDate.setHours(hours, minutes, 0, 0);
         }
 
-        // --- CONVERTER PARA UTC USANDO toISOString() ---
-        const eventDateUTCString = eventDate.toISOString();
+        // --- CONVERTER PARA UTC CORRETAMENTE ---
+        // Trata eventDate como BRT, converte para UTC
+        const eventDateUTC = new Date(eventDate.getTime() - (3 * 60 * 60 * 1000));
 
         // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
           title: clientName,
-          date: eventDateUTCString
+          date: eventDateUTC
         }]);
 
         if (error) {
           console.error('Erro ao salvar evento:', error);
-          await sendWhatsAppMessage(
-            DESTINO_FIXO,
-            `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`
-          );
+          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não foi possível salvar o evento para ${clientName}.`);
         } else {
-          // Exibir em horário local BRT
           await sendWhatsAppMessage(
             DESTINO_FIXO,
             `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
