@@ -105,11 +105,14 @@ app.post('/webhook', async (req, res) => {
 
         if (results.length > 0) {
           eventDate = results[0].start.date();
+
+          // Se hora não estiver definida, fallback 08:00
           if (!results[0].start.isCertain('hour')) {
             eventDate.setHours(8, 0, 0, 0);
           }
         }
 
+        // Se chrono não achou nada, fallback para hoje às 08:00
         if (!eventDate) {
           eventDate = new Date();
           eventDate.setHours(8, 0, 0, 0);
@@ -125,21 +128,13 @@ app.post('/webhook', async (req, res) => {
           }
         }
 
-        // --- CONVERTENDO PARA UTC ANTES DE SALVAR ---
-        const eventDateUTC = new Date(Date.UTC(
-          eventDate.getFullYear(),
-          eventDate.getMonth(),
-          eventDate.getDate(),
-          eventDate.getHours(),
-          eventDate.getMinutes(),
-          eventDate.getSeconds(),
-          eventDate.getMilliseconds()
-        ));
+        // --- CONVERTER PARA UTC USANDO toISOString() ---
+        const eventDateUTCString = eventDate.toISOString();
 
         // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
           title: clientName,
-          date: eventDateUTC
+          date: eventDateUTCString
         }]);
 
         if (error) {
@@ -152,11 +147,10 @@ app.post('/webhook', async (req, res) => {
           // Exibir em horário local BRT
           await sendWhatsAppMessage(
             DESTINO_FIXO,
-            `✅ Evento criado: "${clientName}" em ${formatLocal(eventDateUTC)}`
+            `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
           );
         }
       }
-
       // Listar eventos (flexível: hoje, amanhã, data específica ou dia da semana)
       if (/(eventos|agenda|compromissos|lembretes|atendimentos)/i.test(text)) {
         let start, end;
