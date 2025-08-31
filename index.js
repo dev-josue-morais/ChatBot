@@ -72,48 +72,73 @@ app.post('/webhook', async (req, res) => {
 
       // Criar evento
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
-  // Extrair nome do cliente de forma flexível
-  const nameMatch = text.match(
-    /(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+?)(?:\s+amanhã|\s+hoje|\s+\d{1,2}[\/-]\d{1,2}|\s+às|\s+daqui a|\s+\d+h|$)/iu
-  );
-  const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
+        // Extrair nome do cliente de forma flexível
+        const nameMatch = text.match(
+          /(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+?)(?=\s+(?:amanhã|hoje|\d{1,2}[\/-]\d{1,2}|às|daqui a|\d+h|$))/iu
+        );
+        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-  // Extrair data/hora do texto com chrono.pt
-  let eventDate = chrono.pt.parseDate(text, new Date(), { forwardDate: true });
+        // Tentar extrair data/hora com chrono.pt
+        let eventDate = null;
+        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
 
-  // Se chrono não conseguiu detectar, fallback para 08:00
-  if (!eventDate) {
-    eventDate = new Date();
-    eventDate.setHours(8, 0, 0, 0);
-  }
+        if (results.length > 0) {
+          eventDate = results[0].start.date();
 
-  // Salvar no Supabase (UTC)
-  const { error } = await supabase.from('events').insert([{
-    title: clientName,
-    date: eventDate
-  }]);
+          // Se não encontrou hora, forçar 08:00
+          if (!results[0].start.isCertain('hour')) {
+            eventDate.setHours(8, 0, 0, 0);
+          }
+        }
 
-  if (error) {
-    console.error('Erro ao salvar evento:', error);
-    await sendWhatsAppMessage(
-      DESTINO_FIXO,
-      `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`
-    );
-  } else {
-    await sendWhatsAppMessage(
-      DESTINO_FIXO,
-      `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
-    );
-  }
-}
+        // Se chrono não achou nada, fallback para hoje às 08:00
+        if (!eventDate) {
+          eventDate = new Date();
+          eventDate.setHours(8, 0, 0, 0);
+        }
+
+        // Salvar no Supabase (UTC)
+        const { error } = await supabase.from('events').insert([{
+          title: clientName,
+          date: eventDate
+        }]);
+
+        if (error) {
+          console.error('Erro ao salvar evento:', error);
+          await sendWhatsAppMessage(
+            DESTINO_FIXO,
+            `⚠️ Não foi possível salvar o evento para ${clientName}. Tente novamente.`
+          );
+        } else {
+          await sendWhatsAppMessage(
+            DESTINO_FIXO,
+            `✅ Evento criado: "${clientName}" em ${formatLocal(eventDate)}`
+          );
+        }
+      }
 
       // Listar eventos do dia
-      if (/eventos de hoje/i.test(text)) {
-        const today = new Date();
-        const start = new Date(today);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(today);
-        end.setHours(23, 59, 59, 999);
+      // Listar eventos (flexível: hoje, amanhã, data específica ou dia da semana)
+      if (/(eventos|agenda|compromissos|lembretes|atendimentos)/i.test(text)) {
+        let start, end;
+
+        // Usar chrono para extrair a data pedida
+        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
+
+        if (results.length > 0) {
+          start = results[0].start.date();
+          start.setHours(0, 0, 0, 0);
+
+          end = new Date(start);
+          end.setHours(23, 59, 59, 999);
+        } else {
+          // Fallback → hoje
+          const today = new Date();
+          start = new Date(today);
+          start.setHours(0, 0, 0, 0);
+          end = new Date(today);
+          end.setHours(23, 59, 59, 999);
+        }
 
         const { data: events, error } = await supabase
           .from('events')
@@ -126,12 +151,19 @@ app.post('/webhook', async (req, res) => {
         }
 
         if (!events || events.length === 0) {
-          await sendWhatsAppMessage(DESTINO_FIXO, 'Você não tem eventos hoje.');
+          await sendWhatsAppMessage(
+            DESTINO_FIXO,
+            `Você não tem eventos para ${formatLocal(start, { onlyDate: true })}.`
+          );
         } else {
-          const list = events.map(e =>
-            `- ${e.title} às ${formatLocal(e.date)}`
-          ).join('\n');
-          await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
+          const list = events
+            .map(e => `- ${e.title} às ${formatLocal(e.date)}`)
+            .join('\n');
+
+          await sendWhatsAppMessage(
+            DESTINO_FIXO,
+            `📅 Seus eventos em ${formatLocal(start, { onlyDate: true })}:\n${list}`
+          );
         }
       }
     }
