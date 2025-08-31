@@ -188,27 +188,41 @@ cron.schedule('*/5 * * * *', async () => {
   console.log('Rodando cron job de alertas 30 minutos antes...');
   const now = new Date();
 
+  const startUTC = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+  const endUTC   = new Date(now.getTime() + 35 * 60 * 1000).toISOString();
+
   const { data: events, error } = await supabase
     .from('events')
     .select('*')
-    .gte('date', new Date(now.getTime() + 30 * 60 * 1000).toISOString())
-    .lte(new Date(now.getTime() + 35 * 60 * 1000).toISOString());
+    .gte('date', startUTC)
+    .lte('date', endUTC);
 
-  if (error) return console.error('Erro ao buscar eventos para alerta:', error);
-  if (!events || events.length === 0) return console.log('Nenhum evento para alerta neste intervalo.');
+  if (error) {
+    return console.error('Erro ao buscar eventos para alerta:', error);
+  }
+
+  if (!events || events.length === 0) {
+    return console.log('Nenhum evento para alerta neste intervalo.');
+  }
 
   for (let event of events) {
-    const eventTime = new Date(event.date);
-    await sendWhatsAppMessage(DESTINO_FIXO, `⏰ Lembrete: "${event.title}" às ${formatLocal(eventTime)}`);
+    const eventTime = new Date(event.date); // UTC vindo do banco
+    await sendWhatsAppMessage(
+      DESTINO_FIXO,
+      `⏰ Lembrete: "${event.title}" às ${formatLocal(eventTime)}`
+    );
   }
 }, { timezone: "America/Sao_Paulo" });
+
 
 // CRON job: resumo diário às 7h
 cron.schedule('0 7 * * *', async () => {
   console.log('Rodando cron job diário das 7h...');
   const today = new Date();
-  const start = new Date(today); start.setHours(0, 0, 0, 0);
-  const end = new Date(today); end.setHours(23, 59, 59, 999);
+  const start = new Date(today); 
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(today); 
+  end.setHours(23, 59, 59, 999);
 
   const { data: events, error } = await supabase
     .from('events')
@@ -216,12 +230,22 @@ cron.schedule('0 7 * * *', async () => {
     .gte('date', start.toISOString())
     .lte('date', end.toISOString());
 
-  if (error) return console.error('Erro ao buscar eventos para resumo diário:', error);
-  if (!events || events.length === 0) return console.log('Nenhum evento para o resumo diário.');
+  if (error) {
+    return console.error('Erro ao buscar eventos para resumo diário:', error);
+  }
 
-  const list = events.map(e => `- ${e.title} às ${formatLocal(e.date)}`).join('\n');
+  if (!events || events.length === 0) {
+    return console.log('Nenhum evento para o resumo diário.');
+  }
 
-  await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
+  const list = events
+    .map(e => `- ${e.title} às ${formatLocal(new Date(e.date))}`)
+    .join('\n');
+
+  await sendWhatsAppMessage(
+    DESTINO_FIXO,
+    `📅 Seus eventos de hoje:\n${list}`
+  );
 }, { timezone: "America/Sao_Paulo" });
 
 const PORT = process.env.PORT || 3000;
