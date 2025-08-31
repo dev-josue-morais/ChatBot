@@ -72,8 +72,16 @@ app.post('/webhook', async (req, res) => {
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         // Extrair data/hora do texto
-        const parsedDate = chrono.pt.parseDate(text);
-        let eventDate = parsedDate || new Date();
+        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
+        let eventDate = new Date();
+
+        if (results.length > 0) {
+          eventDate = results[0].start.date();
+
+          // Ajustar timezone manualmente para São Paulo
+          const offset = -3; // UTC-3
+          eventDate = new Date(eventDate.getTime() + offset * 60 * 60 * 1000);
+        }
 
         // Se a hora não estiver definida, define 08:00 por padrão
         if (eventDate.getHours() === 0 && eventDate.getMinutes() === 0) {
