@@ -71,21 +71,23 @@ app.post('/webhook', async (req, res) => {
       console.log(`Mensagem de ${senderName}: ${text}`);
 
       // Criar evento
-      if (/cria.*atendimento/i.test(text)) {
+      if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
         // Extrair nome do cliente
-        const nameMatch = text.match(/atendimento para ([\p{L}\s]+?)(?: amanhã| hoje| \d{1,2}[\/-]\d{1,2}| às|$)/iu);
+        const nameMatch = text.match(/atendimento para ([\p{L}\s]+?)(?: amanhã| hoje| \d{1,2}[\/-]\d{1,2}| às| daq[u]i a \d+|$)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         // Extrair data/hora do texto
-        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
-        let eventDate = new Date();
+        let eventDate = chrono.pt.parseDate(text, new Date(), { forwardDate: true });
 
+        // Se não encontrou, tenta parse completo com resultados
+        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
         if (results.length > 0) {
-          eventDate = results[0].start.date(); // UTC
+          eventDate = results[0].start.date(); // usa a data/hora detectada
         }
 
-        // Se não tiver hora, define 08:00 padrão
-        if (eventDate.getHours() === 0 && eventDate.getMinutes() === 0) {
+        // Se ainda não tiver hora, fallback 08:00
+        if (!eventDate) {
+          eventDate = new Date();
           eventDate.setHours(8, 0, 0, 0);
         }
 
