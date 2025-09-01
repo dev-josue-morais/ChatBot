@@ -97,41 +97,42 @@ app.post('/webhook', async (req, res) => {
         const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        // Extrair data/hora com chrono.pt
-        let eventDate = null;
-        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
-        if (results.length > 0) {
-          eventDate = results[0].start.date();
-          if (!results[0].start.isCertain('hour')) {
+        let eventDate = new Date();
+
+        // Detecta "daqui a X minutos/horas" manualmente
+        const relativeMatch = text.match(/daqui a (\d+)\s*(min|h)/i);
+        if (relativeMatch) {
+          const value = parseInt(relativeMatch[1], 10);
+          if (relativeMatch[2].startsWith('min')) eventDate.setMinutes(eventDate.getMinutes() + value);
+          else eventDate.setHours(eventDate.getHours() + value);
+        } else {
+          // Usa apenas o chrono para datas absolutas
+          const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
+          if (results.length > 0) {
+            eventDate = results[0].start.date();
+            // Se hora não tiver sido especificada, fallback para 08:00
+            if (!results[0].start.isCertain('hour')) {
+              eventDate.setHours(8, 0, 0, 0);
+            }
+          } else {
+            // Nenhuma data encontrada → fallback 08:00 hoje
             eventDate.setHours(8, 0, 0, 0);
           }
         }
-        if (!eventDate) {
-          eventDate = new Date();
-          eventDate.setHours(8, 0, 0, 0);
-        }
 
-        // Patch: capturar hora manualmente se necessário
-        const hourMatch = text.match(/(?:às|as)?\s*(\d{1,2})(?:[:h](\d{2}))?\s*h?/i);
-        if (hourMatch) {
-          let hours = parseInt(hourMatch[1], 10);
-          let minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
-          eventDate.setHours(hours, minutes, 0, 0);
-        }
-
-        console.log (eventDate)
+        // --- CONVERTE HORÁRIO LOCAL PARA UTC ---
+        console.log(eventDate)
         const eventDateUTC = new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
           eventDate.getDate(),
-          eventDate.getHours() + 3,
+          eventDate.getHours() + 3, // BRT → UTC
           eventDate.getMinutes(),
           eventDate.getSeconds(),
           eventDate.getMilliseconds()
         ).toISOString();
-        console.log (eventDateUTC)
+        console.log(eventDateUTC)
 
-        // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
           title: clientName,
           date: eventDateUTC
