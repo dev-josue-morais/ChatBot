@@ -118,8 +118,8 @@ app.post('/webhook', async (req, res) => {
           eventDate.setHours(hours, minutes, 0, 0);
         }
 
-        // --- SALVAR DIRETO EM UTC ---
-        const eventDateUTC = eventDate.toISOString();
+        // --- CONVERTE HORÁRIO LOCAL PARA UTC CORRETAMENTE ---
+        const eventDateUTC = new Date(eventDate.getTime() + (eventDate.getTimezoneOffset() * 60000)).toISOString();
 
         const { error } = await supabase.from('events').insert([{
           title: clientName,
@@ -132,7 +132,7 @@ app.post('/webhook', async (req, res) => {
         } else {
           await sendWhatsAppMessage(
             DESTINO_FIXO,
-            `✅ Evento criado: "${clientName}" em ${formatLocal(eventDateUTC)}`
+            `✅ Evento criado: "${clientName}" em ${formatLocal(new Date(eventDateUTC))}`
           );
         }
       }
