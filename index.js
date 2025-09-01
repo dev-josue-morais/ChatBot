@@ -332,52 +332,78 @@ app.post('/webhook', async (req, res) => {
           await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos em ${formatLocal(start).split(',')[0]}:\n${list}`);
         }
       }
-      // --- APAGAR EVENTO ---
-      if (/(apaga|deleta|remove)[\s\w]*?(evento|atendimento|compromisso|lembrete)/i.test(text)) {
-        const deleteMatch = text.match(/(?:apaga|deleta|remove)[\s\w]*?(?:evento|atendimento|compromisso|lembrete)\s+(?:do|da|de)\s+([\p{L}\s]+)(?:\s+(hoje|amanhã|dia\s+\d{1,2}\/\d{1,2}(?:\/\d{2,4})?))?/iu);
 
-        if (!deleteMatch) {
-          await sendWhatsAppMessage(senderNumber, "⚠️ Não consegui identificar qual evento você quer apagar. Tente: *Apaga o evento da Maria hoje*");
-          continue;
-        }
+      // -------------------- DELETAR EVENTO --------------------
+      const deleteKeywords = /(deleta|apaga|remover|excluir)[\s\w]*?(atendimento|evento|lembrete)/i;
 
-        const clientName = deleteMatch[1].trim();
-        let dateFilter = null;
+      if (deleteKeywords.test(text)) {
+        // tenta pegar a data/hora relativa do texto
+        let targetDate = null;
+        let dateSpanText = '';
 
-        if (deleteMatch[2]) {
-          const dateText = deleteMatch[2].toLowerCase();
-
-          if (dateText.includes("hoje")) {
-            dateFilter = new Date();
-          } else if (dateText.includes("amanhã")) {
-            dateFilter = new Date(Date.now() + 24 * 60 * 60 * 1000);
-          } else if (dateText.includes("dia")) {
-            const parts = dateText.replace("dia", "").trim().split("/");
-            const [d, m, y] = parts;
-            dateFilter = new Date(
-              y || new Date().getFullYear(),
-              parseInt(m) - 1,
-              parseInt(d)
-            );
+        const relativeMatch = text.match(/amanh[aã]/i);
+        if (relativeMatch) {
+          targetDate = new Date(nowLocal);
+          targetDate.setDate(targetDate.getDate() + 1);
+          targetDate.setHours(0, 0, 0, 0);
+          dateSpanText = 'amanhã';
+        } else {
+          const chronoResults = chrono.pt.parse(text, nowLocal, { forwardDate: true });
+          if (chronoResults.length > 0) {
+            targetDate = chronoResults[0].start.date();
+            targetDate.setHours(0, 0, 0, 0);
+            dateSpanText = chronoResults[0].text;
           }
         }
 
-        // Construir query de exclusão
-        let query = supabase.from("events").delete().eq("title", clientName);
+        // normaliza nome
+        let nameMatch = text.match(/(?:deleta|apaga|remover|excluir)[\s\w]*?(?:atendimento|evento|lembrete)\s+de\s+([\p{L}\s'-]{1,80})/iu);
+        if (!nameMatch) nameMatch = text.match(/de\s+([\p{L}\s'-]{1,80})/iu);
+        const clientName = nameMatch ? nameMatch[1].trim() : null;
 
-        if (dateFilter) {
-          const startDay = new Date(dateFilter.setHours(0, 0, 0, 0)).toISOString();
-          const endDay = new Date(dateFilter.setHours(23, 59, 59, 999)).toISOString();
-          query = query.gte("date", startDay).lte("date", endDay);
+        if (!clientName || !targetDate) {
+          await sendWhatsAppMessage(
+            DESTINO_FIXO,
+            "⚠️ Não entendi qual evento você deseja apagar."
+          );
+          continue;
         }
 
-        const { error } = await query;
+        // intervalo do dia em UTC
+        const startUTC = toUTCISOStringFromLocal(new Date(targetDate));
+        const endUTC = toUTCISOStringFromLocal(new Date(targetDate.getTime() + 24 * 60 * 60 * 1000));
 
-        if (error) {
-          console.error("Erro ao apagar evento:", error);
-          await sendWhatsAppMessage(senderNumber, "⚠️ Ocorreu um erro ao apagar o evento.");
+        // busca o evento
+        const { data: events, error: fetchError } = await supabase
+          .from('events')
+          .select('*')
+          .gte('date', startUTC)
+          .lt('date', endUTC)
+          .ilike('title', `%${clientName}%`);
+
+        if (fetchError) {
+          console.error('Erro ao buscar evento:', fetchError);
+          await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Erro ao tentar buscar eventos.");
+          continue;
+        }
+
+        if (!events || events.length === 0) {
+          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Nenhum evento encontrado para ${clientName} em ${dateSpanText}.`);
+          continue;
+        }
+
+        // deleta todos os eventos encontrados
+        const ids = events.map(ev => ev.id);
+        const { error: delError } = await supabase
+          .from('events')
+          .delete()
+          .in('id', ids);
+
+        if (delError) {
+          console.error('Erro ao deletar evento:', delError);
+          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não consegui apagar o evento de ${clientName}.`);
         } else {
-          await sendWhatsAppMessage(senderNumber, `🗑 Evento de ${clientName} removido com sucesso.`);
+          await sendWhatsAppMessage(DESTINO_FIXO, `🗑 Evento de ${clientName} em ${dateSpanText} removido com sucesso.`);
         }
 
         continue;
