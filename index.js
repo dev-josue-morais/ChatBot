@@ -209,7 +209,7 @@ app.post('/webhook', async (req, res) => {
         }
         continue;
       }
-      
+
       console.log(`Mensagem de ${senderName}: ${text}`);
 
       // referência para parsing (ajustado para BRT)
@@ -234,6 +234,16 @@ app.post('/webhook', async (req, res) => {
         } else {
           // 2) tenta chrono.pt para achar data/hora absoluta
           let textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
+
+          // --- NORMALIZAÇÃO HORÁRIOS ---
+          // "9h" ou "9 h" -> "09:00" / "9h30" ou "9 h 30" -> "09:30"
+          textClean = textClean.replace(/\b(\d{1,2})\s*h\s*(\d{1,2})?\b/gi, (m, h, min) => {
+            const hh = h.padStart(2, '0');
+            const mm = min ? min.padStart(2, '0') : '00';
+            return `${hh}:${mm}`;
+          });
+
+          // agora sim chama o chrono
           const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
           if (results.length > 0) {
             eventDate = results[0].start.date();
@@ -322,6 +332,56 @@ app.post('/webhook', async (req, res) => {
           await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos em ${formatLocal(start).split(',')[0]}:\n${list}`);
         }
       }
+      // --- APAGAR EVENTO ---
+      if (/(apaga|deleta|remove)[\s\w]*?(evento|atendimento|compromisso|lembrete)/i.test(text)) {
+        const deleteMatch = text.match(/(?:apaga|deleta|remove)[\s\w]*?(?:evento|atendimento|compromisso|lembrete)\s+(?:do|da|de)\s+([\p{L}\s]+)(?:\s+(hoje|amanhã|dia\s+\d{1,2}\/\d{1,2}(?:\/\d{2,4})?))?/iu);
+
+        if (!deleteMatch) {
+          await sendWhatsAppMessage(senderNumber, "⚠️ Não consegui identificar qual evento você quer apagar. Tente: *Apaga o evento da Maria hoje*");
+          continue;
+        }
+
+        const clientName = deleteMatch[1].trim();
+        let dateFilter = null;
+
+        if (deleteMatch[2]) {
+          const dateText = deleteMatch[2].toLowerCase();
+
+          if (dateText.includes("hoje")) {
+            dateFilter = new Date();
+          } else if (dateText.includes("amanhã")) {
+            dateFilter = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          } else if (dateText.includes("dia")) {
+            const parts = dateText.replace("dia", "").trim().split("/");
+            const [d, m, y] = parts;
+            dateFilter = new Date(
+              y || new Date().getFullYear(),
+              parseInt(m) - 1,
+              parseInt(d)
+            );
+          }
+        }
+
+        // Construir query de exclusão
+        let query = supabase.from("events").delete().eq("title", clientName);
+
+        if (dateFilter) {
+          const startDay = new Date(dateFilter.setHours(0, 0, 0, 0)).toISOString();
+          const endDay = new Date(dateFilter.setHours(23, 59, 59, 999)).toISOString();
+          query = query.gte("date", startDay).lte("date", endDay);
+        }
+
+        const { error } = await query;
+
+        if (error) {
+          console.error("Erro ao apagar evento:", error);
+          await sendWhatsAppMessage(senderNumber, "⚠️ Ocorreu um erro ao apagar o evento.");
+        } else {
+          await sendWhatsAppMessage(senderNumber, `🗑 Evento de ${clientName} removido com sucesso.`);
+        }
+
+        continue;
+      }
     }
 
     res.sendStatus(200);
@@ -369,6 +429,7 @@ app.get("/cron/alerta", async (req, res) => {
     res.status(500).send("Erro interno");
   }
 });
+
 
 // --- CRON JOB RESUMO DIÁRIO ---
 cron.schedule('0 7 * * *', async () => {
