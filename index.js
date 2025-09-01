@@ -42,12 +42,14 @@ async function sendWhatsAppMessage(to, message) {
 }
 
 app.post('/renew-token', async (req, res) => {
+  // Verifica autorização do GitHub
   if (req.headers.authorization !== `Bearer ${process.env.GITHUB_SECRET}`) {
     return res.status(403).send('Não autorizado');
   }
 
-  const renderServiceId = process.env.RENDER_SERVICE_ID
-  const renderApiKey = process.env.RENDER_API_KEY
+  const renderServiceId = process.env.RENDER_SERVICE_ID;
+  const renderApiKey = process.env.RENDER_API_KEY;
+
   try {
     // 1️⃣ Troca o token curto pelo long-lived token
     const response = await axios.get('https://graph.facebook.com/v22.0/oauth/access_token', {
@@ -62,24 +64,30 @@ app.post('/renew-token', async (req, res) => {
     const newToken = response.data.access_token;
     console.log('Novo token gerado:', newToken);
 
-    // 2️⃣ Atualiza a variável de ambiente no Render
-    await axios.post(
+    // 2️⃣ Pega variáveis atuais do Render
+    const { data: vars } = await axios.get(
       `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
-      [
-        {
-          key: 'WHATSAPP_TOKEN',
-          value: newToken,
-          sync: true
-        }
-      ],
-      {
-        headers: {
-          Authorization: `Bearer ${renderApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      }
+      { headers: { Authorization: `Bearer ${renderApiKey}` } }
     );
 
+    // 3️⃣ Deleta variável WHATSAPP_TOKEN existente, se houver
+    const tokenVar = vars.find(v => v.key === 'WHATSAPP_TOKEN');
+    if (tokenVar) {
+      await axios.delete(
+        `https://api.render.com/v1/services/${renderServiceId}/env-vars/${tokenVar.id}`,
+        { headers: { Authorization: `Bearer ${renderApiKey}` } }
+      );
+      console.log('Variável antiga WHATSAPP_TOKEN deletada');
+    }
+
+    // 4️⃣ Cria novamente com o novo token
+    await axios.post(
+      `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
+      [{ key: 'WHATSAPP_TOKEN', value: newToken, sync: true }],
+      { headers: { Authorization: `Bearer ${renderApiKey}`, 'Content-Type': 'application/json' } }
+    );
+
+    console.log('Variável de ambiente do Render atualizada com sucesso!');
     res.send('Token renovado e variável atualizada!');
   } catch (err) {
     console.error(err.response?.data || err.message);
