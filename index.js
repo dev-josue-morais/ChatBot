@@ -63,22 +63,25 @@ app.post('/renew-token', async (req, res) => {
     const newToken = response.data.access_token;
     console.log('Novo token gerado:', newToken);
 
-    // 2️⃣ Atualiza variável de ambiente no Render com PATCH
-    await axios.patch(
+    // 2️⃣ Pega lista de variáveis do Render
+    const { data: envVars } = await axios.get(
       `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
-      [
-        {
-          key: 'WHATSAPP_TOKEN',
-          value: newToken,
-          sync: true
-        }
-      ],
-      {
-        headers: {
-          Authorization: `Bearer ${renderApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      }
+      { headers: { Authorization: `Bearer ${renderApiKey}` } }
+    );
+
+    // 3️⃣ Filtra WHATSAPP_TOKEN e pega cursor atual
+    const whatsappVar = envVars.find(v => v.envVar.key === "WHATSAPP_TOKEN");
+    if (!whatsappVar) {
+      return res.status(404).send("WHATSAPP_TOKEN não encontrado no Render");
+    }
+
+    const cursor = whatsappVar.cursor;
+
+    // 4️⃣ Atualiza variável usando o cursor
+    await axios.patch(
+      `https://api.render.com/v1/services/env-vars/${cursor}`,
+      { value: newToken, sync: true },
+      { headers: { Authorization: `Bearer ${renderApiKey}`, 'Content-Type': 'application/json' } }
     );
 
     console.log('Variável de ambiente do Render atualizada com sucesso!');
