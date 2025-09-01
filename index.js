@@ -153,13 +153,31 @@ app.post('/webhook', async (req, res) => {
       if (!senderNumber) continue;
 
       // --- REDIRECIONAMENTO ÚNICO ---
-      // --- REDIRECIONAMENTO ÚNICO ---
       if (!/Eletricaldas/i.test(senderName)) {
         const { data: alreadySent } = await supabase
           .from('redirects')
           .select('*')
           .eq('phone', senderNumber)
           .single();
+
+        // 📌 Função para formatar o número
+        function formatPhone(num) {
+          if (!num) return "Número desconhecido";
+          if (num.startsWith("55")) {
+            num = num.slice(2); // remove o 55
+          }
+          const ddd = num.slice(0, 2);
+          const rest = num.slice(2);
+          return `(0${ddd}) ${rest}`;
+        }
+
+        const formattedNumber = formatPhone(senderNumber);
+
+        // Sempre notifica você (independente do alreadySent)
+        await sendWhatsAppMessage(
+          DESTINO_FIXO,
+          `📞 Novo contato: ${senderName} (${formattedNumber}) entrou em contato pelo número antigo.`
+        );
 
         if (!alreadySent) {
           // 1️⃣ Deleta registros com mais de 24h
@@ -179,16 +197,10 @@ app.post('/webhook', async (req, res) => {
           await sendWhatsAppMessage(
             senderNumber,
             `${saudacao}! Você está tentando falar com Josué Eletricista.  
-Favor entrar em contato no novo número (064) 99286-9608.`
+            Favor entrar em contato no novo número (064) 99286-9608.`
           );
 
-          // 4️⃣ Notifica o número fixo sobre o novo contato
-          await sendWhatsAppMessage(
-            DESTINO_FIXO,
-            `📞 Novo contato recebido: ${senderName} (${senderNumber}) entrou em contato pelo WhatsApp antigo.`
-          );
-
-          // 5️⃣ Insere o novo registro
+          // 4️⃣ Insere o novo registro
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
           console.log(`Mensagem de redirecionamento enviada para ${senderNumber}`);
         }
