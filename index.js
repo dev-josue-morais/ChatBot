@@ -120,15 +120,17 @@ app.post('/webhook', async (req, res) => {
         }
 
         // --- CONVERTE PARA UTC CORRETAMENTE (somando +3) ---
+        console.log (eventDate)
         const eventDateUTC = new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
           eventDate.getDate(),
-          eventDate.getHours() + 3, // BRT → UTC
+          eventDate.getHours(),
           eventDate.getMinutes(),
           eventDate.getSeconds(),
           eventDate.getMilliseconds()
         ).toISOString();
+        console.log (eventDateUTC)
 
         // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
