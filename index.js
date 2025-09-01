@@ -152,7 +152,7 @@ app.post('/webhook', async (req, res) => {
       const senderNumber = value.contacts?.[0]?.wa_id;
       if (!senderNumber) continue;
 
-      // --- REDIRECIONAMENTO ÚNICO ---
+      // --- REDIRECIONAMENTO ÚNICO (com reencaminhamento da msg) ---
       if (!/Eletricaldas/i.test(senderName)) {
         const { data: alreadySent } = await supabase
           .from('redirects')
@@ -160,23 +160,26 @@ app.post('/webhook', async (req, res) => {
           .eq('phone', senderNumber)
           .single();
 
-        // 📌 Função para formatar o número
+        // Função robusta para formatar o número
         function formatPhone(num) {
           if (!num) return "Número desconhecido";
-          if (num.startsWith("55")) {
-            num = num.slice(2); // remove o 55
-          }
+          num = String(num).replace(/\D/g, '');
+          if (num.startsWith('55')) num = num.slice(2);
           const ddd = num.slice(0, 2);
           const rest = num.slice(2);
-          return `(0${ddd}) ${rest}`;
+          let formattedRest;
+          if (rest.length === 9) formattedRest = `${rest.slice(0, 5)}-${rest.slice(5)}`;
+          else if (rest.length === 8) formattedRest = `${rest.slice(0, 4)}-${rest.slice(4)}`;
+          else formattedRest = rest;
+          return `(0${ddd}) ${formattedRest}`;
         }
 
         const formattedNumber = formatPhone(senderNumber);
 
-        // Sempre notifica você (independente do alreadySent)
+        // Sempre notifica você (DESTINO_FIXO) com número e a msg original
         await sendWhatsAppMessage(
           DESTINO_FIXO,
-          `📞 Novo contato: ${senderName} ${formattedNumber} entrou em contato pelo número antigo.`
+          `📞 Novo contato: ${senderName} ${formattedNumber}\n\n📝 Mensagem enviada: "${text}"`
         );
 
         if (!alreadySent) {
@@ -206,7 +209,7 @@ app.post('/webhook', async (req, res) => {
         }
         continue;
       }
-
+      
       console.log(`Mensagem de ${senderName}: ${text}`);
 
       // referência para parsing (ajustado para BRT)
