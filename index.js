@@ -93,35 +93,28 @@ app.post('/webhook', async (req, res) => {
       // --- CRIAR EVENTO ---
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
         // Extrair nome do cliente
-        let nameText = text.replace(/(amanh[ãa]|hoje|daqui a \d+\s*min|\d{1,2}[:h]\d{0,2})/gi, '');
         const nameMatch = text.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        let now = new Date();
-        let eventDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          now.getHours() - 3,
-          now.getMinutes(),
-          now.getSeconds(),
-          now.getMilliseconds()
-        );
+        // Data de referência local (UTC-3)
+        let nowLocal = new Date();
+        nowLocal.setHours(nowLocal.getHours() - 3);
 
-        // Detecta "daqui a X minutos/horas" manualmente
+        let eventDate = new Date(nowLocal);
+
+        // --- Detecta "daqui a X minutos/horas" ---
         const relativeMatch = text.match(/daqui a (\d+)\s*(min|h)/i);
         if (relativeMatch) {
           const value = parseInt(relativeMatch[1], 10);
           if (relativeMatch[2].startsWith('min')) eventDate.setMinutes(eventDate.getMinutes() + value);
           else eventDate.setHours(eventDate.getHours() + value);
         } else {
-          // Usa apenas o chrono para datas absolutas
-          const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
+          // --- Datas absolutas com chrono.pt ---
+          const results = chrono.pt.parse(text, nowLocal, { forwardDate: true });
           if (results.length > 0) {
             eventDate = results[0].start.date();
-            // Se hora não tiver sido especificada, fallback para 08:00
             if (!results[0].start.isCertain('hour')) {
-              eventDate.setHours(8, 0, 0, 0);
+              eventDate.setHours(8, 0, 0, 0); // fallback 08:00
             }
           } else {
             // Nenhuma data encontrada → fallback 08:00 hoje
