@@ -176,7 +176,7 @@ app.post('/webhook', async (req, res) => {
         // Sempre notifica você (independente do alreadySent)
         await sendWhatsAppMessage(
           DESTINO_FIXO,
-          `📞 Novo contato: ${senderName} (${formattedNumber}) entrou em contato pelo número antigo.`
+          `📞 Novo contato: ${senderName} ${formattedNumber} entrou em contato pelo número antigo.`
         );
 
         if (!alreadySent) {
