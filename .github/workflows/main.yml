@@ -1,0 +1,16 @@
+name: Keep Alive Render
+
+# Quando o workflow será executado
+on:
+  schedule:
+    - cron: '0 7 * * *'  # Todos os dias às 7h UTC
+  workflow_dispatch:      # Permite disparar manualmente
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Disparar keep-alive no Render
+        run: |
+          curl -X GET https://chatbot-6viu.onrender.com/keep-alive
