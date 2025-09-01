@@ -92,6 +92,7 @@ app.post('/webhook', async (req, res) => {
 
       // --- CRIAR EVENTO ---
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
+        // Extrair nome do cliente
         let nameText = text.replace(/(amanh[ãa]|hoje|daqui a \d+\s*min|\d{1,2}[:h]\d{0,2})/gi, '');
         const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
@@ -119,8 +120,9 @@ app.post('/webhook', async (req, res) => {
         }
 
         // --- CONVERTE HORÁRIO LOCAL PARA UTC CORRETAMENTE ---
-        const eventDateUTC = new Date(eventDate.getTime() + (eventDate.getTimezoneOffset() * 60000)).toISOString();
+        const eventDateUTC = new Date(eventDate.getTime() - (eventDate.getTimezoneOffset() * 60000)).toISOString();
 
+        // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
           title: clientName,
           date: eventDateUTC
