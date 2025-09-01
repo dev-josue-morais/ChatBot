@@ -334,65 +334,69 @@ app.post('/webhook', async (req, res) => {
       }
 
       // -------------------- DELETAR EVENTO --------------------
-      const deleteKeywords = /(deleta|apaga|remover|excluir)[\s\w]*?(atendimento|evento|lembrete)/i;
+      if (/(deleta|apaga|remove|excluir)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
 
-      if (deleteKeywords.test(text)) {
-        // tenta pegar a data/hora relativa do texto
+        // --- 1) Extrai data ---
         let targetDate = null;
-        let dateSpanText = '';
+        let dateText = '';
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        const relativeMatch = text.match(/amanh[aã]/i);
-        if (relativeMatch) {
-          targetDate = new Date(nowLocal);
-          targetDate.setDate(targetDate.getDate() + 1);
-          targetDate.setHours(0, 0, 0, 0);
-          dateSpanText = 'amanhã';
+        let textClean = text;
+
+        if (/hoje/i.test(textClean)) {
+          targetDate = today;
+          dateText = "hoje";
+          textClean = textClean.replace(/hoje/i, '');
+        } else if (/amanh[aã]/i.test(textClean)) {
+          targetDate = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+          dateText = "amanhã";
+          textClean = textClean.replace(/amanh[aã]/i, '');
         } else {
-          const chronoResults = chrono.pt.parse(text, nowLocal, { forwardDate: true });
-          if (chronoResults.length > 0) {
-            targetDate = chronoResults[0].start.date();
-            targetDate.setHours(0, 0, 0, 0);
-            dateSpanText = chronoResults[0].text;
+          const dayMatch = textClean.match(/dia\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
+          if (dayMatch) {
+            const d = parseInt(dayMatch[1], 10);
+            const m = parseInt(dayMatch[2], 10) - 1;
+            const y = dayMatch[3] ? parseInt(dayMatch[3], 10) : today.getFullYear();
+            targetDate = new Date(y, m, d);
+            dateText = `dia ${dayMatch[1].padStart(2, '0')}/${dayMatch[2].padStart(2, '0')}`;
+            textClean = textClean.replace(dayMatch[0], '');
           }
         }
 
-        // normaliza nome
-        let nameMatch = text.match(/(?:deleta|apaga|remover|excluir)[\s\w]*?(?:atendimento|evento|lembrete)\s+de\s+([\p{L}\s'-]{1,80})/iu);
-        if (!nameMatch) nameMatch = text.match(/de\s+([\p{L}\s'-]{1,80})/iu);
-        const clientName = nameMatch ? nameMatch[1].trim() : null;
-
-        if (!clientName || !targetDate) {
-          await sendWhatsAppMessage(
-            DESTINO_FIXO,
-            "⚠️ Não entendi qual evento você deseja apagar."
-          );
+        if (!targetDate) {
+          await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Não consegui identificar a data do evento.");
           continue;
         }
 
-        // intervalo do dia em UTC
-        const startUTC = toUTCISOStringFromLocal(new Date(targetDate));
-        const endUTC = toUTCISOStringFromLocal(new Date(targetDate.getTime() + 24 * 60 * 60 * 1000));
+        // --- 2) Extrai nome do cliente do texto restante ---
+        let nameMatch = textClean.match(/(?:deleta|apaga|remove|excluir)[\s\w]*?(?:atendimento|evento|lembrete)?\s*(?:de|do|da)?\s*([\p{L}\s'-]{1,80})/iu);
+        if (!nameMatch) nameMatch = textClean.match(/de\s+([\p{L}\s'-]{1,80})/iu);
+        const clientName = nameMatch ? nameMatch[1].trim() : null;
 
-        // busca o evento
+        if (!clientName) {
+          await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Não consegui identificar o nome do cliente.");
+          continue;
+        }
+
+        // --- 3) Intervalo do dia em UTC ---
+        const startUTC = toUTCISOStringFromLocal(new Date(targetDate.setHours(0, 0, 0, 0)));
+        const endUTC = toUTCISOStringFromLocal(new Date(targetDate.setHours(23, 59, 59, 999)));
+
+        // --- 4) Busca evento ---
         const { data: events, error: fetchError } = await supabase
           .from('events')
           .select('*')
           .gte('date', startUTC)
-          .lt('date', endUTC)
+          .lte('date', endUTC)
           .ilike('title', `%${clientName}%`);
 
-        if (fetchError) {
-          console.error('Erro ao buscar evento:', fetchError);
-          await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Erro ao tentar buscar eventos.");
+        if (fetchError || !events || events.length === 0) {
+          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Nenhum evento encontrado para ${clientName} em ${dateText}.`);
           continue;
         }
 
-        if (!events || events.length === 0) {
-          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Nenhum evento encontrado para ${clientName} em ${dateSpanText}.`);
-          continue;
-        }
-
-        // deleta todos os eventos encontrados
+        // --- 5) Deleta eventos encontrados ---
         const ids = events.map(ev => ev.id);
         const { error: delError } = await supabase
           .from('events')
@@ -400,10 +404,9 @@ app.post('/webhook', async (req, res) => {
           .in('id', ids);
 
         if (delError) {
-          console.error('Erro ao deletar evento:', delError);
           await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não consegui apagar o evento de ${clientName}.`);
         } else {
-          await sendWhatsAppMessage(DESTINO_FIXO, `🗑 Evento de ${clientName} em ${dateSpanText} removido com sucesso.`);
+          await sendWhatsAppMessage(DESTINO_FIXO, `🗑 Evento de ${clientName} em ${dateText} removido com sucesso.`);
         }
 
         continue;
