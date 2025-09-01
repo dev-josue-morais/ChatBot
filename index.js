@@ -97,7 +97,16 @@ app.post('/webhook', async (req, res) => {
         const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
-        let eventDate = new Date();
+        let now = new Date();
+        let eventDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          now.getHours(),
+          now.getMinutes(),
+          now.getSeconds(),
+          now.getMilliseconds()
+        );
         console.log(eventDate)
 
         // Detecta "daqui a X minutos/horas" manualmente
