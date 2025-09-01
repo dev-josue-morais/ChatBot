@@ -133,12 +133,26 @@ app.post('/webhook', async (req, res) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
+    // Helper: converte um Date que representa horário local (BRT) para ISO UTC
+    const toUTCISOStringFromLocal = (d) => {
+      return new Date(Date.UTC(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+        d.getHours() + 3, // BRT -> UTC
+        d.getMinutes(),
+        d.getSeconds(),
+        d.getMilliseconds()
+      )).toISOString();
+    };
+
     for (let msg of messages) {
       const text = msg.text?.body || '';
       const senderName = value.contacts?.[0]?.profile?.name || 'Usuário';
       const senderNumber = value.contacts?.[0]?.wa_id;
       if (!senderNumber) continue;
 
+      // --- REDIRECIONAMENTO ÚNICO ---
       // --- REDIRECIONAMENTO ÚNICO ---
       if (!/Eletricaldas/i.test(senderName)) {
         const { data: alreadySent } = await supabase
@@ -154,13 +168,27 @@ app.post('/webhook', async (req, res) => {
             .delete()
             .lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-          // 2️⃣ Envia a mensagem
+          // 2️⃣ Define saudação conforme horário local
+          const hour = new Date().getHours();
+          let saudacao = "Olá";
+          if (hour >= 5 && hour < 12) saudacao = "Bom dia";
+          else if (hour >= 12 && hour < 18) saudacao = "Boa tarde";
+          else saudacao = "Boa noite";
+
+          // 3️⃣ Envia mensagem de redirecionamento para o cliente
           await sendWhatsAppMessage(
             senderNumber,
-            "Olá! Você está tentando falar com Josué Eletricista. Favor entrar em contato no novo número (064) 99286-9608."
+            `${saudacao}! Você está tentando falar com Josué Eletricista.  
+Favor entrar em contato no novo número (064) 99286-9608.`
           );
 
-          // 3️⃣ Insere o novo registro
+          // 4️⃣ Notifica o número fixo sobre o novo contato
+          await sendWhatsAppMessage(
+            DESTINO_FIXO,
+            `📞 Novo contato recebido: ${senderName} (${senderNumber}) entrou em contato pelo WhatsApp antigo.`
+          );
+
+          // 5️⃣ Insere o novo registro
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
           console.log(`Mensagem de redirecionamento enviada para ${senderNumber}`);
         }
@@ -169,50 +197,62 @@ app.post('/webhook', async (req, res) => {
 
       console.log(`Mensagem de ${senderName}: ${text}`);
 
-      const nowLocal = new Date();
-      nowLocal.setHours(nowLocal.getHours() - 3); // UTC-3 → hora local
+      // referência para parsing (ajustado para BRT)
+      const nowLocal = new Date(Date.now() - 3 * 60 * 60 * 1000); // referência em UTC-3
 
-      // --- CRIAR EVENTO ---
-      if (/(cria|adiciona|agenda|salva)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
-        // Extrair nome do cliente
-        const nameMatch = text.match(/(?:cria|adiciona|agenda|salva)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+?)(?:[.,]|$)/iu);
-        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
+      // intenções
+      const createKeywords = /(cria|adiciona|agenda|salva)[\s\w]*?(atendimento|evento|lembrete)/i;
+      const listKeywords = /(eventos|agenda|compromissos|lembretes|atendimentos)/i;
 
+      // -------------------- CRIAR EVENTO --------------------
+      if (createKeywords.test(text)) {
+        // 1) detecta trecho relativo "daqui a X..." primeiro
+        const relativeMatch = text.match(/daqui a\s*(\d+)\s*(min|h)/i);
         let eventDate = new Date(nowLocal);
+        let dateSpanText = '';
 
-        // --- Detecta "daqui a X minutos/horas" ---
-        const relativeMatch = text.match(/daqui a (\d+)\s*(min|h)/i);
         if (relativeMatch) {
-          const value = parseInt(relativeMatch[1], 10);
-          if (relativeMatch[2].startsWith('min')) eventDate.setMinutes(eventDate.getMinutes() + value);
-          else eventDate.setHours(eventDate.getHours() + value);
+          const val = parseInt(relativeMatch[1], 10);
+          if (relativeMatch[2].startsWith('min')) eventDate.setMinutes(eventDate.getMinutes() + val);
+          else eventDate.setHours(eventDate.getHours() + val);
+          dateSpanText = relativeMatch[0]; // "daqui a 36min"
         } else {
-          // --- Datas absolutas com chrono.pt ---
+          // 2) tenta chrono.pt para achar data/hora absoluta
           let textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
           const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
-
           if (results.length > 0) {
             eventDate = results[0].start.date();
+            dateSpanText = results[0].text || '';
             if (!results[0].start.isCertain('hour')) {
-              eventDate.setHours(8, 0, 0, 0); // fallback 08:00
+              eventDate.setHours(8, 0, 0, 0); // fallback hora
             }
           } else {
-            // Nenhuma data encontrada → fallback hoje 08:00
+            // fallback hoje às 08:00
             eventDate.setHours(8, 0, 0, 0);
           }
         }
 
-        // --- Converte horário local → UTC ---
-        const eventDateUTC = new Date(
-          eventDate.getFullYear(),
-          eventDate.getMonth(),
-          eventDate.getDate(),
-          eventDate.getHours() + 3, // BRT → UTC
-          eventDate.getMinutes(),
-          eventDate.getSeconds(),
-          eventDate.getMilliseconds()
-        ).toISOString();
+        // 3) remova o trecho de data/hora do texto para facilitar captura do nome
+        let textWithoutDate = dateSpanText ? text.replace(dateSpanText, ' ') : text;
+        textWithoutDate = textWithoutDate.replace(/\s+/g, ' ').trim();
 
+        // 4) tenta extrair o nome de forma robusta
+        // primeiro: padrão completo (cria ... evento ... para NOME)
+        let nameMatch = textWithoutDate.match(/(?:cria|adiciona|agenda|salva)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s'-]{1,80})/iu);
+        // fallback 1: só "para NOME"
+        if (!nameMatch) nameMatch = textWithoutDate.match(/para\s+([\p{L}\s'-]{1,80})/iu);
+        // fallback 2: pega a primeira palavra com inicial maiúscula (último recurso)
+        if (!nameMatch) {
+          const cap = textWithoutDate.match(/\b([A-ZÀ-Ý][\p{L}'-]+(?:\s+[A-ZÀ-Ý][\p{L}'-]+)*)\b/u);
+          if (cap) nameMatch = [null, cap[1]];
+        }
+
+        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
+
+        // 5) converte a data local para UTC ISO para salvar (função acima)
+        const eventDateUTC = toUTCISOStringFromLocal(eventDate);
+
+        // salva
         const { error } = await supabase.from('events').insert([{
           title: clientName,
           date: eventDateUTC
@@ -229,8 +269,8 @@ app.post('/webhook', async (req, res) => {
         }
       }
 
-      // --- LISTAR EVENTOS ---
-      if (/(eventos|agenda|compromissos|lembretes|atendimentos)/i.test(text)) {
+      // -------------------- LISTAR EVENTOS --------------------
+      if (listKeywords.test(text)) {
         let start, end;
         const textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
         const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
@@ -241,15 +281,15 @@ app.post('/webhook', async (req, res) => {
           end = new Date(start);
           end.setHours(23, 59, 59, 999);
         } else {
-          // Se nenhuma data encontrada → hoje
+          // "hoje" por padrão
           const today = new Date(nowLocal);
           start = new Date(today); start.setHours(0, 0, 0, 0);
           end = new Date(today); end.setHours(23, 59, 59, 999);
         }
 
-        // Converte para UTC para consulta
-        const startUTC = new Date(start.getTime() - 3*60*60*1000).toISOString();
-        const endUTC = new Date(end.getTime() - 3*60*60*1000).toISOString();
+        // converte intervalo local -> UTC ISO
+        const startUTC = toUTCISOStringFromLocal(start);
+        const endUTC = toUTCISOStringFromLocal(end);
 
         const { data: events, error } = await supabase
           .from('events')
