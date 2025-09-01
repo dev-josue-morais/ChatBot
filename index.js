@@ -375,14 +375,12 @@ app.post('/webhook', async (req, res) => {
         }
 
         // --- 2) Extrai nome do cliente ---
-        // remove palavras-chave que não fazem parte do nome
         textClean = textClean
           .replace(/(?:deleta|apaga|remove|excluir)/i, '')
-          .replace(/\b(atendimento|evento|compromisso|lembrete)\b/i, '')
-          .replace(/\b(de|do|da)\b/i, '')
+          .replace(/\b(atendimento|evento|compromisso|lembrete)\b/gi, '')
+          .replace(/\b(de|do|da)\b/gi, '')
           .trim();
 
-        // o restante é considerado o nome
         const clientName = textClean || null;
 
         if (!clientName) {
@@ -390,11 +388,16 @@ app.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // --- 3) Intervalo do dia em UTC ---
-        const startUTC = toUTCISOStringFromLocal(new Date(targetDate.setHours(0, 0, 0, 0)));
-        const endUTC = toUTCISOStringFromLocal(new Date(targetDate.setHours(23, 59, 59, 999)));
+        // --- 3) Intervalo do dia em UTC (resolve problema de eventos depois das 21h) ---
+        const startLocal = new Date(targetDate);
+        startLocal.setHours(0, 0, 0, 0);
+        const endLocal = new Date(targetDate);
+        endLocal.setHours(23, 59, 59, 999);
 
-        // --- 4) Busca evento ---
+        const startUTC = startLocal.toISOString();
+        const endUTC = endLocal.toISOString();
+
+        // --- 4) Busca eventos dentro do intervalo do dia local ---
         const { data: events, error: fetchError } = await supabase
           .from('events')
           .select('*')
