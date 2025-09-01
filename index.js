@@ -331,30 +331,44 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// --- CRON JOB ALERTA 30 MINUTOS ---
-cron.schedule('*/5 * * * *', async () => {
-  console.log('Rodando cron job de alertas 30 minutos antes...');
-  const now = new Date();
+// --- ROTA ALERTA 30 MINUTOS ---
+app.get("/cron/alerta", async (req, res) => {
+  try {
+    console.log("Executando rota de alertas 30 minutos antes...");
+    const now = new Date();
 
-  const startUTC = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-  const endUTC = new Date(now.getTime() + 35 * 60 * 1000).toISOString();
+    const startUTC = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+    const endUTC = new Date(now.getTime() + 35 * 60 * 1000).toISOString();
 
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('*')
-    .gte('date', startUTC)
-    .lte('date', endUTC);
+    const { data: events, error } = await supabase
+      .from("events")
+      .select("*")
+      .gte("date", startUTC)
+      .lte("date", endUTC);
 
-  if (error) return console.error('Erro ao buscar eventos para alerta:', error);
-  if (!events || events.length === 0) return console.log('Nenhum evento para alerta neste intervalo.');
+    if (error) {
+      console.error("Erro ao buscar eventos para alerta:", error);
+      return res.status(500).send("Erro ao buscar eventos");
+    }
 
-  for (let event of events) {
-    await sendWhatsAppMessage(
-      DESTINO_FIXO,
-      `⏰ Lembrete: "${event.title}" às ${formatLocal(event.date)}`
-    );
+    if (!events || events.length === 0) {
+      console.log("Nenhum evento para alerta neste intervalo.");
+      return res.send("Nenhum evento encontrado");
+    }
+
+    for (let event of events) {
+      await sendWhatsAppMessage(
+        DESTINO_FIXO,
+        `⏰ Lembrete: "${event.title}" às ${formatLocal(event.date)}`
+      );
+    }
+
+    res.send(`✅ ${events.length} evento(s) processado(s).`);
+  } catch (err) {
+    console.error("Erro na rota de alerta:", err);
+    res.status(500).send("Erro interno");
   }
-}, { timezone: "America/Sao_Paulo" });
+});
 
 // --- CRON JOB RESUMO DIÁRIO ---
 cron.schedule('0 7 * * *', async () => {
