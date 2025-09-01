@@ -41,6 +41,50 @@ async function sendWhatsAppMessage(to, message) {
   }
 }
 
+app.post('/renew-token', async (req, res) => {
+  if (req.headers.authorization !== `Bearer ${process.env.GITHUB_SECRET}`) {
+    return res.status(403).send('Não autorizado');
+  }
+
+  try {
+    // 1️⃣ Troca o token curto pelo long-lived token
+    const response = await axios.get('https://graph.facebook.com/v22.0/oauth/access_token', {
+      params: {
+        grant_type: 'fb_exchange_token',
+        client_id: process.env.APP_ID,
+        client_secret: process.env.APP_SECRET,
+        fb_exchange_token: process.env.WHATSAPP_TOKEN
+      }
+    });
+
+    const newToken = response.data.access_token;
+    console.log('Novo token gerado:', newToken);
+
+    // 2️⃣ Atualiza a variável de ambiente no Render
+    await axios.patch(
+      `https://api.render.com/v1/services/${process.env.RENDER_SERVICE_ID}/env-vars`,
+      [
+        {
+          key: 'WHATSAPP_TOKEN',
+          value: newToken,
+          sync: true
+        }
+      ],
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.RENDER_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.send('Token renovado e variável atualizada!');
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).send('Erro ao renovar token');
+  }
+});
+
 // Verificação do webhook
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
@@ -99,10 +143,19 @@ app.post('/webhook', async (req, res) => {
           .single();
 
         if (!alreadySent) {
+          // 1️⃣ Deleta registros com mais de 24h
+          await supabase
+            .from('redirects')
+            .delete()
+            .lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+          // 2️⃣ Envia a mensagem
           await sendWhatsAppMessage(
             senderNumber,
             "Olá! Você está tentando falar com Josué Eletricista. Favor entrar em contato no novo número (064) 99286-9608."
           );
+
+          // 3️⃣ Insere o novo registro
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
           console.log(`Mensagem de redirecionamento enviada para ${senderNumber}`);
         }
