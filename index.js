@@ -54,6 +54,27 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
+app.get('/keep-alive', async (req, res) => {
+  try {
+    // Faz uma query mínima no Supabase
+    const { data, error } = await supabase
+      .from('keep_alive')
+      .select('status')
+      .limit(1);
+
+    if (error) {
+      console.error('Erro no keep-alive Supabase:', error);
+      return res.status(500).send('Erro no keep-alive');
+    }
+
+    console.log('Keep-alive executado:', data);
+    res.send('1'); // Resposta simples para o GitHub
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro interno no keep-alive');
+  }
+});
+
 // Receber mensagens do WhatsApp
 app.post('/webhook', async (req, res) => {
   try {
