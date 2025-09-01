@@ -94,7 +94,7 @@ app.post('/webhook', async (req, res) => {
       if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
         // Extrair nome do cliente
         let nameText = text.replace(/(amanh[ãa]|hoje|daqui a \d+\s*min|\d{1,2}[:h]\d{0,2})/gi, '');
-        const nameMatch = nameText.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
+        const nameMatch = text.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         let now = new Date();
@@ -107,7 +107,6 @@ app.post('/webhook', async (req, res) => {
           now.getSeconds(),
           now.getMilliseconds()
         );
-        console.log(eventDate)
 
         // Detecta "daqui a X minutos/horas" manualmente
         const relativeMatch = text.match(/daqui a (\d+)\s*(min|h)/i);
@@ -208,7 +207,7 @@ cron.schedule('*/5 * * * *', async () => {
     .from('events')
     .select('*')
     .gte('date', startUTC)
-    .lte(endUTC);
+    .lte('date', endUTC);
 
   if (error) return console.error('Erro ao buscar eventos para alerta:', error);
   if (!events || events.length === 0) return console.log('Nenhum evento para alerta neste intervalo.');
