@@ -1,0 +1,16 @@
+name: Renovar Token WhatsApp
+
+on:
+  schedule:
+    - cron: '0 0 */30 * *' # rodar a cada 30 dias
+  workflow_dispatch: # permite rodar manualmente
+
+jobs:
+  renew-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar POST para Render
+        run: |
+          curl -X POST https://chatbot-6viu.onrender.com/renew-token \
+            -H "Authorization: Bearer ${{ secrets.RENDER_SECRET }}" \
+            -H "Content-Type: application/json"
