@@ -12,5 +12,5 @@ jobs:
       - name: Enviar POST para Render
         run: |
           curl -X POST https://chatbot-6viu.onrender.com/renew-token \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_SECRET }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_SECRET }}" \
             -H "Content-Type: application/json"
