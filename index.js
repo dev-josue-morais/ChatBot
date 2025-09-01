@@ -119,8 +119,16 @@ app.post('/webhook', async (req, res) => {
           eventDate.setHours(hours, minutes, 0, 0);
         }
 
-        // --- CONVERTE HORÁRIO LOCAL PARA UTC CORRETAMENTE ---
-        const eventDateUTC = new Date(eventDate.getTime() - (eventDate.getTimezoneOffset() * 60000)).toISOString();
+        // --- CONVERTE PARA UTC CORRETAMENTE (somando +3) ---
+        const eventDateUTC = new Date(
+          eventDate.getFullYear(),
+          eventDate.getMonth(),
+          eventDate.getDate(),
+          eventDate.getHours() + 3, // BRT → UTC
+          eventDate.getMinutes(),
+          eventDate.getSeconds(),
+          eventDate.getMilliseconds()
+        ).toISOString();
 
         // Salvar no Supabase
         const { error } = await supabase.from('events').insert([{
