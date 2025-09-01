@@ -1,0 +1,13 @@
+name: Cron Alerta Eventos
+
+on:
+  schedule:
+    - cron: "25-59/5 9-22 * * *"  # GMT → roda de 06:25 até 19:55 no horário de Brasília
+  workflow_dispatch: # permite rodar manualmente também
+
+jobs:
+  call-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar rota de alerta
+        run: curl -s https://chatbot-6viu.onrender.com/cron/alerta
