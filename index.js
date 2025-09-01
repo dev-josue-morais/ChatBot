@@ -61,8 +61,8 @@ app.post('/renew-token', async (req, res) => {
     console.log('Novo token gerado:', newToken);
 
     // 2️⃣ Atualiza a variável de ambiente no Render
-    await axios.patch(
-      `https://api.render.com/v1/services/${process.env.RENDER_SERVICE_ID}/env-vars`,
+    await axios.post(
+      `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
       [
         {
           key: 'WHATSAPP_TOKEN',
@@ -72,7 +72,7 @@ app.post('/renew-token', async (req, res) => {
       ],
       {
         headers: {
-          Authorization: `Bearer ${process.env.RENDER_API_KEY}`,
+          Authorization: `Bearer ${renderApiKey}`,
           'Content-Type': 'application/json'
         }
       }
