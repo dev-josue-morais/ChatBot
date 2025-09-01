@@ -98,6 +98,7 @@ app.post('/webhook', async (req, res) => {
         const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         let eventDate = new Date();
+        console.log(eventDate)
 
         // Detecta "daqui a X minutos/horas" manualmente
         const relativeMatch = text.match(/daqui a (\d+)\s*(min|h)/i);
@@ -121,7 +122,6 @@ app.post('/webhook', async (req, res) => {
         }
 
         // --- CONVERTE HORÁRIO LOCAL PARA UTC ---
-        console.log(eventDate)
         const eventDateUTC = new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
@@ -131,7 +131,6 @@ app.post('/webhook', async (req, res) => {
           eventDate.getSeconds(),
           eventDate.getMilliseconds()
         ).toISOString();
-        console.log(eventDateUTC)
 
         const { error } = await supabase.from('events').insert([{
           title: clientName,
