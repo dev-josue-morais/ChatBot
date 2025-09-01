@@ -1,0 +1,26 @@
+name: Renovar Token WhatsApp
+
+on:
+  schedule:
+    - cron: '0 0 1 */1 *' # 1 vez por mês, meia-noite UTC
+  workflow_dispatch: # permite rodar manualmente
+
+jobs:
+  renew:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configurar Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Instalar dependências
+        run: npm install axios dotenv
+      - name: Renovar token e atualizar Render
+        run: node renew-token.js
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_SECRET: ${{ secrets.APP_SECRET }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
