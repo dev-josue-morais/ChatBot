@@ -334,7 +334,7 @@ app.post('/webhook', async (req, res) => {
       }
 
       // -------------------- DELETAR EVENTO --------------------
-      if (/(deleta|apaga|remove|excluir)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
+      if (/(deleta|apaga|remove|excluir)[\s\w]*?(atendimento|evento|compromisso|lembrete)/i.test(text)) {
 
         // --- 1) Extrai data ---
         let targetDate = null;
@@ -344,15 +344,20 @@ app.post('/webhook', async (req, res) => {
 
         let textClean = text;
 
+        // "hoje"
         if (/hoje/i.test(textClean)) {
           targetDate = today;
           dateText = "hoje";
           textClean = textClean.replace(/hoje/i, '');
-        } else if (/amanh[aã]/i.test(textClean)) {
+        }
+        // "amanhã"
+        else if (/amanh[aã]/i.test(textClean)) {
           targetDate = new Date(today.getTime() + 24 * 60 * 60 * 1000);
           dateText = "amanhã";
           textClean = textClean.replace(/amanh[aã]/i, '');
-        } else {
+        }
+        // "dia DD/MM(/AAAA)"
+        else {
           const dayMatch = textClean.match(/dia\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
           if (dayMatch) {
             const d = parseInt(dayMatch[1], 10);
@@ -369,10 +374,16 @@ app.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // --- 2) Extrai nome do cliente do texto restante ---
-        let nameMatch = textClean.match(/(?:deleta|apaga|remove|excluir)[\s\w]*?(?:atendimento|evento|lembrete)?\s*(?:de|do|da)?\s*([\p{L}\s'-]{1,80})/iu);
-        if (!nameMatch) nameMatch = textClean.match(/de\s+([\p{L}\s'-]{1,80})/iu);
-        const clientName = nameMatch ? nameMatch[1].trim() : null;
+        // --- 2) Extrai nome do cliente ---
+        // remove palavras-chave que não fazem parte do nome
+        textClean = textClean
+          .replace(/(?:deleta|apaga|remove|excluir)/i, '')
+          .replace(/\b(atendimento|evento|compromisso|lembrete)\b/i, '')
+          .replace(/\b(de|do|da)\b/i, '')
+          .trim();
+
+        // o restante é considerado o nome
+        const clientName = textClean || null;
 
         if (!clientName) {
           await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Não consegui identificar o nome do cliente.");
