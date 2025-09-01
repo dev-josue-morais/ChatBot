@@ -169,15 +169,14 @@ app.post('/webhook', async (req, res) => {
 
       console.log(`Mensagem de ${senderName}: ${text}`);
 
-      // --- CRIAR EVENTO ---
-      if (/(cria|adiciona|agenda)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
-        // Extrair nome do cliente
-        const nameMatch = text.match(/(?:cria|adiciona|agenda)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+)/iu);
-        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
+      const nowLocal = new Date();
+      nowLocal.setHours(nowLocal.getHours() - 3); // UTC-3 → hora local
 
-        // Data de referência local (UTC-3)
-        let nowLocal = new Date();
-        nowLocal.setHours(nowLocal.getHours() - 3);
+      // --- CRIAR EVENTO ---
+      if (/(cria|adiciona|agenda|salva)[\s\w]*?(atendimento|evento|lembrete)/i.test(text)) {
+        // Extrair nome do cliente
+        const nameMatch = text.match(/(?:cria|adiciona|agenda|salva)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s]+?)(?:[.,]|$)/iu);
+        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
 
         let eventDate = new Date(nowLocal);
 
@@ -189,19 +188,21 @@ app.post('/webhook', async (req, res) => {
           else eventDate.setHours(eventDate.getHours() + value);
         } else {
           // --- Datas absolutas com chrono.pt ---
-          const results = chrono.pt.parse(text, nowLocal, { forwardDate: true });
+          let textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
+          const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
+
           if (results.length > 0) {
             eventDate = results[0].start.date();
             if (!results[0].start.isCertain('hour')) {
               eventDate.setHours(8, 0, 0, 0); // fallback 08:00
             }
           } else {
-            // Nenhuma data encontrada → fallback 08:00 hoje
+            // Nenhuma data encontrada → fallback hoje 08:00
             eventDate.setHours(8, 0, 0, 0);
           }
         }
 
-        // --- CONVERTE HORÁRIO LOCAL PARA UTC ---
+        // --- Converte horário local → UTC ---
         const eventDateUTC = new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
@@ -231,27 +232,35 @@ app.post('/webhook', async (req, res) => {
       // --- LISTAR EVENTOS ---
       if (/(eventos|agenda|compromissos|lembretes|atendimentos)/i.test(text)) {
         let start, end;
-        const results = chrono.pt.parse(text, new Date(), { forwardDate: true });
+        const textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
+        const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
+
         if (results.length > 0) {
           start = results[0].start.date();
           start.setHours(0, 0, 0, 0);
           end = new Date(start);
           end.setHours(23, 59, 59, 999);
         } else {
-          const today = new Date();
+          // Se nenhuma data encontrada → hoje
+          const today = new Date(nowLocal);
           start = new Date(today); start.setHours(0, 0, 0, 0);
           end = new Date(today); end.setHours(23, 59, 59, 999);
         }
 
+        // Converte para UTC para consulta
+        const startUTC = new Date(start.getTime() - 3*60*60*1000).toISOString();
+        const endUTC = new Date(end.getTime() - 3*60*60*1000).toISOString();
+
         const { data: events, error } = await supabase
           .from('events')
           .select('*')
-          .gte('date', start.toISOString())
-          .lte('date', end.toISOString());
+          .gte('date', startUTC)
+          .lte('date', endUTC);
 
-        if (error) console.error('Erro ao buscar eventos:', error);
-
-        if (!events || events.length === 0) {
+        if (error) {
+          console.error('Erro ao buscar eventos:', error);
+          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não foi possível buscar os eventos.`);
+        } else if (!events || events.length === 0) {
           await sendWhatsAppMessage(DESTINO_FIXO, `Você não tem eventos para ${formatLocal(start).split(',')[0]}.`);
         } else {
           const list = events.map(e => `- ${e.title} às ${formatLocal(e.date)}`).join('\n');
