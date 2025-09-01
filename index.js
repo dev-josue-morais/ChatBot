@@ -46,6 +46,8 @@ app.post('/renew-token', async (req, res) => {
     return res.status(403).send('Não autorizado');
   }
 
+  const renderServiceId = process.env.RENDER_SERVICE_ID
+  const renderApiKey = process.env.RENDER_API_KEY
   try {
     // 1️⃣ Troca o token curto pelo long-lived token
     const response = await axios.get('https://graph.facebook.com/v22.0/oauth/access_token', {
