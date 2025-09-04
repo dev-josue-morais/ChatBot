@@ -2,42 +2,120 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
-const chrono = require('chrono-node');
-const cron = require('node-cron');
+const OpenAI = require("openai");
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, });
+const DESTINO_FIXO = '5564992869608';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const app = express();
 app.use(express.json());
 
-// Número fixo para envio de mensagens (modo teste)
-const DESTINO_FIXO = '5564992869608';
-
-// Função para exibir datas no fuso correto
-function formatLocal(date) {
-  return new Date(date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-}
-
-// Função para enviar mensagem pelo WhatsApp
-async function sendWhatsAppMessage(to, message) {
+async function processAgendaCommand(text) {
   try {
-    await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        type: "text",
-        text: { body: message }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
-        }
+    // 1️⃣ Chama GPT para interpretar a mensagem
+    const gptPrompt = `
+Você é um assistente de agenda. O usuário está no fuso GMT-3 (Brasil). 
+O título do evento pode ser nome de cliente ou local.
+Identifique a intenção da mensagem: criar, listar ou deletar evento.
+Extraia:
+- action: "create", "list" ou "delete"
+- title: string (nome ou local)
+- datetime: data/hora em ISO (UTC)
+- reminder_minutes: integer opcional (default 30)
+- start_date, end_date: se for listagem de eventos
+Responda apenas em JSON válido.
+Mensagem: "${text}"
+`;
+
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: gptPrompt }],
+    });
+
+    const gptJSON = gptResponse.choices[0].message.content;
+    let command;
+    try {
+      command = JSON.parse(gptJSON);
+    } catch (err) {
+      console.error("Erro ao parsear JSON do GPT:", gptJSON);
+      return "⚠️ Não consegui entender o comando.";
+    }
+
+    // 2️⃣ Funções auxiliares para fuso horário
+    const toUTCFromBRT = (date) => new Date(date.getTime() + 3 * 60 * 60 * 1000);
+    const toBRTFromUTC = (date) => new Date(date.getTime() - 3 * 60 * 60 * 1000);
+    const formatLocal = (date) =>
+      toBRTFromUTC(date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+    // 3️⃣ Executa ação no Supabase
+    if (command.action === "create") {
+      const datetimeUTC = new Date(command.datetime);
+      const { error } = await supabase.from("events").insert([{
+        title: command.title,
+        date: datetimeUTC,
+        reminder_minutes: command.reminder_minutes || 30
+      }]);
+
+      if (error) {
+        console.error("Erro ao criar evento:", error);
+        return `⚠️ Não consegui criar o evento "${command.title}".`;
+      } else {
+        return `✅ Evento criado: "${command.title}" em ${formatLocal(datetimeUTC)}`;
       }
-    );
-    console.log(`Mensagem enviada para ${to}: ${message}`);
+    }
+
+    if (command.action === "delete") {
+      const datetimeUTC = new Date(command.datetime);
+      const start = new Date(datetimeUTC.getTime() - 60 * 1000).toISOString();
+      const end = new Date(datetimeUTC.getTime() + 60 * 1000).toISOString();
+
+      const { data: events, error: fetchError } = await supabase
+        .from("events")
+        .select("*")
+        .eq("title", command.title)
+        .gte("date", start)
+        .lte("date", end);
+
+      if (fetchError || !events || events.length === 0) {
+        return `⚠️ Nenhum evento encontrado para "${command.title}" em ${formatLocal(datetimeUTC)}.`;
+      }
+
+      const ids = events.map((ev) => ev.id);
+      const { error: delError } = await supabase.from("events").delete().in("id", ids);
+      if (delError) {
+        return `⚠️ Não consegui apagar o evento "${command.title}".`;
+      } else {
+        return `🗑 Evento "${command.title}" em ${formatLocal(datetimeUTC)} removido com sucesso.`;
+      }
+    }
+
+    if (command.action === "list") {
+      const startUTC = new Date(command.start_date);
+      const endUTC = new Date(command.end_date);
+
+      const { data: events, error } = await supabase
+        .from("events")
+        .select("*")
+        .gte("date", startUTC.toISOString())
+        .lte("date", endUTC.toISOString());
+
+      if (error) {
+        console.error("Erro ao buscar eventos:", error);
+        return "⚠️ Não foi possível buscar os eventos.";
+      }
+
+      if (!events || events.length === 0) {
+        return `📅 Nenhum evento encontrado entre ${formatLocal(startUTC)} e ${formatLocal(endUTC)}.`;
+      }
+
+      const list = events.map((e) => `- ${e.title} às ${formatLocal(new Date(e.date))}`).join("\n");
+      return `📅 Seus eventos:\n${list}`;
+    }
+
+    return "⚠️ Comando não reconhecido pelo GPT.";
   } catch (err) {
-    console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
+    console.error("Erro em processAgendaCommand:", err);
+    return "⚠️ Erro interno ao processar comando.";
   }
 }
 
@@ -50,7 +128,6 @@ app.post('/renew-token', async (req, res) => {
   const renderApiKey = process.env.RENDER_API_KEY;
 
   try {
-    // 1️⃣ Troca o token curto pelo long-lived token
     const tokenResp = await axios.get('https://graph.facebook.com/v22.0/oauth/access_token', {
       params: {
         grant_type: 'fb_exchange_token',
@@ -63,7 +140,6 @@ app.post('/renew-token', async (req, res) => {
     const newToken = tokenResp.data.access_token;
     console.log('Novo token gerado:', newToken);
 
-    // 2️⃣ Pega todas as variáveis atuais do serviço
     const envResp = await axios.get(
       `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
       { headers: { Authorization: `Bearer ${renderApiKey}` } }
@@ -75,7 +151,6 @@ app.post('/renew-token', async (req, res) => {
       sync: true
     }));
 
-    // 3️⃣ Atualiza todas as variáveis via PUT
     await axios.put(
       `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
       envVars,
@@ -90,7 +165,6 @@ app.post('/renew-token', async (req, res) => {
   }
 });
 
-// Verificação do webhook
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -105,7 +179,6 @@ app.get('/webhook', (req, res) => {
 
 app.get('/keep-alive', async (req, res) => {
   try {
-    // Faz uma query mínima no Supabase
     const { data, error } = await supabase
       .from('keep_alive')
       .select('status')
@@ -117,14 +190,13 @@ app.get('/keep-alive', async (req, res) => {
     }
 
     console.log('Keep-alive executado:', data);
-    res.send('1'); // Resposta simples para o GitHub
+    res.send('1');
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro interno no keep-alive');
   }
 });
 
-// Receber mensagens do WhatsApp
 app.post('/webhook', async (req, res) => {
   try {
     const entry = req.body.entry?.[0];
@@ -133,372 +205,115 @@ app.post('/webhook', async (req, res) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
-    // Helper: converte um Date que representa horário local (BRT) para ISO UTC
-    const toUTCISOStringFromLocal = (d) => {
-      return new Date(Date.UTC(
-        d.getFullYear(),
-        d.getMonth(),
-        d.getDate(),
-        d.getHours() + 3, // BRT -> UTC
-        d.getMinutes(),
-        d.getSeconds(),
-        d.getMilliseconds()
-      )).toISOString();
-    };
+    // Função para enviar mensagens pelo WhatsApp
+    async function sendWhatsAppMessage(to, message) {
+      try {
+        await axios.post(
+          `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
+          {
+            messaging_product: "whatsapp",
+            to,
+            type: "text",
+            text: { body: message }
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      } catch (err) {
+        console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
+      }
+    }
 
+    // Função para formatar número
+    function formatPhone(num) {
+      if (!num) return "Número desconhecido";
+      num = String(num).replace(/\D/g, '');
+      if (num.startsWith('55')) num = num.slice(2);
+      const ddd = num.slice(0, 2);
+      const rest = num.slice(2);
+      let formattedRest;
+      if (rest.length === 9) formattedRest = `${rest.slice(0, 5)}-${rest.slice(5)}`;
+      else if (rest.length === 8) formattedRest = `${rest.slice(0, 4)}-${rest.slice(4)}`;
+      else formattedRest = rest;
+      return `(0${ddd}) ${formattedRest}`;
+    }
+
+    // Itera sobre todas as mensagens recebidas
     for (let msg of messages) {
       const text = msg.text?.body || '';
-      const senderName = value.contacts?.[0]?.profile?.name || 'Usuário';
-      const senderNumber = value.contacts?.[0]?.wa_id;
+      const contact = value.contacts?.[0];
+      if (!contact) continue;
+      const senderName = contact.profile?.name || 'Usuário';
+      const senderNumber = contact.wa_id;
       if (!senderNumber) continue;
 
-      // --- REDIRECIONAMENTO ÚNICO (com reencaminhamento da msg) ---
+      const formattedNumber = formatPhone(senderNumber);
+
+      // ================= Mensagens de Clientes =================
       if (!/Eletricaldas/i.test(senderName)) {
+
+        // 1️⃣ Notifica você (DESTINO_FIXO) de tudo que chegou
+        let forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n`;
+        if (msg.text?.body) forwardText += msg.text.body;
+        if (msg.audio) forwardText += '\n[Áudio]';
+        if (msg.document) forwardText += `\n[Documento: ${msg.document.filename}]`;
+
+        await sendWhatsAppMessage(DESTINO_FIXO, forwardText);
+
+        // 2️⃣ Gerenciar redirect no Supabase
         const { data: alreadySent } = await supabase
           .from('redirects')
           .select('*')
           .eq('phone', senderNumber)
-          .single();
-
-        // Função robusta para formatar o número
-        function formatPhone(num) {
-          if (!num) return "Número desconhecido";
-          num = String(num).replace(/\D/g, '');
-          if (num.startsWith('55')) num = num.slice(2);
-          const ddd = num.slice(0, 2);
-          const rest = num.slice(2);
-          let formattedRest;
-          if (rest.length === 9) formattedRest = `${rest.slice(0, 5)}-${rest.slice(5)}`;
-          else if (rest.length === 8) formattedRest = `${rest.slice(0, 4)}-${rest.slice(4)}`;
-          else formattedRest = rest;
-          return `(0${ddd}) ${formattedRest}`;
-        }
-
-        const formattedNumber = formatPhone(senderNumber);
-
-        // Sempre notifica você (DESTINO_FIXO) com número e a msg original
-        await sendWhatsAppMessage(
-          DESTINO_FIXO,
-          `📞 Novo contato: ${senderName} ${formattedNumber}\n\n📝 Mensagem enviada: "${text}"`
-        );
+          .maybeSingle();
 
         if (!alreadySent) {
-          // 1️⃣ Deleta registros com mais de 24h
+          // Deleta registros antigos (>24h)
           await supabase
             .from('redirects')
             .delete()
             .lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-          // 2️⃣ Define saudação conforme horário local
-          const hour = new Date().getHours();
+          // Saudação conforme horário local
+          const now = new Date();
+          const hour = new Date(now.getTime() - 3 * 60 * 60 * 1000).getHours();
           let saudacao = "Olá";
           if (hour >= 5 && hour < 12) saudacao = "Bom dia";
           else if (hour >= 12 && hour < 18) saudacao = "Boa tarde";
           else saudacao = "Boa noite";
 
-          // 3️⃣ Envia mensagem de redirecionamento para o cliente
+          // Envia resposta automática pro cliente
           await sendWhatsAppMessage(
             senderNumber,
-            `${saudacao}! Você está tentando falar com Josué Eletricista.  
-            Favor entrar em contato no novo número (064) 99286-9608.`
+            `${saudacao}! Você está tentando falar com Josué Eletricista.\nFavor entrar em contato no novo número (064) 99286-9608.`
           );
 
-          // 4️⃣ Insere o novo registro
+          // Salva novo registro
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
-          console.log(`Mensagem de redirecionamento enviada para ${senderNumber}`);
         }
-        continue;
+
+        continue; // passa para próxima mensagem
       }
 
-      console.log(`Mensagem de ${senderName}: ${text}`);
-
-      // referência para parsing (ajustado para BRT)
-      const nowLocal = new Date(Date.now() - 3 * 60 * 60 * 1000); // referência em UTC-3
-
-      // intenções
-      const createKeywords = /(cria|adiciona|agenda|salva)[\s\w]*?(atendimento|evento|lembrete)/i;
-      const listKeywords = /(eventos|agenda|compromissos|lembretes|atendimentos)/i;
-
-      // -------------------- CRIAR EVENTO --------------------
-      if (createKeywords.test(text)) {
-        // 1) detecta trecho relativo "daqui a X..." primeiro
-        const relativeMatch = text.match(/daqui a\s*(\d+)\s*(min|h)/i);
-        let eventDate = new Date(nowLocal);
-        let dateSpanText = '';
-
-        if (relativeMatch) {
-          const val = parseInt(relativeMatch[1], 10);
-          if (relativeMatch[2].startsWith('min')) eventDate.setMinutes(eventDate.getMinutes() + val);
-          else eventDate.setHours(eventDate.getHours() + val);
-          dateSpanText = relativeMatch[0]; // "daqui a 36min"
-        } else {
-          // 2) tenta chrono.pt para achar data/hora absoluta
-          let textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
-
-          // --- NORMALIZAÇÃO HORÁRIOS ---
-          // "9h" ou "9 h" -> "09:00" / "9h30" ou "9 h 30" -> "09:30"
-          textClean = textClean.replace(/\b(\d{1,2})\s*h\s*(\d{1,2})?\b/gi, (m, h, min) => {
-            const hh = h.padStart(2, '0');
-            const mm = min ? min.padStart(2, '0') : '00';
-            return `${hh}:${mm}`;
-          });
-
-          // agora sim chama o chrono
-          const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
-          if (results.length > 0) {
-            eventDate = results[0].start.date();
-            dateSpanText = results[0].text || '';
-            if (!results[0].start.isCertain('hour')) {
-              eventDate.setHours(8, 0, 0, 0); // fallback hora
-            }
-          } else {
-            // fallback hoje às 08:00
-            eventDate.setHours(8, 0, 0, 0);
-          }
-        }
-
-        // 3) remova o trecho de data/hora do texto para facilitar captura do nome
-        let textWithoutDate = dateSpanText ? text.replace(dateSpanText, ' ') : text;
-        textWithoutDate = textWithoutDate.replace(/\s+/g, ' ').trim();
-
-        // 4) tenta extrair o nome de forma robusta
-        // primeiro: padrão completo (cria ... evento ... para NOME)
-        let nameMatch = textWithoutDate.match(/(?:cria|adiciona|agenda|salva)[\s\w]*?(?:atendimento|evento|lembrete)\s+para\s+([\p{L}\s'-]{1,80})/iu);
-        // fallback 1: só "para NOME"
-        if (!nameMatch) nameMatch = textWithoutDate.match(/para\s+([\p{L}\s'-]{1,80})/iu);
-        // fallback 2: pega a primeira palavra com inicial maiúscula (último recurso)
-        if (!nameMatch) {
-          const cap = textWithoutDate.match(/\b([A-ZÀ-Ý][\p{L}'-]+(?:\s+[A-ZÀ-Ý][\p{L}'-]+)*)\b/u);
-          if (cap) nameMatch = [null, cap[1]];
-        }
-
-        const clientName = nameMatch ? nameMatch[1].trim() : 'Cliente';
-
-        // 5) converte a data local para UTC ISO para salvar (função acima)
-        const eventDateUTC = toUTCISOStringFromLocal(eventDate);
-
-        // salva
-        const { error } = await supabase.from('events').insert([{
-          title: clientName,
-          date: eventDateUTC
-        }]);
-
-        if (error) {
-          console.error('Erro ao salvar evento:', error);
-          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não foi possível salvar o evento para ${clientName}.`);
-        } else {
-          await sendWhatsAppMessage(
-            DESTINO_FIXO,
-            `✅ Evento criado: "${clientName}" em ${formatLocal(new Date(eventDateUTC))}`
-          );
-        }
-      }
-
-      // -------------------- LISTAR EVENTOS --------------------
-      if (listKeywords.test(text)) {
-        let start, end;
-        const textClean = text.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
-        const results = chrono.pt.parse(textClean, nowLocal, { forwardDate: true });
-
-        if (results.length > 0) {
-          start = results[0].start.date();
-          start.setHours(0, 0, 0, 0);
-          end = new Date(start);
-          end.setHours(23, 59, 59, 999);
-        } else {
-          // "hoje" por padrão
-          const today = new Date(nowLocal);
-          start = new Date(today); start.setHours(0, 0, 0, 0);
-          end = new Date(today); end.setHours(23, 59, 59, 999);
-        }
-
-        // converte intervalo local -> UTC ISO
-        const startUTC = toUTCISOStringFromLocal(start);
-        const endUTC = toUTCISOStringFromLocal(end);
-
-        const { data: events, error } = await supabase
-          .from('events')
-          .select('*')
-          .gte('date', startUTC)
-          .lte('date', endUTC);
-
-        if (error) {
-          console.error('Erro ao buscar eventos:', error);
-          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não foi possível buscar os eventos.`);
-        } else if (!events || events.length === 0) {
-          await sendWhatsAppMessage(DESTINO_FIXO, `Você não tem eventos para ${formatLocal(start).split(',')[0]}.`);
-        } else {
-          const list = events.map(e => `- ${e.title} às ${formatLocal(e.date)}`).join('\n');
-          await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos em ${formatLocal(start).split(',')[0]}:\n${list}`);
-        }
-      }
-
-      // -------------------- DELETAR EVENTO --------------------
-      if (/(deleta|apaga|remove|excluir)[\s\w]*?(atendimento|evento|compromisso|lembrete)/i.test(text)) {
-
-        // --- 1) Extrai data ---
-        let targetDate = null;
-        let dateText = '';
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        let textClean = text;
-
-        // "hoje"
-        if (/hoje/i.test(textClean)) {
-          targetDate = today;
-          dateText = "hoje";
-          textClean = textClean.replace(/hoje/i, '');
-        }
-        // "amanhã"
-        else if (/amanh[aã]/i.test(textClean)) {
-          targetDate = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-          dateText = "amanhã";
-          textClean = textClean.replace(/amanh[aã]/i, '');
-        }
-        // "dia DD/MM(/AAAA)"
-        else {
-          const dayMatch = textClean.match(/dia\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
-          if (dayMatch) {
-            const d = parseInt(dayMatch[1], 10);
-            const m = parseInt(dayMatch[2], 10) - 1;
-            const y = dayMatch[3] ? parseInt(dayMatch[3], 10) : today.getFullYear();
-            targetDate = new Date(y, m, d);
-            dateText = `dia ${dayMatch[1].padStart(2, '0')}/${dayMatch[2].padStart(2, '0')}`;
-            textClean = textClean.replace(dayMatch[0], '');
-          }
-        }
-
-        if (!targetDate) {
-          await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Não consegui identificar a data do evento.");
-          continue;
-        }
-
-        // --- 2) Extrai nome do cliente ---
-        textClean = textClean
-          .replace(/(?:deleta|apaga|remove|excluir)/i, '')
-          .replace(/\b(atendimento|evento|compromisso|lembrete)\b/gi, '')
-          .replace(/\b(de|do|da)\b/gi, '')
-          .trim();
-
-        const clientName = textClean || null;
-
-        if (!clientName) {
-          await sendWhatsAppMessage(DESTINO_FIXO, "⚠️ Não consegui identificar o nome do cliente.");
-          continue;
-        }
-
-        // --- 3) Intervalo do dia em UTC (resolve problema de eventos depois das 21h) ---
-        const startLocal = new Date(targetDate);
-        startLocal.setHours(0, 0, 0, 0);
-        const endLocal = new Date(targetDate);
-        endLocal.setHours(23, 59, 59, 999);
-
-        const startUTC = startLocal.toISOString();
-        const endUTC = endLocal.toISOString();
-
-        // --- 4) Busca eventos dentro do intervalo do dia local ---
-        const { data: events, error: fetchError } = await supabase
-          .from('events')
-          .select('*')
-          .gte('date', startUTC)
-          .lte('date', endUTC)
-          .ilike('title', `%${clientName}%`);
-
-        if (fetchError || !events || events.length === 0) {
-          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Nenhum evento encontrado para ${clientName} em ${dateText}.`);
-          continue;
-        }
-
-        // --- 5) Deleta eventos encontrados ---
-        const ids = events.map(ev => ev.id);
-        const { error: delError } = await supabase
-          .from('events')
-          .delete()
-          .in('id', ids);
-
-        if (delError) {
-          await sendWhatsAppMessage(DESTINO_FIXO, `⚠️ Não consegui apagar o evento de ${clientName}.`);
-        } else {
-          await sendWhatsAppMessage(DESTINO_FIXO, `🗑 Evento de ${clientName} em ${dateText} removido com sucesso.`);
-        }
-
-        continue;
+      // ================= Mensagens Suas =================
+      console.log(`Mensagem sua: ${text}`);
+      if (/Eletricaldas/i.test(senderName)) {
+        const responseText = await processAgendaCommand(text);
+        await sendWhatsAppMessage(DESTINO_FIXO, responseText);
       }
     }
 
     res.sendStatus(200);
+
   } catch (err) {
     console.error(err);
     res.sendStatus(500);
   }
 });
-
-// --- ROTA ALERTA 30 MINUTOS ---
-app.get("/cron/alerta", async (req, res) => {
-  try {
-    console.log("Executando rota de alertas 30 minutos antes...");
-    const now = new Date();
-
-    const startUTC = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-    const endUTC = new Date(now.getTime() + 35 * 60 * 1000).toISOString();
-
-    const { data: events, error } = await supabase
-      .from("events")
-      .select("*")
-      .gte("date", startUTC)
-      .lte("date", endUTC);
-
-    if (error) {
-      console.error("Erro ao buscar eventos para alerta:", error);
-      return res.status(500).send("Erro ao buscar eventos");
-    }
-
-    if (!events || events.length === 0) {
-      console.log("Nenhum evento para alerta neste intervalo.");
-      return res.send("Nenhum evento encontrado");
-    }
-
-    for (let event of events) {
-      await sendWhatsAppMessage(
-        DESTINO_FIXO,
-        `⏰ Lembrete: "${event.title}" às ${formatLocal(event.date)}`
-      );
-    }
-
-    res.send(`✅ ${events.length} evento(s) processado(s).`);
-  } catch (err) {
-    console.error("Erro na rota de alerta:", err);
-    res.status(500).send("Erro interno");
-  }
-});
-
-
-// --- CRON JOB RESUMO DIÁRIO ---
-cron.schedule('0 7 * * *', async () => {
-  console.log('Rodando cron job diário das 7h...');
-  const today = new Date();
-  const start = new Date(today); start.setHours(0, 0, 0, 0);
-  const end = new Date(today); end.setHours(23, 59, 59, 999);
-
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('*')
-    .gte('date', start.toISOString())
-    .lte('date', end.toISOString());
-
-  if (error) return console.error('Erro ao buscar eventos para resumo diário:', error);
-  if (!events || events.length === 0) return console.log('Nenhum evento para o resumo diário.');
-
-  const list = events
-    .map(e => `- ${e.title} às ${formatLocal(e.date)}`)
-    .join('\n');
-
-  await sendWhatsAppMessage(
-    DESTINO_FIXO,
-    `📅 Seus eventos de hoje:\n${list}`
-  );
-}, { timezone: "America/Sao_Paulo" });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
