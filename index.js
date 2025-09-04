@@ -12,9 +12,11 @@ app.use(express.json());
 
 async function processAgendaCommand(text) {
   try {
-    // 1️⃣ Chama GPT para interpretar a mensagem
+    const nowBRT = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
+    const todayStr = nowBRT.toISOString().split('T')[0];
     const gptPrompt = `
 Você é um assistente de agenda. O usuário está no fuso GMT-3 (Brasil). 
+Considere que a data atual é ${todayStr}.
 O título do evento pode ser nome de cliente ou local.
 Identifique a intenção da mensagem: criar, listar ou deletar evento.
 Extraia:
@@ -43,10 +45,8 @@ Mensagem: "${text}"
     }
 
     // 2️⃣ Funções auxiliares para fuso horário
-    const toUTCFromBRT = (date) => new Date(date.getTime() + 3 * 60 * 60 * 1000);
-    const toBRTFromUTC = (date) => new Date(date.getTime() - 3 * 60 * 60 * 1000);
-    const formatLocal = (date) =>
-      toBRTFromUTC(date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+    const formatLocal = (utcDate) => { return new Date(utcDate).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }); };
 
     // 3️⃣ Executa ação no Supabase
     if (command.action === "create") {
