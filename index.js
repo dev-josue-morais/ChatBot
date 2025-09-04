@@ -178,6 +178,55 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
+// --- ROTA ALERTAS DINÂMICOS ---
+app.get("/cron/alerta", async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Buscar eventos futuros que ainda não foram notificados
+    const { data: events, error } = await supabase
+      .from("events")
+      .select("*")
+      .gte("date", now.toISOString())
+      .eq("notified", false);
+
+    if (error) {
+      console.error("Erro ao buscar eventos para alerta:", error);
+      return res.status(500).send("Erro ao buscar eventos");
+    }
+
+    if (!events || events.length === 0) {
+      console.log("Nenhum evento para alerta neste momento.");
+      return res.send("Nenhum evento encontrado");
+    }
+
+    for (let event of events) {
+      const eventDate = new Date(event.date);
+      const diffMinutes = (eventDate - now) / 60000; // diferença em minutos
+
+      if (diffMinutes <= (event.reminder_minutes || 30) && diffMinutes >= 0) {
+        await sendWhatsAppMessage(
+          DESTINO_FIXO,
+          `⏰ Lembrete: "${event.title}" às ${formatLocal(eventDate)}`
+        );
+
+        // Marcar como notificado
+        await supabase
+          .from("events")
+          .update({ notified: true })
+          .eq("id", event.id);
+        
+        console.log(`Evento "${event.title}" notificado com sucesso.`);
+      }
+    }
+
+    res.send(`✅ Eventos processados: ${events.length}`);
+  } catch (err) {
+    console.error("Erro na rota de alerta:", err);
+    res.status(500).send("Erro interno");
+  }
+});
+
 app.get('/keep-alive', async (req, res) => {
   try {
     const { data, error } = await supabase
