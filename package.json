@@ -4,7 +4,9 @@
   "main": "index.js",
   "repository": "https://github.com/dev-josue-morais/ChatBot.git",
   "author": "dev-josue-morais <josue28jrd@hotmail.com>",
-  "license": "MIT",
+  "license": "MIT","scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
     "axios": "^1.11.0",
