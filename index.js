@@ -365,5 +365,46 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
+// --- CRON JOB RESUMO DIÁRIO 7h ---
+const cron = require('node-cron');
+
+cron.schedule('0 7 * * *', async () => {
+  try {
+    console.log('Rodando cron job diário das 7h...');
+    const today = new Date();
+
+    const start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(today);
+    end.setHours(23, 59, 59, 999);
+
+    const { data: events, error } = await supabase
+      .from('events')
+      .select('*')
+      .gte('date', start.toISOString())
+      .lte('date', end.toISOString());
+
+    if (error) {
+      console.error('Erro ao buscar eventos para resumo diário:', error);
+      return;
+    }
+
+    if (!events || events.length === 0) {
+      console.log('Nenhum evento para o resumo diário.');
+      return; // não envia mensagem
+    }
+
+    const list = events
+      .map(e => `- ${e.title} às ${formatLocal(new Date(e.date))}`)
+      .join('\n');
+
+    await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
+    console.log('Resumo diário enviado com sucesso.');
+
+  } catch (err) {
+    console.error('Erro no cron job diário:', err);
+  }
+}, { timezone: "America/Sao_Paulo" });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
