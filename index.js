@@ -32,7 +32,8 @@ Mensagem: "${text}"
       messages: [{ role: "user", content: gptPrompt }],
     });
 
-    const gptJSON = gptResponse.choices[0].message.content;
+    let gptJSON = gptResponse.choices[0].message.content;
+    gptJSON = gptJSON.replace(/```json\s*|```/g, '').trim();
     let command;
     try {
       command = JSON.parse(gptJSON);
