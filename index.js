@@ -294,12 +294,21 @@ app.post('/webhook', async (req, res) => {
 
     // Itera sobre todas as mensagens recebidas
     for (let msg of messages) {
-      const text = msg.text?.body || '';
-      const contact = value.contacts?.[0];
-      if (!contact) continue;
-      const senderName = contact.profile?.name || 'Usuário';
-      const senderNumber = contact.wa_id;
-      if (!senderNumber) continue;
+  const text = msg.text?.body || '';
+  const contact = value.contacts?.[0];
+  if (!contact) continue;
+  const senderName = contact.profile?.name || 'Usuário';
+  const senderNumber = contact.wa_id;
+  if (!senderNumber) continue;
+
+  // 👇 Loga toda mensagem recebida
+  console.log("📩 Mensagem recebida:", {
+    de: senderName,
+    numero: senderNumber,
+    texto: text || "[sem texto]",
+    temAudio: !!msg.audio,
+    temDocumento: !!msg.document,
+  });
 
       const formattedNumber = formatPhone(senderNumber);
 
