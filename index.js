@@ -462,8 +462,6 @@ app.post('/webhook', async (req, res) => {
 });
 
 // --- CRON JOB RESUMO DIÁRIO 7h ---
-const cron = require('node-cron');
-
 cron.schedule('0 7 * * *', async () => {
   try {
     console.log('Rodando cron job diário das 7h...');
