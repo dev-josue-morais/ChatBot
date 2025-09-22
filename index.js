@@ -215,7 +215,7 @@ app.get("/cron/alerta", async (req, res) => {
           .from("events")
           .update({ notified: true })
           .eq("id", event.id);
-        
+
         console.log(`Evento "${event.title}" notificado com sucesso.`);
       }
     }
@@ -292,23 +292,33 @@ app.post('/webhook', async (req, res) => {
       return `(0${ddd}) ${formattedRest}`;
     }
 
+    function getMessageContent(msg) {
+      if (msg.text?.body) return msg.text.body;
+      if (msg.button?.text) return msg.button.text;
+      if (msg.interactive?.button_reply?.title) return msg.interactive.button_reply.title;
+      if (msg.interactive?.list_reply?.title) return msg.interactive.list_reply.title;
+      if (msg.document?.filename) return `[Documento: ${msg.document.filename}]`;
+      if (msg.image?.caption) return msg.image.caption;
+      if (msg.system?.body) return msg.system.body;
+      return "[sem texto]";
+    }
+
     // Itera sobre todas as mensagens recebidas
     for (let msg of messages) {
-  const text = msg.text?.body || '';
-  const contact = value.contacts?.[0];
-  if (!contact) continue;
-  const senderName = contact.profile?.name || 'Usuário';
-  const senderNumber = contact.wa_id;
-  if (!senderNumber) continue;
+      const text = getMessageContent(msg);
+      const contact = value.contacts?.[0];
+      if (!contact) continue;
+      const senderName = contact.profile?.name || 'Usuário';
+      const senderNumber = contact.wa_id;
+      if (!senderNumber) continue;
 
-  // 👇 Loga toda mensagem recebida
-  console.log("📩 Mensagem recebida:", {
-    de: senderName,
-    numero: senderNumber,
-    texto: text || "[sem texto]",
-    temAudio: !!msg.audio,
-    temDocumento: !!msg.document,
-  });
+      console.log("📩 Mensagem recebida:", {
+        de: senderName,
+        numero: senderNumber,
+        texto: text,
+        temAudio: !!msg.audio,
+        temDocumento: !!msg.document,
+      });
 
       const formattedNumber = formatPhone(senderNumber);
 
