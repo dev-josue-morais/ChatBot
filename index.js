@@ -3,13 +3,44 @@ const express = require('express');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const OpenAI = require("openai");
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, });
-const DESTINO_FIXO = '5564992869608';
+const cron = require('node-cron');
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const DESTINO_FIXO = '556492869608';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const app = express();
 app.use(express.json());
 
+// Enviar mensagem WhatsApp
+async function sendWhatsAppMessage(to, message) {
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { body: message }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (err) {
+    console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
+  }
+}
+
+// Formatar horário para fuso horário do Brasil
+function formatLocal(utcDate) {
+  return new Date(utcDate).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
+// Função para processar comandos de agenda
 async function processAgendaCommand(text) {
   try {
     const nowBRT = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
@@ -43,10 +74,6 @@ Mensagem: "${text}"
       console.error("Erro ao parsear JSON do GPT:", gptJSON);
       return "⚠️ Não consegui entender o comando.";
     }
-
-    // 2️⃣ Funções auxiliares para fuso horário
-
-    const formatLocal = (utcDate) => { return new Date(utcDate).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }); };
 
     // 3️⃣ Executa ação no Supabase
     if (command.action === "create") {
@@ -255,7 +282,7 @@ app.post('/webhook', async (req, res) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
-    // Função para enviar mensagens pelo WhatsApp
+    // Função para enviar texto pelo WhatsApp
     async function sendWhatsAppMessage(to, message) {
       try {
         await axios.post(
@@ -278,6 +305,69 @@ app.post('/webhook', async (req, res) => {
       }
     }
 
+    // Função para buscar URL da mídia a partir do ID
+    async function getMediaUrl(mediaId) {
+      try {
+        const resp = await axios.get(
+          `https://graph.facebook.com/v22.0/${mediaId}`,
+          {
+            headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+          }
+        );
+        return resp.data.url;
+      } catch (err) {
+        console.error("Erro ao buscar mídia:", err.response?.data || err.message);
+        return null;
+      }
+    }
+
+    // Função para encaminhar mídia
+    async function forwardMedia(msg) {
+      let mediaId, payload;
+
+      if (msg.document) {
+        mediaId = msg.document.id;
+        const url = await getMediaUrl(mediaId);
+        if (!url) return;
+        payload = {
+          messaging_product: "whatsapp",
+          to: DESTINO_FIXO,
+          type: "document",
+          document: {
+            link: url,
+            filename: msg.document.filename || "documento"
+          }
+        };
+      } else if (msg.audio) {
+        mediaId = msg.audio.id;
+        const url = await getMediaUrl(mediaId);
+        if (!url) return;
+        payload = {
+          messaging_product: "whatsapp",
+          to: DESTINO_FIXO,
+          type: "audio",
+          audio: { link: url }
+        };
+      }
+
+      if (payload) {
+        try {
+          await axios.post(
+            `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
+            payload,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        } catch (err) {
+          console.error("Erro ao reencaminhar mídia:", err.response?.data || err.message);
+        }
+      }
+    }
+
     // Função para formatar número
     function formatPhone(num) {
       if (!num) return "Número desconhecido";
@@ -294,7 +384,6 @@ app.post('/webhook', async (req, res) => {
 
     // Itera sobre todas as mensagens recebidas
     for (let msg of messages) {
-      console.log("📦 Mensagem bruta recebida:", JSON.stringify(msg, null, 2));
       const text = msg.text?.body || '';
       const contact = value.contacts?.[0];
       if (!contact) continue;
@@ -306,14 +395,20 @@ app.post('/webhook', async (req, res) => {
 
       // ================= Mensagens de Clientes =================
       if (!/Eletricaldas/i.test(senderName)) {
-
         // 1️⃣ Notifica você (DESTINO_FIXO) de tudo que chegou
         let forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n`;
         if (msg.text?.body) forwardText += msg.text.body;
         if (msg.audio) forwardText += '\n[Áudio]';
         if (msg.document) forwardText += `\n[Documento: ${msg.document.filename}]`;
 
-        await sendWhatsAppMessage(DESTINO_FIXO, forwardText);
+        if (forwardText.trim() !== '') {
+          await sendWhatsAppMessage(DESTINO_FIXO, forwardText);
+        }
+
+        // 1.1 Reencaminha mídia real (quando tiver)
+        if (msg.audio || msg.document) {
+          await forwardMedia(msg);
+        }
 
         // 2️⃣ Gerenciar redirect no Supabase
         const { data: alreadySent } = await supabase
