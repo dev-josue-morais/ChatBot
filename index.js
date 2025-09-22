@@ -1,4 +1,6 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
 const express = require('express');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
@@ -282,89 +284,29 @@ app.post('/webhook', async (req, res) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
-    // Função para enviar texto pelo WhatsApp
-    async function sendWhatsAppMessage(to, message) {
+    // Função para enviar mensagens pelo WhatsApp
+    async function sendWhatsAppMessage(to, payload) {
       try {
         await axios.post(
           `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
-          {
-            messaging_product: "whatsapp",
-            to,
-            type: "text",
-            text: { body: message }
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-              "Content-Type": "application/json"
-            }
-          }
+          payload,
+          { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
         );
       } catch (err) {
         console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
       }
     }
 
-    // Função para buscar URL da mídia a partir do ID
-    async function getMediaUrl(mediaId) {
+    // Função para baixar URL de mídia pelo media_id
+    async function getMediaUrl(media_id) {
       try {
-        const resp = await axios.get(
-          `https://graph.facebook.com/v22.0/${mediaId}`,
-          {
-            headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
-          }
-        );
-        return resp.data.url;
+        const mediaResp = await axios.get(`https://graph.facebook.com/v22.0/${media_id}`, {
+          headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+        });
+        return mediaResp.data.url; // URL temporária do arquivo
       } catch (err) {
-        console.error("Erro ao buscar mídia:", err.response?.data || err.message);
+        console.error("Erro ao obter URL do media:", err.response?.data || err.message);
         return null;
-      }
-    }
-
-    // Função para encaminhar mídia
-    async function forwardMedia(msg) {
-      let mediaId, payload;
-
-      if (msg.document) {
-        mediaId = msg.document.id;
-        const url = await getMediaUrl(mediaId);
-        if (!url) return;
-        payload = {
-          messaging_product: "whatsapp",
-          to: DESTINO_FIXO,
-          type: "document",
-          document: {
-            link: url,
-            filename: msg.document.filename || "documento"
-          }
-        };
-      } else if (msg.audio) {
-        mediaId = msg.audio.id;
-        const url = await getMediaUrl(mediaId);
-        if (!url) return;
-        payload = {
-          messaging_product: "whatsapp",
-          to: DESTINO_FIXO,
-          type: "audio",
-          audio: { link: url }
-        };
-      }
-
-      if (payload) {
-        try {
-          await axios.post(
-            `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
-            payload,
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-                "Content-Type": "application/json"
-              }
-            }
-          );
-        } catch (err) {
-          console.error("Erro ao reencaminhar mídia:", err.response?.data || err.message);
-        }
       }
     }
 
@@ -382,35 +324,52 @@ app.post('/webhook', async (req, res) => {
       return `(0${ddd}) ${formattedRest}`;
     }
 
-    // Itera sobre todas as mensagens recebidas
     for (let msg of messages) {
-      const text = msg.text?.body || '';
       const contact = value.contacts?.[0];
       if (!contact) continue;
       const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
       if (!senderNumber) continue;
-
       const formattedNumber = formatPhone(senderNumber);
 
       // ================= Mensagens de Clientes =================
       if (!/Eletricaldas/i.test(senderName)) {
-        // 1️⃣ Notifica você (DESTINO_FIXO) de tudo que chegou
         let forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n`;
-        if (msg.text?.body) forwardText += msg.text.body;
-        if (msg.audio) forwardText += '\n[Áudio]';
-        if (msg.document) forwardText += `\n[Documento: ${msg.document.filename}]`;
 
-        if (forwardText.trim() !== '') {
-          await sendWhatsAppMessage(DESTINO_FIXO, forwardText);
+        if (msg.text?.body) {
+          // Texto simples
+          forwardText += msg.text.body;
+          await sendWhatsAppMessage(DESTINO_FIXO, {
+            messaging_product: "whatsapp",
+            to: DESTINO_FIXO,
+            type: "text",
+            text: { body: forwardText }
+          });
+        } else if (msg.audio?.id) {
+          // Áudio
+          const url = await getMediaUrl(msg.audio.id);
+          if (url) {
+            await sendWhatsAppMessage(DESTINO_FIXO, {
+              messaging_product: "whatsapp",
+              to: DESTINO_FIXO,
+              type: "audio",
+              audio: { link: url }
+            });
+          }
+        } else if (msg.document?.id) {
+          // Documento
+          const url = await getMediaUrl(msg.document.id);
+          if (url) {
+            await sendWhatsAppMessage(DESTINO_FIXO, {
+              messaging_product: "whatsapp",
+              to: DESTINO_FIXO,
+              type: "document",
+              document: { link: url, filename: msg.document.filename || "documento" }
+            });
+          }
         }
 
-        // 1.1 Reencaminha mídia real (quando tiver)
-        if (msg.audio || msg.document) {
-          await forwardMedia(msg);
-        }
-
-        // 2️⃣ Gerenciar redirect no Supabase
+        // ✅ Redirect Supabase e saudação continua igual
         const { data: alreadySent } = await supabase
           .from('redirects')
           .select('*')
@@ -418,13 +377,11 @@ app.post('/webhook', async (req, res) => {
           .maybeSingle();
 
         if (!alreadySent) {
-          // Deleta registros antigos (>24h)
           await supabase
             .from('redirects')
             .delete()
             .lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-          // Saudação conforme horário local
           const now = new Date();
           const hour = new Date(now.getTime() - 3 * 60 * 60 * 1000).getHours();
           let saudacao = "Olá";
@@ -432,29 +389,34 @@ app.post('/webhook', async (req, res) => {
           else if (hour >= 12 && hour < 18) saudacao = "Boa tarde";
           else saudacao = "Boa noite";
 
-          // Envia resposta automática pro cliente
-          await sendWhatsAppMessage(
-            senderNumber,
-            `${saudacao}! Você está tentando falar com Josué Eletricista.\nFavor entrar em contato no novo número (064) 99286-9608.`
-          );
+          await sendWhatsAppMessage(senderNumber, {
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: { body: `${saudacao}! Você está tentando falar com Josué Eletricista.\nFavor entrar em contato no novo número (064) 99286-9608.` }
+          });
 
-          // Salva novo registro
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
         }
 
-        continue; // passa para próxima mensagem
+        continue;
       }
 
       // ================= Mensagens Suas =================
+      const text = msg.text?.body || '';
       console.log(`Mensagem sua: ${text}`);
       if (/Eletricaldas/i.test(senderName)) {
         const responseText = await processAgendaCommand(text);
-        await sendWhatsAppMessage(DESTINO_FIXO, responseText);
+        await sendWhatsAppMessage(DESTINO_FIXO, {
+          messaging_product: "whatsapp",
+          to: DESTINO_FIXO,
+          type: "text",
+          text: { body: responseText }
+        });
       }
     }
 
     res.sendStatus(200);
-
   } catch (err) {
     console.error(err);
     res.sendStatus(500);
