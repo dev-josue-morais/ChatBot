@@ -104,10 +104,12 @@ function formatLocal(utcDate) {
 async function processAgendaCommand(text) {
   try {
     const nowBRT = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
-    const todayStr = nowBRT.toISOString().split('T')[0];
+    const todayStr = nowBRT.toISOString().split('T')[0]; // data
+    const nowTime = nowBRT.toTimeString().split(' ')[0]; // hora HH:MM:SS
+
     const gptPrompt = `
 Você é um assistente de agenda. O usuário está no fuso GMT-3 (Brasil). 
-Considere que a data atual é ${todayStr}.
+Considere que a data e hora atual é ${todayStr} ${nowTime}.
 O título do evento pode ser nome de cliente ou local.
 Identifique a intenção da mensagem: criar, listar ou deletar evento.
 Extraia:
@@ -377,7 +379,7 @@ app.post('/webhook', async (req, res) => {
 
         let mediaId = docId || audioId || imageId || videoId;
         if (!mediaId) {
-         return false;
+          return false;
         }
 
         // qual o tipo para enviar
