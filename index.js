@@ -14,6 +14,43 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const app = express();
 app.use(express.json());
 
+const FormData = require("form-data");
+
+// baixa e sobe de novo no WhatsApp
+async function reuploadMedia(mediaId) {
+  try {
+    // 1. pega URL temporária
+    const meta = await axios.get(
+      `https://graph.facebook.com/v22.0/${mediaId}`,
+      { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
+    );
+    const url = meta.data.url;
+
+    // 2. baixa o binário
+    const fileResp = await axios.get(url, {
+      responseType: "arraybuffer",
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+    });
+
+    // 3. reenvia pro endpoint /media
+    const formData = new FormData();
+    formData.append("file", fileResp.data, { filename: "file" });
+    formData.append("messaging_product", "whatsapp");
+
+    const upload = await axios.post(
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/media`,
+      formData,
+      { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, ...formData.getHeaders() } }
+    );
+
+    console.log("✅ Reupload media OK:", upload.data);
+    return upload.data.id; // novo media_id
+  } catch (err) {
+    console.error("❌ Erro no reupload:", err.response?.data || err.message);
+    return null;
+  }
+}
+
 // Enviar mensagem WhatsApp
 async function sendWhatsAppMessage(to, message) {
   try {
@@ -339,44 +376,47 @@ app.post('/webhook', async (req, res) => {
         const type = docId ? "document" : audioId ? "audio" : imageId ? "image" : videoId ? "video" : (msg.type || "unknown");
         console.log(`📦 forwardMedia detectou mediaId=${mediaId} tipo=${type}`);
 
-        const url = await getMediaUrl(mediaId);
-        if (!url) {
-          console.log("⚠️ Não foi possível obter URL da mídia; abortando reenvio.");
+        // aqui você já tem mediaId e o tipo (document, audio, image, video)
+        const newId = await reuploadMedia(mediaId);
+        if (!newId) {
+          console.log("⚠️ Falha no reupload da mídia");
           return false;
         }
 
         let payload;
         if (type === "document") {
-          const filename = msg.document?.filename || msg.document?.caption || "documento";
           payload = {
             messaging_product: "whatsapp",
             to: dest,
             type: "document",
-            document: { link: url, filename }
+            document: {
+              id: newId,
+              filename: msg.document?.filename || "documento.pdf"
+            }
           };
         } else if (type === "audio") {
           payload = {
             messaging_product: "whatsapp",
             to: dest,
             type: "audio",
-            audio: { link: url }
+            audio: { id: newId }
           };
         } else if (type === "image") {
           payload = {
             messaging_product: "whatsapp",
             to: dest,
             type: "image",
-            image: { link: url, caption: msg.image?.caption || undefined }
+            image: { id: newId }
           };
         } else if (type === "video") {
           payload = {
             messaging_product: "whatsapp",
             to: dest,
             type: "video",
-            video: { link: url, caption: msg.video?.caption || undefined }
+            video: { id: newId }
           };
         } else {
-          console.log("⚠️ Tipo de mídia não suportado para reenvio automático:", type);
+          console.log("⚠️ Tipo de mídia não suportado:", type);
           return false;
         }
 
