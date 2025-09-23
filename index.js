@@ -6,9 +6,14 @@ const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const OpenAI = require("openai");
 const cron = require('node-cron');
-
+const { DateTime } = require("luxon");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const DESTINO_FIXO = '556492869608';
+
+// 1️⃣ Hora atual em Brasília
+function getNowBRT() {
+  return DateTime.now().setZone("America/Sao_Paulo");
+}
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const app = express();
@@ -97,19 +102,17 @@ async function sendWhatsAppMessage(to, message) {
 
 // Formatar horário para fuso horário do Brasil
 function formatLocal(utcDate) {
-  return new Date(utcDate).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return DateTime.fromISO(utcDate, { zone: "utc" })
+    .setZone("America/Sao_Paulo")
+    .toFormat("dd/MM/yyyy HH:mm");
 }
 
-// Função para processar comandos de agenda
 async function processAgendaCommand(text) {
   try {
-    const nowBRT = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
-    const todayStr = nowBRT.toISOString().split('T')[0]; // data
-    const nowTime = nowBRT.toTimeString().split(' ')[0]; // hora HH:MM:SS
 
     const gptPrompt = `
 Você é um assistente de agenda. O usuário está no fuso GMT-3 (Brasil). 
-Considere que a data e hora atual é ${todayStr} ${nowTime}.
+Considere que a data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 O título do evento pode ser nome de cliente ou local.
 Identifique a intenção da mensagem: criar, listar ou deletar evento.
 Extraia:
@@ -122,7 +125,7 @@ Responda apenas em JSON válido.
 Mensagem: "${text}"
 `;
 
-    // 1️⃣ Chama GPT
+    // 2️⃣ Chama GPT
     const gptResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: gptPrompt }],
@@ -131,7 +134,7 @@ Mensagem: "${text}"
     let gptJSON = gptResponse.choices[0].message.content;
     gptJSON = gptJSON.replace(/```json\s*|```/g, '').trim();
 
-    // 2️⃣ Parse JSON
+    // 3️⃣ Parse JSON
     let command;
     try {
       command = JSON.parse(gptJSON);
@@ -140,28 +143,32 @@ Mensagem: "${text}"
       return "⚠️ Não consegui entender o comando.";
     }
 
-    // 3️⃣ Converte datetime do GPT (GMT-3) para UTC
+    // 4️⃣ Converte datas GMT-3 do GPT para UTC usando Luxon
     if (command.datetime) {
-      const dtBRT = new Date(command.datetime); // GPT retorna horário GMT-3
-      command.datetime = new Date(dtBRT.getTime() + 3 * 60 * 60 * 1000).toISOString();
+      command.datetime = DateTime.fromISO(command.datetime, { zone: "America/Sao_Paulo" })
+        .toUTC()
+        .toISO();
     }
     if (command.start_date) {
-      const dtBRTStart = new Date(command.start_date);
-      command.start_date = new Date(dtBRTStart.getTime() + 3 * 60 * 60 * 1000).toISOString();
+      command.start_date = DateTime.fromISO(command.start_date, { zone: "America/Sao_Paulo" })
+        .toUTC()
+        .toISO();
     }
     if (command.end_date) {
-      const dtBRTEnd = new Date(command.end_date);
-      command.end_date = new Date(dtBRTEnd.getTime() + 3 * 60 * 60 * 1000).toISOString();
+      command.end_date = DateTime.fromISO(command.end_date, { zone: "America/Sao_Paulo" })
+        .toUTC()
+        .toISO();
     }
 
-    // 4️⃣ Executa ação no Supabase
+    // 5️⃣ Executa ação no Supabase
     if (command.action === "create") {
-      const datetimeUTC = new Date(command.datetime);
+      const datetimeUTC = command.datetime;
       const { error } = await supabase.from("events").insert([{
         title: command.title,
         date: datetimeUTC,
         reminder_minutes: command.reminder_minutes || 30
       }]);
+
       if (error) {
         console.error("Erro ao criar evento:", error);
         return `⚠️ Não consegui criar o evento "${command.title}".`;
@@ -171,9 +178,9 @@ Mensagem: "${text}"
     }
 
     if (command.action === "delete") {
-      const datetimeUTC = new Date(command.datetime);
-      const start = new Date(datetimeUTC.getTime() - 60 * 1000).toISOString();
-      const end = new Date(datetimeUTC.getTime() + 60 * 1000).toISOString();
+      const datetimeUTC = command.datetime;
+      const start = DateTime.fromISO(datetimeUTC).minus({ minutes: 1 }).toISO();
+      const end = DateTime.fromISO(datetimeUTC).plus({ minutes: 1 }).toISO();
 
       const { data: events, error: fetchError } = await supabase
         .from("events")
@@ -196,14 +203,14 @@ Mensagem: "${text}"
     }
 
     if (command.action === "list") {
-      const startUTC = new Date(command.start_date);
-      const endUTC = new Date(command.end_date);
+      const startUTC = command.start_date;
+      const endUTC = command.end_date;
 
       const { data: events, error } = await supabase
         .from("events")
         .select("*")
-        .gte("date", startUTC.toISOString())
-        .lte("date", endUTC.toISOString());
+        .gte("date", startUTC)
+        .lte("date", endUTC);
 
       if (error) {
         console.error("Erro ao buscar eventos:", error);
@@ -214,7 +221,7 @@ Mensagem: "${text}"
         return `📅 Nenhum evento encontrado entre ${formatLocal(startUTC)} e ${formatLocal(endUTC)}.`;
       }
 
-      const list = events.map(e => `- ${e.title} às ${formatLocal(new Date(e.date))}`).join("\n");
+      const list = events.map(e => `- ${e.title} às ${formatLocal(e.date)}`).join("\n");
       return `📅 Seus eventos:\n${list}`;
     }
 
@@ -283,13 +290,12 @@ app.get('/webhook', (req, res) => {
 // --- ROTA ALERTAS DINÂMICOS ---
 app.get("/cron/alerta", async (req, res) => {
   try {
-    const now = new Date();
-
+    const nowBRT = getNowBRT();
     // Buscar eventos futuros que ainda não foram notificados
     const { data: events, error } = await supabase
       .from("events")
       .select("*")
-      .gte("date", now.toISOString())
+      .gte("date", nowBRT.toUTC().toISO())
       .eq("notified", false);
 
     if (error) {
@@ -303,13 +309,14 @@ app.get("/cron/alerta", async (req, res) => {
     }
 
     for (let event of events) {
-      const eventDate = new Date(event.date);
-      const diffMinutes = (eventDate - now) / 60000; // diferença em minutos
+      const nowBRT = getNowBRT();
+      const eventDateBRT = DateTime.fromISO(event.date, { zone: "utc" }).setZone("America/Sao_Paulo");
+      const diffMinutes = eventDateBRT.diff(nowBRT, 'minutes').minutes;
 
       if (diffMinutes <= (event.reminder_minutes || 30) && diffMinutes >= 0) {
         await sendWhatsAppMessage(
           DESTINO_FIXO,
-          `⏰ Lembrete: "${event.title}" às ${formatLocal(eventDate)}`
+          `⏰ Lembrete: "${event.title}" às ${formatLocal(event.date)}`
         );
 
         // Marcar como notificado
@@ -462,8 +469,7 @@ app.post('/webhook', async (req, res) => {
         if (!alreadySent) {
           await supabase.from('redirects').delete().lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-          const now = new Date();
-          const hour = new Date(now.getTime() - 3 * 60 * 60 * 1000).getHours();
+          const hour = getNowBRT().hour;
           let saudacao = "Olá";
           if (hour >= 5 && hour < 12) saudacao = "Bom dia";
           else if (hour >= 12 && hour < 18) saudacao = "Boa tarde";
@@ -501,18 +507,15 @@ app.post('/webhook', async (req, res) => {
 cron.schedule('0 7 * * *', async () => {
   try {
     console.log('Rodando cron job diário das 7h...');
-    const today = new Date();
 
-    const start = new Date(today);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(today);
-    end.setHours(23, 59, 59, 999);
+    const start = getNowBRT().startOf("day").toUTC().toISO();
+    const end = getNowBRT().endOf("day").toUTC().toISO();
 
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .gte('date', start.toISOString())
-      .lte('date', end.toISOString());
+      .gte('date', start)
+      .lte('date', end);
 
     if (error) {
       console.error('Erro ao buscar eventos para resumo diário:', error);
@@ -525,7 +528,7 @@ cron.schedule('0 7 * * *', async () => {
     }
 
     const list = events
-      .map(e => `- ${e.title} às ${formatLocal(new Date(e.date))}`)
+      .map(e => `- ${e.title} às ${formatLocal(e.date)}`)
       .join('\n');
 
     await sendWhatsAppMessage(DESTINO_FIXO, `📅 Seus eventos de hoje:\n${list}`);
