@@ -355,59 +355,32 @@ app.post('/webhook', async (req, res) => {
       }
     }
 
-    // Pega URL temporária da mídia pelo media_id
-    async function getMediaUrl(media_id) {
-      try {
-        const mediaResp = await axios.get(`https://graph.facebook.com/v22.0/${media_id}`, {
-          headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
-        });
-        return mediaResp.data.url;
-      } catch (err) {
-        console.error("❌ Erro ao obter URL da mídia:", err.response?.data || err.message);
-        return null;
-      }
-    }
-
     // Detecta e reencaminha mídia (document, audio, image, video)
     async function forwardMediaIfAny(msg, dest = DESTINO_FIXO) {
       try {
-        // suporta variantes comuns de onde o id aparece
         const docId = msg.document?.id || msg.document?.media_id || msg.document?.wa_id;
         const audioId = msg.audio?.id || msg.audio?.media_id || msg.audio?.wa_id;
         const imageId = msg.image?.id || msg.image?.media_id || msg.image?.wa_id;
         const videoId = msg.video?.id || msg.video?.media_id || msg.video?.wa_id;
 
         let mediaId = docId || audioId || imageId || videoId;
-        if (!mediaId) {
-          return false;
-        }
+        if (!mediaId) return false;
 
-        // qual o tipo para enviar
         const type = docId ? "document" : audioId ? "audio" : imageId ? "image" : videoId ? "video" : (msg.type || "unknown");
-
-        // pega mime e filename da msg
-        const mimeType =
-          msg.document?.mime_type ||
-          msg.audio?.mime_type ||
-          msg.image?.mime_type ||
-          msg.video?.mime_type;
+        const mimeType = msg.document?.mime_type || msg.audio?.mime_type || msg.image?.mime_type || msg.video?.mime_type;
+        const filename = msg.document?.filename || "arquivo";
 
         const contact = value.contacts?.[0];
-        if (!contact) {
-          return false;
-        }
-        const filename = msg.document?.filename || "arquivo";
+        if (!contact) return false;
         const senderName = contact.profile?.name || 'Usuário';
-        const senderNumber = contact.wa_id || 'noNumber';;
+        const senderNumber = contact.wa_id || 'noNumber';
         const formattedNumber = formatPhone(senderNumber);
 
-        // faz reupload pro WhatsApp
+        // Reupload da mídia
         const newId = await reuploadMedia(mediaId, mimeType, filename);
-        if (!newId) {
-          return false;
-        }
+        if (!newId) return false;
 
-        // 🔔 AVISO ANTES DA MÍDIA
+        // 🔔 Aviso antes da mídia
         const aviso = `📥 Nova mensagem de ${senderName} ${formattedNumber}`;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
@@ -418,40 +391,19 @@ app.post('/webhook', async (req, res) => {
 
         let payload;
         if (type === "document") {
-          payload = {
-            messaging_product: "whatsapp",
-            to: dest,
-            type: "document",
-            document: { id: newId, filename }
-          };
+          payload = { messaging_product: "whatsapp", to: dest, type: "document", document: { id: newId, filename } };
         } else if (type === "audio") {
-          payload = {
-            messaging_product: "whatsapp",
-            to: dest,
-            type: "audio",
-            audio: { id: newId }
-          };
+          payload = { messaging_product: "whatsapp", to: dest, type: "audio", audio: { id: newId } };
         } else if (type === "image") {
-          payload = {
-            messaging_product: "whatsapp",
-            to: dest,
-            type: "image",
-            image: { id: newId }
-          };
+          payload = { messaging_product: "whatsapp", to: dest, type: "image", image: { id: newId } };
         } else if (type === "video") {
-          payload = {
-            messaging_product: "whatsapp",
-            to: dest,
-            type: "video",
-            video: { id: newId }
-          };
-        } else {
-          return false;
-        }
+          payload = { messaging_product: "whatsapp", to: dest, type: "video", video: { id: newId } };
+        } else return false;
 
         await sendWhatsAppRaw(payload);
         return true;
       } catch (err) {
+        console.error("Erro em forwardMediaIfAny:", err.response?.data || err.message || err);
         return false;
       }
     }
@@ -469,50 +421,30 @@ app.post('/webhook', async (req, res) => {
 
     // Itera sobre as mensagens
     for (let msg of messages) {
-
       const contact = value.contacts?.[0];
-      if (!contact) {
-        continue;
-      }
+      if (!contact) continue;
+
       const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
-      if (!senderNumber) {
-        continue;
-      }
+      if (!senderNumber) continue;
       const formattedNumber = formatPhone(senderNumber);
 
-      // Texto (sempre envia se existir)
-      const text = extractTextFromMsg(msg);
-      if (text) {
-        const forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n${text}`;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: DESTINO_FIXO,
-          type: "text",
-          text: { body: forwardText }
-        });
-      }
-
-      // Tenta reencaminhar mídia (se houver)
-      const mediaForwarded = await forwardMediaIfAny(msg, DESTINO_FIXO);
-      if (!text && !mediaForwarded) {
-        // sem texto e sem mídia -> log pra debug
-      }
-
-      // ================= Mensagens de Clientes - redirect (mantive sua lógica) =================
+      // ================= Mensagens de Clientes =================
       if (!/Eletricaldas/i.test(senderName)) {
-        // verifica redirect no supabase
-        const { data: alreadySent } = await supabase
-          .from('redirects')
-          .select('*')
-          .eq('phone', senderNumber)
-          .maybeSingle();
+        // 1️⃣ Texto do cliente
+        const text = extractTextFromMsg(msg);
+        if (text) {
+          const forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n${text}`;
+          await sendWhatsAppRaw({ messaging_product: "whatsapp", to: DESTINO_FIXO, type: "text", text: { body: forwardText } });
+        }
 
+        // 2️⃣ Reencaminhar mídia
+        await forwardMediaIfAny(msg, DESTINO_FIXO);
+
+        // 3️⃣ Redirect automático no Supabase
+        const { data: alreadySent } = await supabase.from('redirects').select('*').eq('phone', senderNumber).maybeSingle();
         if (!alreadySent) {
-          await supabase
-            .from('redirects')
-            .delete()
-            .lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+          await supabase.from('redirects').delete().lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
           const now = new Date();
           const hour = new Date(now.getTime() - 3 * 60 * 60 * 1000).getHours();
@@ -531,20 +463,14 @@ app.post('/webhook', async (req, res) => {
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
         }
 
-        // já tratamos envio acima; pular resto do processamento
-        continue;
+        continue; // cliente tratado, pula o restante
       }
 
       // ================= Mensagens Suas (Eletricaldas) =================
       if (/Eletricaldas/i.test(senderName)) {
         const myText = extractTextFromMsg(msg);
         const responseText = await processAgendaCommand(myText);
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: DESTINO_FIXO,
-          type: "text",
-          text: { body: responseText }
-        });
+        await sendWhatsAppRaw({ messaging_product: "whatsapp", to: DESTINO_FIXO, type: "text", text: { body: responseText } });
       }
     }
 
