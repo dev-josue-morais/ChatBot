@@ -397,7 +397,7 @@ app.post('/webhook', async (req, res) => {
         }
         
         // 🔔 AVISO ANTES DA MÍDIA
-        const aviso = `📥 Nova mensagem de ${msg.nomeContato || "Contato"} (${msg.from})`;
+        const aviso = `📥 Nova mensagem de ${contact.profile?.name || "Cliente"} (${msg.from})`;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: dest,
