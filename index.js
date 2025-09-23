@@ -65,7 +65,6 @@ async function reuploadMedia(mediaId, mimeType, filename = "file") {
       }
     );
 
-    console.log("✅ Reupload OK:", uploadResp.data);
     return uploadResp.data.id;
   } catch (err) {
     console.error("❌ Erro no reupload:", err.response?.data || err.message);
@@ -227,7 +226,6 @@ app.post('/renew-token', async (req, res) => {
     });
 
     const newToken = tokenResp.data.access_token;
-    console.log('Novo token gerado:', newToken);
 
     const envResp = await axios.get(
       `https://api.render.com/v1/services/${renderServiceId}/env-vars`,
@@ -246,7 +244,6 @@ app.post('/renew-token', async (req, res) => {
       { headers: { Authorization: `Bearer ${renderApiKey}`, 'Content-Type': 'application/json' } }
     );
 
-    console.log('Variáveis de ambiente do Render atualizadas com sucesso!');
     res.send('Token renovado e variável atualizada com sucesso!');
   } catch (err) {
     console.error(err.response?.data || err.message);
@@ -260,7 +257,6 @@ app.get('/webhook', (req, res) => {
   const challenge = req.query['hub.challenge'];
 
   if (mode && token === process.env.WEBHOOK_VERIFY_TOKEN) {
-    console.log('Webhook verificado com sucesso!');
     return res.status(200).send(challenge);
   }
   res.sendStatus(403);
@@ -327,7 +323,6 @@ app.get('/keep-alive', async (req, res) => {
       return res.status(500).send('Erro no keep-alive');
     }
 
-    console.log('Keep-alive executado:', data);
     res.send('1');
   } catch (err) {
     console.error(err);
@@ -351,7 +346,6 @@ app.post('/webhook', async (req, res) => {
           payload,
           { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
         );
-        console.log("✅ WhatsApp API respondeu:", resp.data);
         return resp.data;
       } catch (err) {
         console.error("❌ Erro ao enviar pela WhatsApp API:", err.response?.data || err.message);
@@ -362,11 +356,9 @@ app.post('/webhook', async (req, res) => {
     // Pega URL temporária da mídia pelo media_id
     async function getMediaUrl(media_id) {
       try {
-        console.log("🔎 Buscando media URL para media_id =", media_id);
         const mediaResp = await axios.get(`https://graph.facebook.com/v22.0/${media_id}`, {
           headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
         });
-        console.log("🔗 media URL obtida:", mediaResp.data.url || mediaResp.data);
         return mediaResp.data.url;
       } catch (err) {
         console.error("❌ Erro ao obter URL da mídia:", err.response?.data || err.message);
@@ -385,13 +377,11 @@ app.post('/webhook', async (req, res) => {
 
         let mediaId = docId || audioId || imageId || videoId;
         if (!mediaId) {
-          console.log("ℹ️ Nenhuma mediaId encontrada nesse msg (não é mídia ou tipo não suportado).");
-          return false;
+         return false;
         }
 
         // qual o tipo para enviar
         const type = docId ? "document" : audioId ? "audio" : imageId ? "image" : videoId ? "video" : (msg.type || "unknown");
-        console.log(`📦 forwardMedia detectou mediaId=${mediaId} tipo=${type}`);
 
         // pega mime e filename da msg
         const mimeType =
@@ -402,7 +392,6 @@ app.post('/webhook', async (req, res) => {
 
         const contact = value.contacts?.[0];
         if (!contact) {
-          console.log("⚠️ Sem contact no payload; pulando mensagem.");
           return false;
         }
         const filename = msg.document?.filename || "arquivo";
@@ -413,7 +402,6 @@ app.post('/webhook', async (req, res) => {
         // faz reupload pro WhatsApp
         const newId = await reuploadMedia(mediaId, mimeType, filename);
         if (!newId) {
-          console.log("⚠️ Falha no reupload da mídia");
           return false;
         }
 
@@ -456,16 +444,12 @@ app.post('/webhook', async (req, res) => {
             video: { id: newId }
           };
         } else {
-          console.log("⚠️ Tipo de mídia não suportado para reenvio automático:", type);
           return false;
         }
 
-        console.log("➡️ Enviando payload de mídia para seu número:", JSON.stringify(payload, null, 2));
         await sendWhatsAppRaw(payload);
-        console.log("✅ Mídia reencaminhada com sucesso.");
         return true;
       } catch (err) {
-        console.error("Erro em forwardMediaIfAny:", err.response?.data || err.message);
         return false;
       }
     }
@@ -483,18 +467,14 @@ app.post('/webhook', async (req, res) => {
 
     // Itera sobre as mensagens
     for (let msg of messages) {
-      console.log("----- NOVA MENSAGEM (raw) -----");
-      console.log(JSON.stringify(msg, null, 2));
 
       const contact = value.contacts?.[0];
       if (!contact) {
-        console.log("⚠️ Sem contact no payload; pulando mensagem.");
         continue;
       }
       const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
       if (!senderNumber) {
-        console.log("⚠️ Sem senderNumber; pulando.");
         continue;
       }
       const formattedNumber = formatPhone(senderNumber);
@@ -503,7 +483,6 @@ app.post('/webhook', async (req, res) => {
       const text = extractTextFromMsg(msg);
       if (text) {
         const forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n${text}`;
-        console.log("✉️ Enviando texto para você:", forwardText);
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: DESTINO_FIXO,
@@ -516,7 +495,6 @@ app.post('/webhook', async (req, res) => {
       const mediaForwarded = await forwardMediaIfAny(msg, DESTINO_FIXO);
       if (!text && !mediaForwarded) {
         // sem texto e sem mídia -> log pra debug
-        console.log("ℹ️ Mensagem sem texto e sem mídia reencaminhável (pode ser type=unsupported).");
       }
 
       // ================= Mensagens de Clientes - redirect (mantive sua lógica) =================
@@ -558,7 +536,6 @@ app.post('/webhook', async (req, res) => {
       // ================= Mensagens Suas (Eletricaldas) =================
       if (/Eletricaldas/i.test(senderName)) {
         const myText = extractTextFromMsg(msg);
-        console.log("📥 Mensagem sua detectada (texto):", myText);
         const responseText = await processAgendaCommand(myText);
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
