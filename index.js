@@ -14,7 +14,6 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const app = express();
 app.use(express.json());
 
-const axios = require("axios");
 const FormData = require("form-data");
 
 // baixa e sobe de novo no WhatsApp
