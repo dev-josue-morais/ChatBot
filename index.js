@@ -400,10 +400,15 @@ app.post('/webhook', async (req, res) => {
           msg.image?.mime_type ||
           msg.video?.mime_type;
 
+        const contact = value.contacts?.[0];
+        if (!contact) {
+          console.log("⚠️ Sem contact no payload; pulando mensagem.");
+          return false;
+        }
         const filename = msg.document?.filename || "arquivo";
-      const senderName = contact.profile?.name || 'Usuário';
-      const senderNumber = contact.wa_id || 'noNumber';;
-      const formattedNumber = formatPhone(senderNumber);
+        const senderName = contact.profile?.name || 'Usuário';
+        const senderNumber = contact.wa_id || 'noNumber';;
+        const formattedNumber = formatPhone(senderNumber);
 
         // faz reupload pro WhatsApp
         const newId = await reuploadMedia(mediaId, mimeType, filename);
