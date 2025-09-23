@@ -395,6 +395,15 @@ app.post('/webhook', async (req, res) => {
           console.log("⚠️ Falha no reupload da mídia");
           return false;
         }
+        
+        // 🔔 AVISO ANTES DA MÍDIA
+        const aviso = `📥 Nova mensagem de ${msg.nomeContato || "Contato"} (${msg.from})`;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: dest,
+          type: "text",
+          text: { body: aviso }
+        });
 
         let payload;
         if (type === "document") {
