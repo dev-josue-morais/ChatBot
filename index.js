@@ -14,37 +14,47 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const app = express();
 app.use(express.json());
 
+const axios = require("axios");
 const FormData = require("form-data");
 
 // baixa e sobe de novo no WhatsApp
-async function reuploadMedia(mediaId) {
+async function reuploadMedia(mediaId, mimeType, filename = "file") {
   try {
-    // 1. pega URL temporária
-    const meta = await axios.get(
-      `https://graph.facebook.com/v22.0/${mediaId}`,
-      { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
-    );
-    const url = meta.data.url;
-
-    // 2. baixa o binário
-    const fileResp = await axios.get(url, {
-      responseType: "arraybuffer",
+    // 1. pega a URL assinada do WhatsApp
+    const mediaUrl = `https://graph.facebook.com/v21.0/${mediaId}`;
+    const mediaResp = await axios.get(mediaUrl, {
       headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
     });
+    const directUrl = mediaResp.data.url;
 
-    // 3. reenvia pro endpoint /media
+    // 2. baixa o arquivo binário
+    const fileResp = await axios.get(directUrl, {
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
+      responseType: "arraybuffer"
+    });
+
+    // 3. monta o formdata com o mime correto
     const formData = new FormData();
-    formData.append("file", fileResp.data, { filename: "file" });
+    formData.append("file", fileResp.data, {
+      filename,
+      contentType: mimeType || "application/octet-stream"
+    });
     formData.append("messaging_product", "whatsapp");
 
-    const upload = await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/media`,
+    // 4. envia pro endpoint de upload
+    const uploadResp = await axios.post(
+      `https://graph.facebook.com/v21.0/${process.env.PHONE_NUMBER_ID}/media`,
       formData,
-      { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, ...formData.getHeaders() } }
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          ...formData.getHeaders()
+        }
+      }
     );
 
-    console.log("✅ Reupload media OK:", upload.data);
-    return upload.data.id; // novo media_id
+    console.log("✅ Reupload OK:", uploadResp.data);
+    return uploadResp.data.id;
   } catch (err) {
     console.error("❌ Erro no reupload:", err.response?.data || err.message);
     return null;
@@ -363,11 +373,6 @@ app.post('/webhook', async (req, res) => {
 
         let mediaId = docId || audioId || imageId || videoId;
         if (!mediaId) {
-          // alguns providers/versões colocam o id em msg?.id ou msg?.context?.id — log para debug
-          mediaId = msg.id || msg?.context?.id;
-        }
-
-        if (!mediaId) {
           console.log("ℹ️ Nenhuma mediaId encontrada nesse msg (não é mídia ou tipo não suportado).");
           return false;
         }
@@ -376,8 +381,17 @@ app.post('/webhook', async (req, res) => {
         const type = docId ? "document" : audioId ? "audio" : imageId ? "image" : videoId ? "video" : (msg.type || "unknown");
         console.log(`📦 forwardMedia detectou mediaId=${mediaId} tipo=${type}`);
 
-        // aqui você já tem mediaId e o tipo (document, audio, image, video)
-        const newId = await reuploadMedia(mediaId);
+        // pega mime e filename da msg
+        const mimeType =
+          msg.document?.mime_type ||
+          msg.audio?.mime_type ||
+          msg.image?.mime_type ||
+          msg.video?.mime_type;
+
+        const filename = msg.document?.filename || "arquivo";
+
+        // faz reupload pro WhatsApp
+        const newId = await reuploadMedia(mediaId, mimeType, filename);
         if (!newId) {
           console.log("⚠️ Falha no reupload da mídia");
           return false;
@@ -389,10 +403,7 @@ app.post('/webhook', async (req, res) => {
             messaging_product: "whatsapp",
             to: dest,
             type: "document",
-            document: {
-              id: newId,
-              filename: msg.document?.filename || "documento.pdf"
-            }
+            document: { id: newId, filename }
           };
         } else if (type === "audio") {
           payload = {
@@ -416,7 +427,7 @@ app.post('/webhook', async (req, res) => {
             video: { id: newId }
           };
         } else {
-          console.log("⚠️ Tipo de mídia não suportado:", type);
+          console.log("⚠️ Tipo de mídia não suportado para reenvio automático:", type);
           return false;
         }
 
