@@ -115,13 +115,14 @@ Identifique a intenção da mensagem: criar, listar ou deletar evento.
 Extraia:
 - action: "create", "list" ou "delete"
 - title: string (nome ou local)
-- datetime: data/hora em ISO (UTC)
+- datetime: data/hora em ISO (GMT-3)
 - reminder_minutes: integer opcional (default 30)
 - start_date, end_date: se for listagem de eventos
 Responda apenas em JSON válido.
 Mensagem: "${text}"
 `;
 
+    // 1️⃣ Chama GPT
     const gptResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: gptPrompt }],
@@ -129,6 +130,8 @@ Mensagem: "${text}"
 
     let gptJSON = gptResponse.choices[0].message.content;
     gptJSON = gptJSON.replace(/```json\s*|```/g, '').trim();
+
+    // 2️⃣ Parse JSON
     let command;
     try {
       command = JSON.parse(gptJSON);
@@ -137,7 +140,21 @@ Mensagem: "${text}"
       return "⚠️ Não consegui entender o comando.";
     }
 
-    // 3️⃣ Executa ação no Supabase
+    // 3️⃣ Converte datetime do GPT (GMT-3) para UTC
+    if (command.datetime) {
+      const dtBRT = new Date(command.datetime); // GPT retorna horário GMT-3
+      command.datetime = new Date(dtBRT.getTime() + 3 * 60 * 60 * 1000).toISOString();
+    }
+    if (command.start_date) {
+      const dtBRTStart = new Date(command.start_date);
+      command.start_date = new Date(dtBRTStart.getTime() + 3 * 60 * 60 * 1000).toISOString();
+    }
+    if (command.end_date) {
+      const dtBRTEnd = new Date(command.end_date);
+      command.end_date = new Date(dtBRTEnd.getTime() + 3 * 60 * 60 * 1000).toISOString();
+    }
+
+    // 4️⃣ Executa ação no Supabase
     if (command.action === "create") {
       const datetimeUTC = new Date(command.datetime);
       const { error } = await supabase.from("events").insert([{
@@ -145,7 +162,6 @@ Mensagem: "${text}"
         date: datetimeUTC,
         reminder_minutes: command.reminder_minutes || 30
       }]);
-
       if (error) {
         console.error("Erro ao criar evento:", error);
         return `⚠️ Não consegui criar o evento "${command.title}".`;
@@ -170,7 +186,7 @@ Mensagem: "${text}"
         return `⚠️ Nenhum evento encontrado para "${command.title}" em ${formatLocal(datetimeUTC)}.`;
       }
 
-      const ids = events.map((ev) => ev.id);
+      const ids = events.map(ev => ev.id);
       const { error: delError } = await supabase.from("events").delete().in("id", ids);
       if (delError) {
         return `⚠️ Não consegui apagar o evento "${command.title}".`;
@@ -198,7 +214,7 @@ Mensagem: "${text}"
         return `📅 Nenhum evento encontrado entre ${formatLocal(startUTC)} e ${formatLocal(endUTC)}.`;
       }
 
-      const list = events.map((e) => `- ${e.title} às ${formatLocal(new Date(e.date))}`).join("\n");
+      const list = events.map(e => `- ${e.title} às ${formatLocal(new Date(e.date))}`).join("\n");
       return `📅 Seus eventos:\n${list}`;
     }
 
