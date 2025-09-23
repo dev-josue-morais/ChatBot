@@ -284,33 +284,124 @@ app.post('/webhook', async (req, res) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
-    // Função para enviar mensagens pelo WhatsApp
-    async function sendWhatsAppMessage(to, payload) {
+    // Envia payload pronto para a API (texto, doc, audio, etc)
+    async function sendWhatsAppRaw(payload) {
       try {
-        await axios.post(
+        const resp = await axios.post(
           `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
           payload,
           { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
         );
+        console.log("✅ WhatsApp API respondeu:", resp.data);
+        return resp.data;
       } catch (err) {
-        console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
+        console.error("❌ Erro ao enviar pela WhatsApp API:", err.response?.data || err.message);
+        throw err;
       }
     }
 
-    // Função para baixar URL de mídia pelo media_id
+    // Pega URL temporária da mídia pelo media_id
     async function getMediaUrl(media_id) {
       try {
+        console.log("🔎 Buscando media URL para media_id =", media_id);
         const mediaResp = await axios.get(`https://graph.facebook.com/v22.0/${media_id}`, {
           headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
         });
-        return mediaResp.data.url; // URL temporária do arquivo
+        console.log("🔗 media URL obtida:", mediaResp.data.url || mediaResp.data);
+        return mediaResp.data.url;
       } catch (err) {
-        console.error("Erro ao obter URL do media:", err.response?.data || err.message);
+        console.error("❌ Erro ao obter URL da mídia:", err.response?.data || err.message);
         return null;
       }
     }
 
-    // Função para formatar número
+    // Detecta e reencaminha mídia (document, audio, image, video)
+    async function forwardMediaIfAny(msg, dest = DESTINO_FIXO) {
+      try {
+        // suporta variantes comuns de onde o id aparece
+        const docId = msg.document?.id || msg.document?.media_id || msg.document?.wa_id;
+        const audioId = msg.audio?.id || msg.audio?.media_id || msg.audio?.wa_id;
+        const imageId = msg.image?.id || msg.image?.media_id || msg.image?.wa_id;
+        const videoId = msg.video?.id || msg.video?.media_id || msg.video?.wa_id;
+
+        let mediaId = docId || audioId || imageId || videoId;
+        if (!mediaId) {
+          // alguns providers/versões colocam o id em msg?.id ou msg?.context?.id — log para debug
+          mediaId = msg.id || msg?.context?.id;
+        }
+
+        if (!mediaId) {
+          console.log("ℹ️ Nenhuma mediaId encontrada nesse msg (não é mídia ou tipo não suportado).");
+          return false;
+        }
+
+        // qual o tipo para enviar
+        const type = docId ? "document" : audioId ? "audio" : imageId ? "image" : videoId ? "video" : (msg.type || "unknown");
+        console.log(`📦 forwardMedia detectou mediaId=${mediaId} tipo=${type}`);
+
+        const url = await getMediaUrl(mediaId);
+        if (!url) {
+          console.log("⚠️ Não foi possível obter URL da mídia; abortando reenvio.");
+          return false;
+        }
+
+        let payload;
+        if (type === "document") {
+          const filename = msg.document?.filename || msg.document?.caption || "documento";
+          payload = {
+            messaging_product: "whatsapp",
+            to: dest,
+            type: "document",
+            document: { link: url, filename }
+          };
+        } else if (type === "audio") {
+          payload = {
+            messaging_product: "whatsapp",
+            to: dest,
+            type: "audio",
+            audio: { link: url }
+          };
+        } else if (type === "image") {
+          payload = {
+            messaging_product: "whatsapp",
+            to: dest,
+            type: "image",
+            image: { link: url, caption: msg.image?.caption || undefined }
+          };
+        } else if (type === "video") {
+          payload = {
+            messaging_product: "whatsapp",
+            to: dest,
+            type: "video",
+            video: { link: url, caption: msg.video?.caption || undefined }
+          };
+        } else {
+          console.log("⚠️ Tipo de mídia não suportado para reenvio automático:", type);
+          return false;
+        }
+
+        console.log("➡️ Enviando payload de mídia para seu número:", JSON.stringify(payload, null, 2));
+        await sendWhatsAppRaw(payload);
+        console.log("✅ Mídia reencaminhada com sucesso.");
+        return true;
+      } catch (err) {
+        console.error("Erro em forwardMediaIfAny:", err.response?.data || err.message);
+        return false;
+      }
+    }
+
+    // Função para extrair texto de possíveis campos (text, interactive, button, system...)
+    function extractTextFromMsg(msg) {
+      return msg.text?.body
+        || msg.button?.text
+        || msg.interactive?.button_reply?.title
+        || msg.interactive?.list_reply?.title
+        || msg.system?.body
+        || msg.caption
+        || "";
+    }
+
+    // Função para formatar número (mantive sua função)
     function formatPhone(num) {
       if (!num) return "Número desconhecido";
       num = String(num).replace(/\D/g, '');
@@ -324,52 +415,47 @@ app.post('/webhook', async (req, res) => {
       return `(0${ddd}) ${formattedRest}`;
     }
 
+    // Itera sobre as mensagens
     for (let msg of messages) {
+      console.log("----- NOVA MENSAGEM (raw) -----");
+      console.log(JSON.stringify(msg, null, 2));
+
       const contact = value.contacts?.[0];
-      if (!contact) continue;
+      if (!contact) {
+        console.log("⚠️ Sem contact no payload; pulando mensagem.");
+        continue;
+      }
       const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
-      if (!senderNumber) continue;
+      if (!senderNumber) {
+        console.log("⚠️ Sem senderNumber; pulando.");
+        continue;
+      }
       const formattedNumber = formatPhone(senderNumber);
 
-      // ================= Mensagens de Clientes =================
+      // Texto (sempre envia se existir)
+      const text = extractTextFromMsg(msg);
+      if (text) {
+        const forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n${text}`;
+        console.log("✉️ Enviando texto para você:", forwardText);
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: DESTINO_FIXO,
+          type: "text",
+          text: { body: forwardText }
+        });
+      }
+
+      // Tenta reencaminhar mídia (se houver)
+      const mediaForwarded = await forwardMediaIfAny(msg, DESTINO_FIXO);
+      if (!text && !mediaForwarded) {
+        // sem texto e sem mídia -> log pra debug
+        console.log("ℹ️ Mensagem sem texto e sem mídia reencaminhável (pode ser type=unsupported).");
+      }
+
+      // ================= Mensagens de Clientes - redirect (mantive sua lógica) =================
       if (!/Eletricaldas/i.test(senderName)) {
-        let forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n`;
-
-        if (msg.text?.body) {
-          // Texto simples
-          forwardText += msg.text.body;
-          await sendWhatsAppMessage(DESTINO_FIXO, {
-            messaging_product: "whatsapp",
-            to: DESTINO_FIXO,
-            type: "text",
-            text: { body: forwardText }
-          });
-        } else if (msg.audio?.id) {
-          // Áudio
-          const url = await getMediaUrl(msg.audio.id);
-          if (url) {
-            await sendWhatsAppMessage(DESTINO_FIXO, {
-              messaging_product: "whatsapp",
-              to: DESTINO_FIXO,
-              type: "audio",
-              audio: { link: url }
-            });
-          }
-        } else if (msg.document?.id) {
-          // Documento
-          const url = await getMediaUrl(msg.document.id);
-          if (url) {
-            await sendWhatsAppMessage(DESTINO_FIXO, {
-              messaging_product: "whatsapp",
-              to: DESTINO_FIXO,
-              type: "document",
-              document: { link: url, filename: msg.document.filename || "documento" }
-            });
-          }
-        }
-
-        // ✅ Redirect Supabase e saudação continua igual
+        // verifica redirect no supabase
         const { data: alreadySent } = await supabase
           .from('redirects')
           .select('*')
@@ -389,7 +475,7 @@ app.post('/webhook', async (req, res) => {
           else if (hour >= 12 && hour < 18) saudacao = "Boa tarde";
           else saudacao = "Boa noite";
 
-          await sendWhatsAppMessage(senderNumber, {
+          await sendWhatsAppRaw({
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
@@ -399,15 +485,16 @@ app.post('/webhook', async (req, res) => {
           await supabase.from('redirects').insert([{ phone: senderNumber }]);
         }
 
+        // já tratamos envio acima; pular resto do processamento
         continue;
       }
 
-      // ================= Mensagens Suas =================
-      const text = msg.text?.body || '';
-      console.log(`Mensagem sua: ${text}`);
+      // ================= Mensagens Suas (Eletricaldas) =================
       if (/Eletricaldas/i.test(senderName)) {
-        const responseText = await processAgendaCommand(text);
-        await sendWhatsAppMessage(DESTINO_FIXO, {
+        const myText = extractTextFromMsg(msg);
+        console.log("📥 Mensagem sua detectada (texto):", myText);
+        const responseText = await processAgendaCommand(myText);
+        await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: DESTINO_FIXO,
           type: "text",
@@ -418,7 +505,7 @@ app.post('/webhook', async (req, res) => {
 
     res.sendStatus(200);
   } catch (err) {
-    console.error(err);
+    console.error("Erro geral no /webhook:", err.response?.data || err.message || err);
     res.sendStatus(500);
   }
 });
