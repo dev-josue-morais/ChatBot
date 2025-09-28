@@ -17,7 +17,7 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
 {
   "modulo": "agenda",
   "action": "create" | "list" | "delete",
-  "title": "Título ou nome do evento",
+  "title": "Somente nome do cliente ou do local",
   "datetime": "Data/hora ISO no GMT-3",
   "reminder_minutes": número (default 30),
   "start_date": "Data/hora início ISO (GMT-3)",
