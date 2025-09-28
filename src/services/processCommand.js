@@ -49,7 +49,7 @@ Para ORÇAMENTO:
 }
 
 Regras ORÇAMENTO:
-- Se o usuário mencionar *editar, atualizar, alterar ou remover*, então use sempre "action": "edit" (nunca "create" e nunca invente orçamento não solicitado se não sntender retorne null).
+- Se o usuário mencionar *editar, atualizar, alterar ou remover*, então use sempre "action": "edit" (nunca "create" e nunca invente orçamento não solicitado).
 - Em "list", só use "nome_cliente", "id" (número do orçamento) ou "telefone_cliente" como filtros.
 - Em "edit":
    - Se vier "materiais" ou "servicos", substituem a lista inteira.
