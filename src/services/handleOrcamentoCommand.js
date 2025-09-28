@@ -103,7 +103,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     query = query.ilike('nome_cliente', `%${command.nome_cliente}%`);
                 }
                 if (command.id) {
-                    query = query.eq('orcamento_numero', command.orcamento_numero);
+                    query = query.eq('orcamento_numero', command.id);
                 }
 
                 const { data: orcamentos, error } = await query;
