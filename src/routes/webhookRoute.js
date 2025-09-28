@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getNowBRT, formatPhone } = require('../services/utils');
-const { processAgendaCommand } = require('../services/agendaService');
+const { processCommand } = require('../services/processCommand');
 const { sendWhatsAppRaw, extractTextFromMsg, forwardMediaIfAny } = require('../services/whatsappService');
 const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO } = require('../../config');
@@ -71,7 +71,7 @@ router.post('/', async (req, res, next) => {
       // Mensagens de Eletricaldas
       if (/Eletricaldas/i.test(senderName)) {
         const myText = extractTextFromMsg(msg);
-        const responseText = await processAgendaCommand(myText);
+        const responseText = await processCommand(myText);
         await sendWhatsAppRaw({ messaging_product: "whatsapp", to: DESTINO_FIXO, type: "text", text: { body: responseText } });
       }
     }
