@@ -39,6 +39,7 @@ Mensagem: "${text}"
       console.error("Erro ao parsear JSON do GPT:", gptJSON);
       return "⚠️ Não consegui entender o comando.";
     }
+    console.log("🧠 GPT output:", gptJSON);
 
     // 3️⃣ Converte datas GMT-3 do GPT para UTC usando Luxon
     if (command.datetime) {
@@ -102,7 +103,7 @@ Mensagem: "${text}"
       case "list": {
         const startUTC = command.start_date;
         const endUTC = command.end_date;
-
+        console.log("📆 Intervalo de busca:", { startUTC, endUTC, command });
         const { data: events, error } = await supabase
           .from("events")
           .select("*")
@@ -118,7 +119,7 @@ Mensagem: "${text}"
           return `📅 Nenhum evento encontrado entre ${formatLocal(startUTC)} e ${formatLocal(endUTC)}.`;
         }
 
-        const list = events.map(e => `- ${e.title} às ${formatLocal(e.date)}`).join("\n");
+        const list = events.map(e => `- ${e.title} em ${formatLocal(e.date)}`).join("\n");
         return `📅 Seus eventos:\n${list}`;
       }
 
