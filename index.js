@@ -2,12 +2,12 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 const express = require('express');
-const { scheduleDailySummary } = require('./services/cronService');
+const { scheduleDailySummary } = require('./src/services/cronService');
 
 const app = express();
 app.use(express.json());
 
-const routes = require('./routes');
+const routes = require('./src/routes');
 
 app.use(routes);
 

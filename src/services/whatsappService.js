@@ -2,7 +2,7 @@
 const axios = require('axios');
 const FormData = require("form-data");
 const { formatPhone } = require("./utils");
-const { WHATSAPP_TOKEN, PHONE_NUMBER_ID, WHATSAPP_TOKEN, DESTINO_FIXODESTINO_FIXO } = require('../config');
+const { WHATSAPP_TOKEN, PHONE_NUMBER_ID, WHATSAPP_TOKEN, DESTINO_FIXO } = require('../../config');
 
 // Baixa e faz upload de mídia no WhatsApp
 async function reuploadMedia(mediaId, mimeType, filename = "file") {

@@ -1,7 +1,7 @@
 // services/agendaService.js
 const { DateTime } = require("luxon");
-const openai = require('./openaiClient');
-const supabase = require('./supabaseClient');
+const openai = require('./openai');
+const supabase = require('./supabase');
 const { formatLocal, getNowBRT } = require('./utils');
 
 // Processa comandos de agenda recebidos do WhatsApp

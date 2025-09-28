@@ -3,9 +3,8 @@ const router = express.Router();
 const { getNowBRT, formatPhone } = require('../services/utils');
 const { processAgendaCommand } = require('../services/agendaService');
 const { sendWhatsAppRaw, extractTextFromMsg, forwardMediaIfAny } = require('../services/whatsappService');
-const supabase = require('../services/supabaseClient');
-const { DESTINO_FIXO } = require('../config');
-const { WEBHOOK_VERIFY_TOKEN } = require('../config');
+const supabase = require('../services/supabase');
+const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO } = require('../../config');
 
 // GET webhook (verificação do Facebook)
 router.get('/', (req, res) => {

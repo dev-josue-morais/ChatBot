@@ -2,7 +2,7 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
-const { GITHUB_SECRET, RENDER_SERVICE_ID, RENDER_API_KEY, APP_ID, APP_SECRET, WHATSAPP_TOKEN } = require('../config');
+const { GITHUB_SECRET, RENDER_SERVICE_ID, RENDER_API_KEY, APP_ID, APP_SECRET, WHATSAPP_TOKEN } = require('../../config');
 
 router.post('/', async (req, res, next) => {
   if (req.headers.authorization !== `Bearer ${GITHUB_SECRET}`) {
