@@ -19,7 +19,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
                 }
 
-                return `✅ Orçamento criado com sucesso para ${command.nome_cliente} (ID: ${data[0].id})`;
+                return `✅ Orçamento criado com sucesso para ${command.nome_cliente} (ID: ${data[0].orcamento_numero})`;
             }
 
             case 'edit': {
@@ -63,9 +63,20 @@ async function handleOrcamentoCommand(command, userPhone) {
             }
 
             case 'list': {
-                const { data: orcamentos, error } = await supabase
-                    .from('orcamentos')
-                    .select('*');
+                let query = supabase.from('orcamentos').select('*');
+
+                // Aplicar filtros se existirem
+                if (command.telefone_cliente) {
+                    query = query.eq('telefone_cliente', command.telefone_cliente);
+                }
+                if (command.nome_cliente) {
+                    query = query.ilike('nome_cliente', `%${command.nome_cliente}%`);
+                }
+                if (command.orcamento_numero) {
+                    query = query.eq('orcamento_numero', command.orcamento_numero);
+                }
+
+                const { data: orcamentos, error } = await query;
 
                 if (error) {
                     console.error("Erro ao listar orçamentos:", error);
@@ -74,7 +85,9 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
-                return `📄 Orçamentos:\n` + orcamentos.map(o => `- ${o.nome_cliente} (ID: ${o.orcamento_numero})`).join('\n');
+                return `📄 Orçamentos:\n` + orcamentos
+                    .map(o => `- ${o.nome_cliente} (Número: ${o.orcamento_numero})`)
+                    .join('\n');
             }
 
             case 'pdf': {
