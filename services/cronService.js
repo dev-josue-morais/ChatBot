@@ -1,4 +1,4 @@
-// src/services/cronService.js
+// services/cronService.js
 const cron = require('node-cron');
 const { getNowBRT, formatLocal } = require('./utils');
 const supabase = require('./supabaseClient');

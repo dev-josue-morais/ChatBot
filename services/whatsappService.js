@@ -1,4 +1,4 @@
-// src/services/whatsappService.js
+// services/whatsappService.js
 const axios = require('axios');
 const FormData = require("form-data");
 const { formatPhone } = require("./utils");

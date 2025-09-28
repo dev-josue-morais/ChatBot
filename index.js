@@ -7,7 +7,7 @@ const { scheduleDailySummary } = require('./services/cronService');
 const app = express();
 app.use(express.json());
 
-const routes = require('./src/routes');
+const routes = require('./routes');
 
 app.use(routes);
 

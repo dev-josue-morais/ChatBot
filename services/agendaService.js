@@ -1,4 +1,4 @@
-// src/services/agendaService.js
+// services/agendaService.js
 const { DateTime } = require("luxon");
 const openai = require('./openaiClient');
 const supabase = require('./supabaseClient');
