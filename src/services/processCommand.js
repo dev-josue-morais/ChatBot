@@ -12,6 +12,7 @@ async function processCommand(text, userPhone) {
 Você é um assistente de automação comercial.
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
+
 Para AGENDA:
 {
   "modulo": "agenda",
@@ -22,34 +23,41 @@ Para AGENDA:
   "start_date": "Data/hora início ISO (GMT-3)",
   "end_date": "Data/hora fim ISO (GMT-3)"
 }
+
 Para ORÇAMENTO:
 {
   "modulo": "orcamento",
   "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": "Número do orçamento (para list/edit/delete/pdf)",
+  "id": "Número do orçamento (obrigatório em edit/delete/pdf)",
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
-  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}], // para criar ou editar lista toda. 
-  "servicos": [{"nome": "string", "valor": número}] // para criar ou editar lista toda. 
-Para edição granular:
+
+  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+  "servicos": [{"nome": "string", "valor": número}],
+
+  // Edição granular
   "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "remove_materiais": [{"nome": "string"}],
   "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
   "add_servicos": [{"nome": "string", "valor": número}],
   "remove_servicos": [{"nome": "string"}],
   "edit_servicos": [{"nome": "string", "valor": número?}],
+
   "desconto_materiais": "opcional",
   "desconto_servicos": "opcional"
 }
+
 Regras ORÇAMENTO:
-- Em "list", **se fornecido "nome_cliente, orçamento_numero, telefone_cliente"**.
+- Se o usuário mencionar *editar, atualizar, alterar ou remover*, então use sempre "action": "edit" (nunca "create").
+- Em "list", só use "nome_cliente", "id" (número do orçamento) ou "telefone_cliente" como filtros.
 - Em "edit":
    - Se vier "materiais" ou "servicos", substituem a lista inteira.
    - Se vier "add_", "remove_" ou "edit_", aplique apenas sobre os itens especificados.
+- Se o usuário não informar preço de material, inclua valor = null.
 - No campo "materiais", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
 - Sempre responda com JSON válido, sem texto adicional.
-- Datas sempre em GMT-3 (Brasil). 
+- Datas sempre em GMT-3 (Brasil).
 
 Mensagem do usuário: "\${text}"
 `;
@@ -73,33 +81,7 @@ Mensagem do usuário: "\${text}"
 
     console.log("🧠 GPT output:", command);
 
-    // 3️⃣ Checa memória pendente
-    const { data: memoria } = await supabase
-      .from("memoria_contexto")
-      .select("*")
-      .maybeSingle();
-
-    if (memoria) {
-      const pendente = memoria.dados;
-      if (pendente.modulo === "orcamento" && pendente.action === "create" && pendente.falta_telefone) {
-        pendente.telefone_cliente = text.trim();
-        delete pendente.falta_telefone;
-        await supabase.from("memoria_contexto").delete().eq("id", memoria.id);
-        return await handleOrcamentoCommand(pendente, userPhone);
-      }
-    }
-
-    // 4️⃣ Se faltar telefone no novo comando, salvar memória e perguntar
-    if (command.modulo === "orcamento" && command.action === "create" && command.falta_telefone) {
-      await supabase.from("memoria_contexto").insert([{
-        user_id: userPhone,
-        tipo: "orcamento_pendente",
-        dados: command
-      }]);
-      return `📞 Qual o telefone do cliente ${command.nome_cliente}?`;
-    }
-
-    // 5️⃣ Executa módulo correto
+    // Executa módulo correto
     if (command.modulo === "agenda") {
       return await handleAgendaCommand(command, userPhone);
     } else if (command.modulo === "orcamento") {
