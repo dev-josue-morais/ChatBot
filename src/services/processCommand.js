@@ -1,6 +1,9 @@
 // services/agendaService.js
 const openai = require('./openai');
 const supabase = require('./supabase');
+const { handleOrcamentoCommand } = require('./handleOrcamentoCommand');
+const { handleAgendaCommand } = require('./handleAgendaCommand');
+const { getNowBRT } = require('./utils');
 
 // Processa comandos de agenda recebidos do WhatsApp
 async function processCommand(text, userPhone) {
@@ -24,8 +27,8 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
 💰 Para ORÇAMENTO:
 {
   "modulo": "orcamento",
-  "action": "create" | "list" | "edit" | "pdf",
-  "orcamento_numero": "string se necessário",
+  "action": "create" | "list" | "edit" | "delete" | "pdf",
+  "id": "ID do orçamento (para edit/delete/pdf)",
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",

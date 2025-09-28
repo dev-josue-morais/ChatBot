@@ -1,4 +1,4 @@
-const supabase = require('./supabaseClient');
+const supabase = require('./supabase');
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
