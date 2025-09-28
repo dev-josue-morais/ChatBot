@@ -10,7 +10,7 @@ function formatCurrency(value) {
 function aplicarDesconto(total, desconto) {
   if (!desconto) return { totalFinal: total, descricao: formatCurrency(total) };
 
-  // Caso seja percentual (string terminando com %)
+  // Caso percentual (termina com %)
   if (typeof desconto === "string" && desconto.trim().endsWith("%")) {
     const perc = parseFloat(desconto.replace("%", "").trim());
     if (isNaN(perc)) return { totalFinal: total, descricao: formatCurrency(total) };
@@ -18,18 +18,18 @@ function aplicarDesconto(total, desconto) {
     const valorComDesconto = total - (total * (perc / 100));
     return {
       totalFinal: valorComDesconto,
-      descricao: `~~${formatCurrency(total)}~~ ${formatCurrency(valorComDesconto)} (-${perc}%)`
+      descricao: `~${formatCurrency(total)}~ ${formatCurrency(valorComDesconto)} (-${perc}%)`
     };
   }
 
-  // Caso seja valor absoluto (número ou string numérica)
+  // Caso valor absoluto
   const valor = parseFloat(desconto);
   if (isNaN(valor) || valor <= 0) return { totalFinal: total, descricao: formatCurrency(total) };
 
   const valorComDesconto = total - valor;
   return {
     totalFinal: valorComDesconto,
-    descricao: `~~${formatCurrency(total)}~~ ${formatCurrency(valorComDesconto)} (-${formatCurrency(valor)})`
+    descricao: `~${formatCurrency(total)}~ ${formatCurrency(valorComDesconto)} (-${formatCurrency(valor)})`
   };
 }
 
@@ -45,7 +45,8 @@ function formatOrcamento(o) {
   const descontoMateriais = aplicarDesconto(totalMateriais, o.desconto_materiais);
   const descontoServicos = aplicarDesconto(totalServicos, o.desconto_servicos);
 
-  const totalGeral = descontoMateriais.totalFinal + descontoServicos.totalFinal;
+  const totalOriginal = totalMateriais + totalServicos;
+  const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
   return `
 📝 Orçamento ${o.orcamento_numero}
@@ -70,7 +71,9 @@ ${(o.servicos && o.servicos.length > 0)
 
 💰 Total Serviços: ${descontoServicos.descricao}
 
-🧾 Total Geral: ${formatCurrency(totalGeral)}
+🧾 Total Geral: ${totalFinal !== totalOriginal 
+      ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}` 
+      : formatCurrency(totalFinal)}
 `.trim();
 }
 
