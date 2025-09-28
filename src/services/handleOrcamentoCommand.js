@@ -61,14 +61,18 @@ async function handleOrcamentoCommand(command, userPhone) {
         return "⚠️ O campo *telefone do cliente* é obrigatório.";
     }
 
+    // Normaliza materiais e serviços enviados via add_*
+    const materiais = command.materiais || command.add_materiais || [];
+    const servicos = command.servicos || command.add_servicos || [];
+
     const { data, error } = await supabase.from('orcamentos').insert([{
         nome_cliente: command.nome_cliente,
         telefone_cliente: command.telefone_cliente,
         descricao_atividades: command.descricao_atividades || '',
-        materiais: command.materiais || [],
-        servicos: command.servicos || [],
-        desconto_materiais: command.desconto_materiais || 0,
-        desconto_servicos: command.desconto_servicos || 0
+        materiais,
+        servicos,
+        desconto_materiais: command.desconto_materiais ?? null,
+        desconto_servicos: command.desconto_servicos ?? null
     }]).select();
 
     if (error) {
