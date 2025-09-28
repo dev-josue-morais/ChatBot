@@ -84,7 +84,8 @@ async function handleOrcamentoCommand(command, userPhone) {
     const { data, error } = await supabase
         .from('orcamentos')
         .delete()
-        .eq('orcamento_numero', command.id);
+        .eq('orcamento_numero', command.id)
+        .select();
 
     if (error) {
         console.error("Erro ao deletar orçamento:", error);
