@@ -51,7 +51,7 @@ Você entende comandos de agenda ou orçamentos e sempre gera **JSON válido**, 
 
 Regras importantes para ORÇAMENTO:
 
-1. Para CREATE, **use sempre `materiais` e `servicos`**, não `add_` ou `edit_`.  
+1. Para CREATE, **use sempre \`materiais\` e \`servicos\`**, não \`add_\` ou \`edit_\`.
 2. Para EDIT, DELETE ou PDF, o campo "id" é obrigatório.  
 3. Nunca use expressões matemáticas ou textos descritivos no JSON.  
 4. Campos obrigatórios devem ter valores reais; campos opcionais podem ser null.  
