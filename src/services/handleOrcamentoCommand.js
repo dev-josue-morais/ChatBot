@@ -277,8 +277,8 @@ async function handleOrcamentoCommand(command, userPhone) {
             }
 
             case 'pdf': {
-                if (!command.orcamento_numero) return '⚠️ É necessário informar o número do orçamento para gerar PDF.';
-                return `🖨 PDF do orçamento ${command.orcamento_numero} gerado com sucesso (simulado).`;
+                if (!command.id) return '⚠️ É necessário informar o número do orçamento para gerar PDF.';
+                return `🖨 PDF do orçamento ${command.id} gerado com sucesso (simulado).`;
             }
 
             default:
