@@ -28,7 +28,7 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
 {
   "modulo": "orcamento",
   "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": "ID do orçamento (para edit/delete/pdf)",
+  "id": "Número do orçamento (para edit/delete/pdf)",
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
@@ -38,13 +38,15 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
   "desconto_servicos": "opcional"
 }
 
-- Se faltar telefone_cliente em create, retorne {"falta_telefone": true}.
-- Sempre corrija datas para GMT-3.
-- Para agenda, use intervalos como "hoje", "amanhã", "semana".
-- Sempre responda apenas com JSON válido.
+Regras importantes para ORÇAMENTO:
+- Em "list", **se o usuário fornecer nome do cliente ou telefone, use esses filtros**. Se não fornecer, liste todos.
+- Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
+- Em "create", "nome_cliente" e "telefone_cliente" são obrigatórios; se faltar telefone, retorne {"falta_telefone": true}.
+- Sempre responda com JSON válido, sem texto adicional.
+- Datas sempre em GMT-3.
+
 Mensagem do usuário: "${text}"
 `;
-
     // 1️⃣ Chama GPT
     const gptResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
