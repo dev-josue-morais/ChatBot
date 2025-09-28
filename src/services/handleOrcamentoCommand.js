@@ -78,7 +78,22 @@ async function handleOrcamentoCommand(command, userPhone) {
 
     return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
 }
-            case 'edit': {
+           case 'delete': {
+    if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
+
+    const { data, error } = await supabase
+        .from('orcamentos')
+        .delete()
+        .eq('orcamento_numero', command.id);
+
+    if (error) {
+        console.error("Erro ao deletar orçamento:", error);
+        return `⚠️ Não consegui deletar o orçamento ${command.id}.`;
+    }
+
+    return `🗑 Orçamento ${command.id} deletado com sucesso.`;
+}
+ case 'edit': {
     if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
     // Buscar orçamento atual
