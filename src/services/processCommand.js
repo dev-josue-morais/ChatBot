@@ -9,11 +9,11 @@ const { getNowBRT } = require('./utils');
 async function processCommand(text, userPhone) {
   try {
     const gptPrompt = `
-Você é um assistente de automação comercial.
+Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil). 
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
 
-Para AGENDA:
+📅 Para AGENDA, siga este formato:
 {
   "modulo": "agenda",
   "action": "create" | "list" | "delete",
@@ -24,22 +24,24 @@ Para AGENDA:
   "end_date": "Data/hora fim ISO (GMT-3)"
 }
 
-Para ORÇAMENTO:
+💰 Para ORÇAMENTO:
 {
   "modulo": "orcamento",
   "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": número (obrigatório em edit/delete/pdf, use exatamente o que o usuário digitou)
+  "id": "Número do orçamento (para edit/delete/pdf)",
+
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
 
-  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-  "servicos": [{"nome": "string", "valor": número}],
+  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],   // usado em create ou para substituir lista inteira
+  "servicos": [{"nome": "string", "valor": número}],                                       // idem acima
 
-  // Edição granular
+  // Para edição granular:
   "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "remove_materiais": [{"nome": "string"}],
   "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
+
   "add_servicos": [{"nome": "string", "valor": número}],
   "remove_servicos": [{"nome": "string"}],
   "edit_servicos": [{"nome": "string", "valor": número?}],
@@ -48,16 +50,17 @@ Para ORÇAMENTO:
   "desconto_servicos": "opcional"
 }
 
-Regras ORÇAMENTO:
-- Se o usuário mencionar *editar, atualizar, alterar ou remover*, então use sempre "action": "edit" (nunca "create" e nunca invente orçamento não solicitado).
-- Em "list", só use "nome_cliente", "id" (número do orçamento) ou "telefone_cliente" como filtros.
+Regras importantes para ORÇAMENTO:
+
+- Em "list", **se o usuário fornecer nome do cliente, número do orçamento ou telefone, use esses filtros "nome_cliente, orçamento_numero, telefone_cliente"**.
+- Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
+- Em "create", "nome_cliente" e "telefone_cliente" são obrigatórios; se faltar telefone, retorne {"falta_telefone": true}.
 - Em "edit":
    - Se vier "materiais" ou "servicos", substituem a lista inteira.
    - Se vier "add_", "remove_" ou "edit_", aplique apenas sobre os itens especificados.
-- Se o usuário não informar preço de material, inclua valor = null.
-- No campo "materiais", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
+- No campo "materiais", além de "nome", "qtd" e "valor", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
 - Sempre responda com JSON válido, sem texto adicional.
-- Datas sempre em GMT-3 (Brasil).
+- Datas sempre em GMT-3.
 
 Mensagem do usuário: "\${text}"
 `;
