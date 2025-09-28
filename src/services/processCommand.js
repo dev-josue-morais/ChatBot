@@ -10,17 +10,17 @@ async function processCommand(text, userPhone) {
     const gptPrompt = `
 Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil).
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-Você entende comandos de agenda ou orçamentos e converte em JSON válido.
+Você entende comandos de agenda ou orçamentos e sempre gera **JSON válido**, sem explicações, sem expressões ou textos descritivos.
 
-📅 Para AGENDA, siga este formato:
+📅 Para AGENDA:
 {
   "modulo": "agenda",
   "action": "create" | "list" | "delete",
-  "title": "Somente nome do cliente ou do local",
-  "datetime": "Data/hora ISO no GMT-3",
+  "title": "string",
+  "datetime": "ISO 8601 string no GMT-3",
   "reminder_minutes": número (default 30),
-  "start_date": "Data/hora início ISO (GMT-3)",
-  "end_date": "Data/hora fim ISO (GMT-3)"
+  "start_date": "ISO 8601 string",
+  "end_date": "ISO 8601 string"
 }
 
 💰 Para ORÇAMENTO:
@@ -32,6 +32,11 @@ Você entende comandos de agenda ou orçamentos e converte em JSON válido.
   "telefone_cliente": string (obrigatório em create),
   "descricao_atividades": string ou null,
 
+  // Para CREATE, use diretamente estes campos
+  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+  "servicos": [{"nome": "string", "valor": número}],
+
+  // Para EDIT, use os campos granulares
   "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
   "remove_materiais": [{"nome": "string"}],
@@ -40,19 +45,18 @@ Você entende comandos de agenda ou orçamentos e converte em JSON válido.
   "edit_servicos": [{"nome": "string", "valor": número?}],
   "remove_servicos": [{"nome": "string"}],
 
-  "desconto_materiais": número (ex: 10) ou string com porcentagem (ex: "10%") ou null,
-"desconto_servicos": número (ex: 10) ou string com porcentagem (ex: "10%") ou null. 
+  "desconto_materiais": número ou string com porcentagem (ex: 10 ou "10%") ou null,
+  "desconto_servicos": número ou string com porcentagem (ex: 10 ou "10%") ou null
 }
 
 Regras importantes para ORÇAMENTO:
 
-1. Nunca use expressões matemáticas (ex: 30 * 4). Use sempre números literais.
-2. Campos obrigatórios devem ter valores reais. Campos opcionais podem ser null.
-3. Sempre gere JSON válido e completo para o comando solicitado.
-4. Para 'edit', 'delete' ou 'pdf', o campo "id" é obrigatório.
-5. Para 'create', inclua todos os campos obrigatórios e materiais/serviços fornecidos.
-6. Nunca adicione explicações ou textos descritivos no JSON.
-7. Para datas, use sempre o formato ISO 8601 em GMT-3.
+1. Para CREATE, **use sempre `materiais` e `servicos`**, não `add_` ou `edit_`.  
+2. Para EDIT, DELETE ou PDF, o campo "id" é obrigatório.  
+3. Nunca use expressões matemáticas ou textos descritivos no JSON.  
+4. Campos obrigatórios devem ter valores reais; campos opcionais podem ser null.  
+5. Sempre gere JSON **parseável e completo**, sem explicações ou comentários.  
+6. Datas use formato ISO 8601 em GMT-3.
 
 Mensagem do usuário: "${text}"
 `;
