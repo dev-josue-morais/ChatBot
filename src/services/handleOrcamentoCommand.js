@@ -78,7 +78,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 
     return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
 }
-
             case 'edit': {
     if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
@@ -99,63 +98,85 @@ async function handleOrcamentoCommand(command, userPhone) {
 
     // --- Materiais ---
     if (command.materiais) {
-        // Substitui lista inteira apenas se fornecida
-        materiais = command.materiais;
+        materiais = command.materiais.map(m => ({
+            nome: m.nome.trim(),
+            qtd: m.qtd,
+            valor: m.valor,
+            unidade: m.unidade?.trim()
+        }));
     }
 
     if (command.add_materiais) {
         for (const newItem of command.add_materiais) {
-            const existing = materiais.find(m => m.nome === newItem.nome);
+            const nomeNormalized = newItem.nome.trim().toLowerCase();
+            const existing = materiais.find(m => m.nome.trim().toLowerCase() === nomeNormalized);
             if (existing) {
                 if (newItem.qtd != null) existing.qtd = newItem.qtd;
                 if (newItem.valor != null) existing.valor = newItem.valor;
-                if (newItem.unidade != null) existing.unidade = newItem.unidade;
+                if (newItem.unidade != null) existing.unidade = newItem.unidade.trim();
             } else {
-                materiais.push(newItem);
+                materiais.push({
+                    ...newItem,
+                    nome: newItem.nome.trim(),
+                    unidade: newItem.unidade?.trim()
+                });
             }
         }
     }
 
     if (command.edit_materiais) {
         for (const edit of command.edit_materiais) {
-            const item = materiais.find(m => m.nome === edit.nome);
+            const nomeNormalized = edit.nome.trim().toLowerCase();
+            const item = materiais.find(m => m.nome.trim().toLowerCase() === nomeNormalized);
             if (item) {
                 if (edit.qtd != null) item.qtd = edit.qtd;
                 if (edit.valor != null) item.valor = edit.valor;
-                if (edit.unidade != null) item.unidade = edit.unidade;
+                if (edit.unidade != null) item.unidade = edit.unidade.trim();
             }
         }
     }
 
     if (command.remove_materiais) {
-        materiais = materiais.filter(m => !command.remove_materiais.some(r => r.nome === m.nome));
+        materiais = materiais.filter(
+            m => !command.remove_materiais.some(r => r.nome.trim().toLowerCase() === m.nome.trim().toLowerCase())
+        );
     }
 
     // --- Serviços ---
     if (command.servicos) {
-        servicos = command.servicos;
+        servicos = command.servicos.map(s => ({
+            nome: s.nome.trim(),
+            valor: s.valor
+        }));
     }
 
     if (command.add_servicos) {
         for (const newItem of command.add_servicos) {
-            const existing = servicos.find(s => s.nome === newItem.nome);
+            const nomeNormalized = newItem.nome.trim().toLowerCase();
+            const existing = servicos.find(s => s.nome.trim().toLowerCase() === nomeNormalized);
             if (existing) {
                 if (newItem.valor != null) existing.valor = newItem.valor;
             } else {
-                servicos.push(newItem);
+                servicos.push({
+                    ...newItem,
+                    nome: newItem.nome.trim()
+                });
             }
         }
     }
 
     if (command.edit_servicos) {
         for (const edit of command.edit_servicos) {
-            const item = servicos.find(s => s.nome === edit.nome);
+            const nomeNormalized = edit.nome.trim().toLowerCase();
+            const item = servicos.find(s => s.nome.trim().toLowerCase() === nomeNormalized);
             if (item && edit.valor != null) item.valor = edit.valor;
         }
     }
 
     if (command.remove_servicos) {
-        servicos = servicos.filter(s => !command.remove_servicos.some(r => r.nome === s.nome));
+        servicos = servicos.filter(
+            s => !command.remove_servicos.some(r => r.nome.trim().toLowerCase() === s.nome.trim().toLowerCase())
+        );
     }
 
     // --- Monta objeto de updates ---
