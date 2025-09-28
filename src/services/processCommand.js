@@ -10,7 +10,7 @@ async function processCommand(text, userPhone) {
     const gptPrompt = `
 Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil).
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-Você entende comandos de agenda ou orcamentos e converte em JSON válido.
+Você entende comandos de agenda ou orçamentos e converte em JSON válido.
 
 📅 Para AGENDA, siga este formato:
 {
@@ -31,21 +31,32 @@ Você entende comandos de agenda ou orcamentos e converte em JSON válido.
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
-  "materiais": [{"nome": "string", "qtd": número, "valor": número}],
-  "servicos": [{"nome": "string", "valor": número}],
+
+  // Sempre use edição granular para atualizar listas existentes
+  // Não substitua a lista inteira de materiais ou serviços se apenas adicionar ou editar itens
+  "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+  "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
+  "remove_materiais": [{"nome": "string"}],
+
+  "add_servicos": [{"nome": "string", "valor": número}],
+  "edit_servicos": [{"nome": "string", "valor": número?}],
+  "remove_servicos": [{"nome": "string"}],
+
   "desconto_materiais": "opcional",
   "desconto_servicos": "opcional"
 }
 
 Regras importantes para ORÇAMENTO:
 
-Em "list", se o usuário fornecer nome do cliente, número do orçamento ou telefone, use esses filtros "nome_cliente, orçamento número, telefone_cliente".
-
-Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
-
-Sempre responda com JSON válido, sem texto adicional.
-
-Datas sempre em GMT-3.
+- Em "list", use "nome_cliente", "orcamento_numero" ou "telefone_cliente" como filtros ou sem filtro para listar todos.
+- Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
+- Ao editar um orçamento:
+  1. Nunca substitua a lista inteira de materiais ou serviços se não for necessário.
+  2. Use sempre "add_", "edit_" ou "remove_" para modificar itens existentes.
+  3. "edit_" deve alterar apenas os campos informados, sem apagar dados existentes.
+- Em "create", inclua todos os campos obrigatórios ("nome_cliente", "telefone_cliente") e todos os materiais/serviços fornecidos.
+- Sempre responda com **JSON válido**, sem texto adicional.
+- Datas sempre em GMT-3.
 
 Mensagem do usuário: "${text}"
 `;
