@@ -8,7 +8,7 @@ function formatOrcamento(o) {
 📌 Observação: ${o.descricao_atividades || '-'}
 📦 Materiais:
 ${(o.materiais && o.materiais.length > 0)
-        ? o.materiais.map(m => `   - ${m.nome} (Qtd: ${m.qtd}, Valor: ${m.valor})`).join("\n")
+        ? o.materiais.map(m => `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Valor: ${m.valor})`).join("\n")
         : "   Nenhum"}
 💰 Desconto Materiais: ${o.desconto_materiais || '0'}
 🔧 Serviços:
