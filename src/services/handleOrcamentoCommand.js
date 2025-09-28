@@ -23,7 +23,7 @@ async function handleOrcamentoCommand(command, userPhone) {
             }
 
             case 'edit': {
-                if (!command.orcamento_numero) return '⚠️ É necessário informar o ID do orçamento para editar.';
+                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
                 const updates = {};
                 if (command.nome_cliente) updates.nome_cliente = command.nome_cliente;
@@ -37,7 +37,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const { error } = await supabase
                     .from('orcamentos')
                     .update(updates)
-                    .eq('orcamento_numero', command.orcamento_numero);
+                    .eq('orcamento_numero', command.id);
 
                 if (error) {
                     console.error("Erro ao editar orçamento:", error);
@@ -47,12 +47,12 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return `✏️ Orçamento ${command.orcamento_numero} atualizado com sucesso.`;
             }
             case 'delete': {
-                if (!command.orcamento_numero) return '⚠️ É necessário informar o ID do orçamento para deletar.';
+                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
 
                 const { error } = await supabase
                     .from('orcamentos')
                     .delete()
-                    .eq('orcamento_numero', command.orcamento_numero);
+                    .eq('orcamento_numero', command.id);
 
                 if (error) {
                     console.error("Erro ao deletar orçamento:", error);
