@@ -6,18 +6,16 @@ function formatOrcamento(o) {
 👤 Cliente: ${o.nome_cliente}
 📞 Telefone: ${o.telefone_cliente}
 📌 Observação: ${o.descricao_atividades || '-'}
-💰 Desconto Materiais: ${o.desconto_materiais || '0'}
-💰 Desconto Serviços: ${o.desconto_servicos || '0'}
-
 📦 Materiais:
 ${(o.materiais && o.materiais.length > 0)
         ? o.materiais.map(m => `   - ${m.nome} (Qtd: ${m.qtd}, Valor: ${m.valor})`).join("\n")
         : "   Nenhum"}
-
+💰 Desconto Materiais: ${o.desconto_materiais || '0'}
 🔧 Serviços:
 ${(o.servicos && o.servicos.length > 0)
         ? o.servicos.map(s => `   - ${s.nome} (Valor: ${s.valor})`).join("\n")
         : "   Nenhum"}
+💰 Desconto Serviços: ${o.desconto_servicos || '0'}
 `.trim();
 }
 
