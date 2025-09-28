@@ -133,7 +133,7 @@ async function handleOrcamentoCommand(command, userPhone) {
     }
 
     // Monta updates
-    const updates: any = {
+    const updates = {
         ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
         ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
         ...(command.descricao_atividades && { descricao_atividades: command.descricao_atividades }),
