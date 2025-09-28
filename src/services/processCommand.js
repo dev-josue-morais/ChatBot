@@ -43,8 +43,8 @@ Regras importantes para ORÇAMENTO:
 - Em "list", **se o usuário fornecer nome do cliente, número do orçamento ou telefone, use esses filtros "nome_cliente, orçamento número, telefone_cliente"**.
 - Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
 - Em "create", "nome_cliente" e "telefone_cliente" são obrigatórios; se faltar telefone, retorne {"falta_telefone": true}.
+- No campo "materiais", além de "nome", "qtd" e "valor", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente"), e some o valor total do material por item quando fornecido.
 - Sempre responda com JSON válido, sem texto adicional.
-- No campo "materiais", além de "nome", "qtd" e "valor", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
 - Datas sempre em GMT-3.
 
 Mensagem do usuário: "${text}"
