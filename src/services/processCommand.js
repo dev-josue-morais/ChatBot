@@ -1,8 +1,8 @@
 // services/agendaService.js
 const openai = require('./openai');
 const supabase = require('./supabase');
-const { handleOrcamentoCommand } = require('./handleOrcamentoCommand');
-const { handleAgendaCommand } = require('./handleAgendaCommand');
+const handleOrcamentoCommand = require('./handleOrcamentoCommand');
+const handleAgendaCommand = require('./handleAgendaCommand');
 const { getNowBRT } = require('./utils');
 
 // Processa comandos de agenda recebidos do WhatsApp
