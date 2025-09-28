@@ -7,5 +7,10 @@ module.exports = {
   APP_SECRET: process.env.APP_SECRET,
   WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN,
   RENDER_SERVICE_ID: process.env.RENDER_SERVICE_ID,
-  RENDER_API_KEY: process.env.RENDER_API_KEY
+  PHONE_NUMBER_ID: process.env.PHONE_NUMBER_ID,
+  RENDER_API_KEY: process.env.RENDER_API_KEY,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_KEY: process.env.SUPABASE_KEY,
+  GITHUB_SECRET: process.env.GITHUB_SECRET
 };
