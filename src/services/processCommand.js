@@ -28,7 +28,7 @@ Para ORÇAMENTO:
 {
   "modulo": "orcamento",
   "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": "Número do orçamento (obrigatório em edit/delete/pdf)",
+  "id": número (obrigatório em edit/delete/pdf, use exatamente o que o usuário digitou)
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
