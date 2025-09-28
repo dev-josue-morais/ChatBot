@@ -1,5 +1,12 @@
 const supabase = require('./supabase');
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(value || 0);
+}
+
 function formatOrcamento(o) {
     return `
 📝 Orçamento ${o.orcamento_numero}
@@ -10,7 +17,7 @@ function formatOrcamento(o) {
 ${(o.materiais && o.materiais.length > 0)
         ? o.materiais.map(m => {
     const total = (m.qtd || 0) * (m.valor || 0);
-    return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${m.valor}, Total: ${total})`;
+    return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
 }).join("\n")
         : "   Nenhum"}
 💰 Desconto Materiais: ${o.desconto_materiais || '0'}
