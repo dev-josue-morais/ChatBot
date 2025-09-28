@@ -41,10 +41,10 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (error) {
                     console.error("Erro ao editar orçamento:", error);
-                    return `⚠️ Não consegui editar o orçamento ${command.orcamento_numero}.`;
+                    return `⚠️ Não consegui editar o orçamento ${command.id}.`;
                 }
 
-                return `✏️ Orçamento ${command.orcamento_numero} atualizado com sucesso.`;
+                return `✏️ Orçamento ${command.id} atualizado com sucesso.`;
             }
             case 'delete': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
@@ -56,10 +56,10 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (error) {
                     console.error("Erro ao deletar orçamento:", error);
-                    return `⚠️ Não consegui deletar o orçamento ${command.orcamento_numero}.`;
+                    return `⚠️ Não consegui deletar o orçamento ${command.id}.`;
                 }
 
-                return `🗑 Orçamento ${command.orcamento_numero} deletado com sucesso.`;
+                return `🗑 Orçamento ${command.id} deletado com sucesso.`;
             }
 
             case 'list': {
