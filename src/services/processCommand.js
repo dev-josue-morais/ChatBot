@@ -69,7 +69,6 @@ Mensagem do usuário: "${text}"
     const { data: memoria } = await supabase
       .from("memoria_contexto")
       .select("*")
-      .eq("user_id", userPhone)
       .maybeSingle();
 
     if (memoria) {

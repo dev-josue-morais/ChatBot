@@ -23,7 +23,7 @@ async function handleOrcamentoCommand(command, userPhone) {
             }
 
             case 'edit': {
-                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
+                if (!command.orcamento_numero) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
                 const updates = {};
                 if (command.nome_cliente) updates.nome_cliente = command.nome_cliente;
@@ -37,7 +37,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const { error } = await supabase
                     .from('orcamentos')
                     .update(updates)
-                    .eq('id', command.id);
+                    .eq('orcamento_numero', command.orcamento_numero);
 
                 if (error) {
                     console.error("Erro ao editar orçamento:", error);
@@ -47,19 +47,19 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return `✏️ Orçamento ${command.orcamento_numero} atualizado com sucesso.`;
             }
             case 'delete': {
-                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
+                if (!command.orcamento_numero) return '⚠️ É necessário informar o ID do orçamento para deletar.';
 
                 const { error } = await supabase
                     .from('orcamentos')
                     .delete()
-                    .eq('id', command.id);
+                    .eq('orcamento_numero', command.orcamento_numero);
 
                 if (error) {
                     console.error("Erro ao deletar orçamento:", error);
-                    return `⚠️ Não consegui deletar o orçamento ${command.id}.`;
+                    return `⚠️ Não consegui deletar o orçamento ${command.orcamento_numero}.`;
                 }
 
-                return `🗑 Orçamento ${command.id} deletado com sucesso.`;
+                return `🗑 Orçamento ${command.orcamento_numero} deletado com sucesso.`;
             }
 
             case 'list': {
@@ -74,7 +74,7 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
-                return `📄 Orçamentos:\n` + orcamentos.map(o => `- ${o.nome_cliente} (ID: ${o.id})`).join('\n');
+                return `📄 Orçamentos:\n` + orcamentos.map(o => `- ${o.nome_cliente} (ID: ${o.orcamento_numero})`).join('\n');
             }
 
             case 'pdf': {
