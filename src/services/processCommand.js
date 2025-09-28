@@ -39,7 +39,8 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
 }
 
 Regras importantes para ORÇAMENTO:
-- Em "list", **se o usuário fornecer nome do cliente ou telefone, use esses filtros**. Se não fornecer, liste todos.
+
+- Em "list", **se o usuário fornecer nome do cliente ou telefone, use esses filtros "nome_cliente, orcamento_numero"**. Se não fornecer, liste todos.
 - Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
 - Em "create", "nome_cliente" e "telefone_cliente" são obrigatórios; se faltar telefone, retorne {"falta_telefone": true}.
 - Sempre responda com JSON válido, sem texto adicional.
