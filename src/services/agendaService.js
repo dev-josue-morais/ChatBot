@@ -8,17 +8,27 @@ const { formatLocal, getNowBRT } = require('./utils');
 async function processAgendaCommand(text) {
   try {
     const gptPrompt = `
-Você é um assistente de agenda. O usuário está no fuso GMT-3 (Brasil). 
-Considere que a data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
+Você é um assistente de agenda inteligente. O usuário está no fuso GMT-3 (Brasil). 
+A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 O título do evento pode ser nome de cliente ou local.
-Identifique a intenção da mensagem: criar, listar ou deletar evento.
-Extraia:
+
+Identifique a intenção principal da mensagem: criar, listar ou deletar evento.
+
+Extraia os seguintes campos:
 - action: "create", "list" ou "delete"
 - title: string (nome ou local)
 - datetime: data/hora em ISO (GMT-3)
-- reminder_minutes: integer opcional (default 30)
-- start_date, end_date: se for listagem de eventos
-Responda apenas em JSON válido.
+- reminder_minutes: inteiro opcional (default 30)
+- start_date e end_date: obrigatórios **se action = "list"**
+
+Regras adicionais:
+- Para "hoje", use o intervalo de 00:00 a 23:59 (no fuso GMT-3).
+- Para "amanhã", use o próximo dia 00:00 a 23:59 (no fuso GMT-3).
+- Para "semana", considere segunda-feira 00:00 até domingo 23:59.
+- Se a mensagem indicar apenas "eventos" sem data, use de hoje.
+- Sempre retorne as datas em formato ISO com GMT-3.
+- Responda **somente** com JSON válido (sem explicações nem texto fora do JSON).
+
 Mensagem: "${text}"
 `;
 
@@ -39,7 +49,6 @@ Mensagem: "${text}"
       console.error("Erro ao parsear JSON do GPT:", gptJSON);
       return "⚠️ Não consegui entender o comando.";
     }
-    console.log("🧠 GPT output:", gptJSON);
 
     // 3️⃣ Converte datas GMT-3 do GPT para UTC usando Luxon
     if (command.datetime) {
@@ -103,7 +112,6 @@ Mensagem: "${text}"
       case "list": {
         const startUTC = command.start_date;
         const endUTC = command.end_date;
-        console.log("📆 Intervalo de busca:", { startUTC, endUTC, command });
         const { data: events, error } = await supabase
           .from("events")
           .select("*")
