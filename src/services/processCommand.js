@@ -9,11 +9,10 @@ const { getNowBRT } = require('./utils');
 async function processCommand(text, userPhone) {
   try {
     const gptPrompt = `
-Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil). 
+Você é um assistente de automação comercial.
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
-
-📅 Para AGENDA, siga este formato:
+Para AGENDA:
 {
   "modulo": "agenda",
   "action": "create" | "list" | "delete",
@@ -23,31 +22,36 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
   "start_date": "Data/hora início ISO (GMT-3)",
   "end_date": "Data/hora fim ISO (GMT-3)"
 }
-
-💰 Para ORÇAMENTO:
+Para ORÇAMENTO:
 {
   "modulo": "orcamento",
   "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": "Número do orçamento (para edit/delete/pdf)",
+  "id": "Número do orçamento (para list/edit/delete/pdf)",
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
-  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-  "servicos": [{"nome": "string", "valor": número}],
+  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}], // para criar ou editar lista toda. 
+  "servicos": [{"nome": "string", "valor": número}] // para criar ou editar lista toda. 
+Para edição granular:
+  "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+  "remove_materiais": [{"nome": "string"}],
+  "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
+  "add_servicos": [{"nome": "string", "valor": número}],
+  "remove_servicos": [{"nome": "string"}],
+  "edit_servicos": [{"nome": "string", "valor": número?}],
   "desconto_materiais": "opcional",
   "desconto_servicos": "opcional"
 }
-
-Regras importantes para ORÇAMENTO:
-
-- Em "list", **se o usuário fornecer nome do cliente, número do orçamento ou telefone, use esses filtros "nome_cliente, orçamento número, telefone_cliente"**.
-- Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
-- Em "create", "nome_cliente" e "telefone_cliente" são obrigatórios; se faltar telefone, retorne {"falta_telefone": true}.
-- No campo "materiais", além de "nome", "qtd" e "valor", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
+Regras ORÇAMENTO:
+- Em "list", **se fornecido "nome_cliente, orçamento_numero, telefone_cliente"**.
+- Em "edit":
+   - Se vier "materiais" ou "servicos", substituem a lista inteira.
+   - Se vier "add_", "remove_" ou "edit_", aplique apenas sobre os itens especificados.
+- No campo "materiais", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
 - Sempre responda com JSON válido, sem texto adicional.
-- Datas sempre em GMT-3.
+- Datas sempre em GMT-3 (Brasil). 
 
-Mensagem do usuário: "${text}"
+Mensagem do usuário: "\${text}"
 `;
     // 1️⃣ Chama GPT
     const gptResponse = await openai.chat.completions.create({
