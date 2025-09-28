@@ -85,7 +85,7 @@ async function handleOrcamentoCommand(command, userPhone) {
     // Buscar orçamento atual
     const { data: currentData, error: fetchError } = await supabase
         .from('orcamentos')
-        .select('materiais, servicos')
+        .select('materiais, servicos, nome_cliente, telefone_cliente, descricao_atividades, desconto_materiais, desconto_servicos')
         .eq('orcamento_numero', command.id)
         .single();
 
@@ -99,40 +99,66 @@ async function handleOrcamentoCommand(command, userPhone) {
 
     // --- Materiais ---
     if (command.materiais) {
-        // substitui lista inteira
+        // Substitui lista inteira apenas se fornecida
         materiais = command.materiais;
     }
+
     if (command.add_materiais) {
-        materiais = [...materiais, ...command.add_materiais];
+        for (const newItem of command.add_materiais) {
+            const existing = materiais.find(m => m.nome === newItem.nome);
+            if (existing) {
+                if (newItem.qtd != null) existing.qtd = newItem.qtd;
+                if (newItem.valor != null) existing.valor = newItem.valor;
+                if (newItem.unidade != null) existing.unidade = newItem.unidade;
+            } else {
+                materiais.push(newItem);
+            }
+        }
     }
+
+    if (command.edit_materiais) {
+        for (const edit of command.edit_materiais) {
+            const item = materiais.find(m => m.nome === edit.nome);
+            if (item) {
+                if (edit.qtd != null) item.qtd = edit.qtd;
+                if (edit.valor != null) item.valor = edit.valor;
+                if (edit.unidade != null) item.unidade = edit.unidade;
+            }
+        }
+    }
+
     if (command.remove_materiais) {
         materiais = materiais.filter(m => !command.remove_materiais.some(r => r.nome === m.nome));
-    }
-    if (command.edit_materiais) {
-        materiais = materiais.map(m => {
-            const update = command.edit_materiais.find(e => e.nome === m.nome);
-            return update ? { ...m, ...update } : m;
-        });
     }
 
     // --- Serviços ---
     if (command.servicos) {
         servicos = command.servicos;
     }
+
     if (command.add_servicos) {
-        servicos = [...servicos, ...command.add_servicos];
+        for (const newItem of command.add_servicos) {
+            const existing = servicos.find(s => s.nome === newItem.nome);
+            if (existing) {
+                if (newItem.valor != null) existing.valor = newItem.valor;
+            } else {
+                servicos.push(newItem);
+            }
+        }
     }
+
+    if (command.edit_servicos) {
+        for (const edit of command.edit_servicos) {
+            const item = servicos.find(s => s.nome === edit.nome);
+            if (item && edit.valor != null) item.valor = edit.valor;
+        }
+    }
+
     if (command.remove_servicos) {
         servicos = servicos.filter(s => !command.remove_servicos.some(r => r.nome === s.nome));
     }
-    if (command.edit_servicos) {
-        servicos = servicos.map(s => {
-            const update = command.edit_servicos.find(e => e.nome === s.nome);
-            return update ? { ...s, ...update } : s;
-        });
-    }
 
-    // Monta updates
+    // --- Monta objeto de updates ---
     const updates = {
         ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
         ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
@@ -157,22 +183,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 
     return `✏️ Orçamento atualizado com sucesso:\n\n${formatOrcamento(data[0])}`;
 }
-            case 'delete': {
-                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
-
-                const { error } = await supabase
-                    .from('orcamentos')
-                    .delete()
-                    .eq('orcamento_numero', command.id);
-
-                if (error) {
-                    console.error("Erro ao deletar orçamento:", error);
-                    return `⚠️ Não consegui deletar o orçamento ${command.id}.`;
-                }
-
-                return `🗑 Orçamento ${command.id} deletado com sucesso.`;
-            }
-
             case 'list': {
                 let query = supabase.from('orcamentos').select('*');
 
