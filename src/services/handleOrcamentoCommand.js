@@ -7,21 +7,47 @@ function formatCurrency(value) {
   }).format(value || 0);
 }
 
+function aplicarDesconto(total, desconto) {
+  if (!desconto) return { totalFinal: total, descricao: formatCurrency(total) };
+
+  // Caso seja percentual (string terminando com %)
+  if (typeof desconto === "string" && desconto.trim().endsWith("%")) {
+    const perc = parseFloat(desconto.replace("%", "").trim());
+    if (isNaN(perc)) return { totalFinal: total, descricao: formatCurrency(total) };
+
+    const valorComDesconto = total - (total * (perc / 100));
+    return {
+      totalFinal: valorComDesconto,
+      descricao: `~~${formatCurrency(total)}~~ ${formatCurrency(valorComDesconto)} (-${perc}%)`
+    };
+  }
+
+  // Caso seja valor absoluto (número ou string numérica)
+  const valor = parseFloat(desconto);
+  if (isNaN(valor) || valor <= 0) return { totalFinal: total, descricao: formatCurrency(total) };
+
+  const valorComDesconto = total - valor;
+  return {
+    totalFinal: valorComDesconto,
+    descricao: `~~${formatCurrency(total)}~~ ${formatCurrency(valorComDesconto)} (-${formatCurrency(valor)})`
+  };
+}
+
 function formatOrcamento(o) {
-    const totalMateriais = (o.materiais || []).reduce((sum, m) => {
-        return sum + (m.qtd || 0) * (m.valor || 0);
-    }, 0);
+  const totalMateriais = (o.materiais || []).reduce((sum, m) => {
+    return sum + (m.qtd || 0) * (m.valor || 0);
+  }, 0);
 
-    const totalServicos = (o.servicos || []).reduce((sum, s) => {
-        return sum + (s.valor || 0);
-    }, 0);
+  const totalServicos = (o.servicos || []).reduce((sum, s) => {
+    return sum + (s.valor || 0);
+  }, 0);
 
-    const descontoMateriais = parseFloat(o.desconto_materiais || 0);
-    const descontoServicos = parseFloat(o.desconto_servicos || 0);
+  const descontoMateriais = aplicarDesconto(totalMateriais, o.desconto_materiais);
+  const descontoServicos = aplicarDesconto(totalServicos, o.desconto_servicos);
 
-    const totalGeral = (totalMateriais - descontoMateriais) + (totalServicos - descontoServicos);
+  const totalGeral = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
-    return `
+  return `
 📝 Orçamento ${o.orcamento_numero}
 👤 Cliente: ${o.nome_cliente}
 📞 Telefone: ${o.telefone_cliente}
@@ -29,22 +55,20 @@ function formatOrcamento(o) {
 
 📦 Materiais:
 ${(o.materiais && o.materiais.length > 0)
-        ? o.materiais.map(m => {
-            const total = (m.qtd || 0) * (m.valor || 0);
-            return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
+      ? o.materiais.map(m => {
+          const total = (m.qtd || 0) * (m.valor || 0);
+          return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
         }).join("\n")
-        : "   Nenhum"}
+      : "   Nenhum"}
 
-💰 Total Materiais: ${formatCurrency(totalMateriais)}
-💰 Desconto Materiais: ${formatCurrency(descontoMateriais)}
+💰 Total Materiais: ${descontoMateriais.descricao}
 
 🔧 Serviços:
 ${(o.servicos && o.servicos.length > 0)
-        ? o.servicos.map(s => `   - ${s.nome} (Valor: ${formatCurrency(s.valor)})`).join("\n")
-        : "   Nenhum"}
+      ? o.servicos.map(s => `   - ${s.nome} (Valor: ${formatCurrency(s.valor)})`).join("\n")
+      : "   Nenhum"}
 
-💰 Total Serviços: ${formatCurrency(totalServicos)}
-💰 Desconto Serviços: ${formatCurrency(descontoServicos)}
+💰 Total Serviços: ${descontoServicos.descricao}
 
 🧾 Total Geral: ${formatCurrency(totalGeral)}
 `.trim();
