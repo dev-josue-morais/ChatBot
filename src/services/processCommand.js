@@ -27,13 +27,11 @@ Você entende comandos de agenda ou orçamentos e converte em JSON válido.
 {
   "modulo": "orcamento",
   "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": "Número do orçamento (para edit/delete/pdf)",
-  "nome_cliente": "obrigatório em create",
-  "telefone_cliente": "obrigatório em create",
-  "descricao_atividades": "opcional",
+  "id": número (para edit/delete/pdf, obrigatório nesses casos),
+  "nome_cliente": string (obrigatório em create),
+  "telefone_cliente": string (obrigatório em create),
+  "descricao_atividades": string ou null,
 
-  // Sempre use edição granular para atualizar listas existentes
-  // Não substitua a lista inteira de materiais ou serviços se apenas adicionar ou editar itens
   "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
   "remove_materiais": [{"nome": "string"}],
@@ -42,21 +40,19 @@ Você entende comandos de agenda ou orçamentos e converte em JSON válido.
   "edit_servicos": [{"nome": "string", "valor": número?}],
   "remove_servicos": [{"nome": "string"}],
 
-  "desconto_materiais": "opcional",
-  "desconto_servicos": "opcional"
+  "desconto_materiais": número (ex: 10) ou string com porcentagem (ex: "10%") ou null,
+"desconto_servicos": número (ex: 10) ou string com porcentagem (ex: "10%") ou null. 
 }
 
 Regras importantes para ORÇAMENTO:
 
-- Em "list", use "nome_cliente", "orcamento_numero" ou "telefone_cliente" como filtros ou sem filtro para listar todos.
-- Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
-- Ao editar um orçamento:
-  1. Nunca substitua a lista inteira de materiais ou serviços se não for necessário.
-  2. Use sempre "add_", "edit_" ou "remove_" para modificar itens existentes.
-  3. "edit_" deve alterar apenas os campos informados, sem apagar dados existentes.
-- Em "create", inclua todos os campos obrigatórios ("nome_cliente", "telefone_cliente") e todos os materiais/serviços fornecidos.
-- Sempre responda com **JSON válido**, sem texto adicional.
-- Datas sempre em GMT-3.
+1. Nunca use expressões matemáticas (ex: 30 * 4). Use sempre números literais.
+2. Campos obrigatórios devem ter valores reais. Campos opcionais podem ser null.
+3. Sempre gere JSON válido e completo para o comando solicitado.
+4. Para 'edit', 'delete' ou 'pdf', o campo "id" é obrigatório.
+5. Para 'create', inclua todos os campos obrigatórios e materiais/serviços fornecidos.
+6. Nunca adicione explicações ou textos descritivos no JSON.
+7. Para datas, use sempre o formato ISO 8601 em GMT-3.
 
 Mensagem do usuário: "${text}"
 `;
