@@ -7,7 +7,6 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const { data, error } = await supabase.from('orcamentos').insert([{
                     nome_cliente: command.nome_cliente,
                     telefone_cliente: command.telefone_cliente,
-                    userid: userPhone,
                     descricao_atividades: command.descricao_atividades || '',
                     materiais: command.materiais || [],
                     servicos: command.servicos || [],
@@ -66,8 +65,7 @@ async function handleOrcamentoCommand(command, userPhone) {
             case 'list': {
                 const { data: orcamentos, error } = await supabase
                     .from('orcamentos')
-                    .select('*')
-                    .eq('userid', userPhone);
+                    .select('*');
 
                 if (error) {
                     console.error("Erro ao listar orçamentos:", error);
