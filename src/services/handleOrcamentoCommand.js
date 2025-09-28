@@ -91,9 +91,13 @@ async function handleOrcamentoCommand(command, userPhone) {
         return `⚠️ Não consegui deletar o orçamento ${command.id}.`;
     }
 
+    if (!data || data.length === 0) {
+        return `⚠️ Orçamento ${command.id} não encontrado.`;
+    }
+
     return `🗑 Orçamento ${command.id} deletado com sucesso.`;
 }
- case 'edit': {
+          case 'edit': {
     if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
     // Buscar orçamento atual
