@@ -8,7 +8,10 @@ function formatOrcamento(o) {
 📌 Observação: ${o.descricao_atividades || '-'}
 📦 Materiais:
 ${(o.materiais && o.materiais.length > 0)
-        ? o.materiais.map(m => `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Valor: ${m.valor})`).join("\n")
+        ? o.materiais.map(m => {
+    const total = (m.qtd || 0) * (m.valor || 0);
+    return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${m.valor}, Total: ${total})`;
+}).join("\n")
         : "   Nenhum"}
 💰 Desconto Materiais: ${o.desconto_materiais || '0'}
 🔧 Serviços:
