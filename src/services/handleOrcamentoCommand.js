@@ -53,34 +53,30 @@ ${(o.servicos && o.servicos.length > 0)
 async function handleOrcamentoCommand(command, userPhone) {
     try {
         switch (command.action) {
-            case 'create': {
-    if (!command.nome_cliente) {
-        return "⚠️ O campo *nome do cliente* é obrigatório.";
-    }
-    if (!command.telefone_cliente) {
-        return "⚠️ O campo *telefone do cliente* é obrigatório.";
-    }
-
-    // Normaliza materiais e serviços enviados via add_*
-    const materiais = command.materiais || command.add_materiais || [];
-    const servicos = command.servicos || command.add_servicos || [];
-
-    const { data, error } = await supabase.from('orcamentos').insert([{
-        nome_cliente: command.nome_cliente,
-        telefone_cliente: command.telefone_cliente,
-        descricao_atividades: command.descricao_atividades || '',
-        materiais,
-        servicos,
-        desconto_materiais: command.desconto_materiais ?? null,
-        desconto_servicos: command.desconto_servicos ?? null
-    }]).select();
-
-    if (error) {
-        console.error("Erro ao criar orçamento:", error);
-        return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
-    }
-
-    return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
+            case 'create': {  
+    if (!command.nome_cliente) {  
+        return "⚠️ O campo *nome do cliente* é obrigatório.";  
+    }  
+    if (!command.telefone_cliente) {  
+        return "⚠️ O campo *telefone do cliente* é obrigatório.";  
+    }  
+  
+    const { data, error } = await supabase.from('orcamentos').insert([{  
+        nome_cliente: command.nome_cliente,  
+        telefone_cliente: command.telefone_cliente,  
+        descricao_atividades: command.descricao_atividades || '',  
+        materiais: command.materiais || [],  
+        servicos: command.servicos || [],  
+        desconto_materiais: command.desconto_materiais || 0,  
+        desconto_servicos: command.desconto_servicos || 0  
+    }]).select();  
+  
+    if (error) {  
+        console.error("Erro ao criar orçamento:", error);  
+        return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;  
+    }  
+  
+    return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;  
 }
            case 'delete': {
     if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
