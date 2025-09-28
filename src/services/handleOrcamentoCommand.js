@@ -1,5 +1,26 @@
 const supabase = require('./supabase');
 
+function formatOrcamento(o) {
+    return `
+📝 Orçamento ${o.orcamento_numero}
+👤 Cliente: ${o.nome_cliente}
+📞 Telefone: ${o.telefone_cliente}
+📌 Observação: ${o.descricao_atividades || '-'}
+💰 Desconto Materiais: ${o.desconto_materiais || '0'}
+💰 Desconto Serviços: ${o.desconto_servicos || '0'}
+
+📦 Materiais:
+${(o.materiais && o.materiais.length > 0)
+        ? o.materiais.map(m => `   - ${m.nome} (Qtd: ${m.qtd}, Valor: ${m.valor})`).join("\n")
+        : "   Nenhum"}
+
+🔧 Serviços:
+${(o.servicos && o.servicos.length > 0)
+        ? o.servicos.map(s => `   - ${s.nome} (Valor: ${s.valor})`).join("\n")
+        : "   Nenhum"}
+`.trim();
+}
+
 async function handleOrcamentoCommand(command, userPhone) {
     try {
         switch (command.action) {
@@ -19,7 +40,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
                 }
 
-                return `✅ Orçamento criado com sucesso para ${command.nome_cliente} (ID: ${data[0].orcamento_numero})`;
+                return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
             }
 
             case 'edit': {
@@ -34,18 +55,20 @@ async function handleOrcamentoCommand(command, userPhone) {
                 if (command.desconto_materiais) updates.desconto_materiais = command.desconto_materiais;
                 if (command.desconto_servicos) updates.desconto_servicos = command.desconto_servicos;
 
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('orcamentos')
                     .update(updates)
-                    .eq('orcamento_numero', command.id);
+                    .eq('orcamento_numero', command.id)
+                    .select();
 
                 if (error) {
                     console.error("Erro ao editar orçamento:", error);
                     return `⚠️ Não consegui editar o orçamento ${command.id}.`;
                 }
 
-                return `✏️ Orçamento ${command.id} atualizado com sucesso.`;
+                return `✏️ Orçamento atualizado com sucesso:\n\n${formatOrcamento(data[0])}`;
             }
+
             case 'delete': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
 
@@ -65,7 +88,6 @@ async function handleOrcamentoCommand(command, userPhone) {
             case 'list': {
                 let query = supabase.from('orcamentos').select('*');
 
-                // Aplicar filtros se existirem
                 if (command.telefone_cliente) {
                     query = query.eq('telefone_cliente', command.telefone_cliente);
                 }
@@ -85,14 +107,11 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
-                return `📄 Orçamentos:\n` + orcamentos
-                    .map(o => `- ${o.nome_cliente} (Número: ${o.orcamento_numero})`)
-                    .join('\n');
+                return orcamentos.map(formatOrcamento).join("\n\n---\n\n");
             }
 
             case 'pdf': {
                 if (!command.orcamento_numero) return '⚠️ É necessário informar o número do orçamento para gerar PDF.';
-                // Aqui você pode chamar sua função de geração de PDF
                 return `🖨 PDF do orçamento ${command.orcamento_numero} gerado com sucesso (simulado).`;
             }
 
