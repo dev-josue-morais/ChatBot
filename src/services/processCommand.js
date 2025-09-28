@@ -32,7 +32,7 @@ Você entende comandos de *agenda* ou *orcamentos* e converte em JSON válido.
   "nome_cliente": "obrigatório em create",
   "telefone_cliente": "obrigatório em create",
   "descricao_atividades": "opcional",
-  "materiais": [{"nome": "string", "qtd": número, "valor": número}],
+  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "servicos": [{"nome": "string", "valor": número}],
   "desconto_materiais": "opcional",
   "desconto_servicos": "opcional"
@@ -44,6 +44,7 @@ Regras importantes para ORÇAMENTO:
 - Em "edit", "delete" ou "pdf", o campo "id" é obrigatório.
 - Em "create", "nome_cliente" e "telefone_cliente" são obrigatórios; se faltar telefone, retorne {"falta_telefone": true}.
 - Sempre responda com JSON válido, sem texto adicional.
+- No campo "materiais", além de "nome", "qtd" e "valor", sempre inclua também "unidade" (ex: "m", "cm", "rolo", "kit", "caixa", "pacote", "dente").
 - Datas sempre em GMT-3.
 
 Mensagem do usuário: "${text}"
