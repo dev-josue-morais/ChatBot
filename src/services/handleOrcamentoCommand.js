@@ -54,50 +54,109 @@ async function handleOrcamentoCommand(command, userPhone) {
     try {
         switch (command.action) {
             case 'create': {
-                const { data, error } = await supabase.from('orcamentos').insert([{
-                    nome_cliente: command.nome_cliente,
-                    telefone_cliente: command.telefone_cliente,
-                    descricao_atividades: command.descricao_atividades || '',
-                    materiais: command.materiais || [],
-                    servicos: command.servicos || [],
-                    desconto_materiais: command.desconto_materiais || '',
-                    desconto_servicos: command.desconto_servicos || ''
-                }]).select();
+    if (!command.nome_cliente) {
+        return "⚠️ O campo *nome do cliente* é obrigatório.";
+    }
+    if (!command.telefone_cliente) {
+        return "⚠️ O campo *telefone do cliente* é obrigatório.";
+    }
 
-                if (error) {
-                    console.error("Erro ao criar orçamento:", error);
-                    return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
-                }
+    const { data, error } = await supabase.from('orcamentos').insert([{
+        nome_cliente: command.nome_cliente,
+        telefone_cliente: command.telefone_cliente,
+        descricao_atividades: command.descricao_atividades || '',
+        materiais: command.materiais || [],
+        servicos: command.servicos || [],
+        desconto_materiais: command.desconto_materiais || 0,
+        desconto_servicos: command.desconto_servicos || 0
+    }]).select();
 
-                return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
-            }
+    if (error) {
+        console.error("Erro ao criar orçamento:", error);
+        return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
+    }
+
+    return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
+}
 
             case 'edit': {
-                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
+    if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
-                const updates = {};
-                if (command.nome_cliente) updates.nome_cliente = command.nome_cliente;
-                if (command.telefone_cliente) updates.telefone_cliente = command.telefone_cliente;
-                if (command.descricao_atividades) updates.descricao_atividades = command.descricao_atividades;
-                if (command.materiais) updates.materiais = command.materiais;
-                if (command.servicos) updates.servicos = command.servicos;
-                if (command.desconto_materiais) updates.desconto_materiais = command.desconto_materiais;
-                if (command.desconto_servicos) updates.desconto_servicos = command.desconto_servicos;
+    // Buscar orçamento atual
+    const { data: currentData, error: fetchError } = await supabase
+        .from('orcamentos')
+        .select('materiais, servicos')
+        .eq('orcamento_numero', command.id)
+        .single();
 
-                const { data, error } = await supabase
-                    .from('orcamentos')
-                    .update(updates)
-                    .eq('orcamento_numero', command.id)
-                    .select();
+    if (fetchError) {
+        console.error("Erro ao buscar orçamento:", fetchError);
+        return `⚠️ Não consegui buscar o orçamento ${command.id}.`;
+    }
 
-                if (error) {
-                    console.error("Erro ao editar orçamento:", error);
-                    return `⚠️ Não consegui editar o orçamento ${command.id}.`;
-                }
+    let materiais = [...(currentData.materiais || [])];
+    let servicos = [...(currentData.servicos || [])];
 
-                return `✏️ Orçamento atualizado com sucesso:\n\n${formatOrcamento(data[0])}`;
-            }
+    // --- Materiais ---
+    if (command.materiais) {
+        // substitui lista inteira
+        materiais = command.materiais;
+    }
+    if (command.add_materiais) {
+        materiais = [...materiais, ...command.add_materiais];
+    }
+    if (command.remove_materiais) {
+        materiais = materiais.filter(m => !command.remove_materiais.some(r => r.nome === m.nome));
+    }
+    if (command.edit_materiais) {
+        materiais = materiais.map(m => {
+            const update = command.edit_materiais.find(e => e.nome === m.nome);
+            return update ? { ...m, ...update } : m;
+        });
+    }
 
+    // --- Serviços ---
+    if (command.servicos) {
+        servicos = command.servicos;
+    }
+    if (command.add_servicos) {
+        servicos = [...servicos, ...command.add_servicos];
+    }
+    if (command.remove_servicos) {
+        servicos = servicos.filter(s => !command.remove_servicos.some(r => r.nome === s.nome));
+    }
+    if (command.edit_servicos) {
+        servicos = servicos.map(s => {
+            const update = command.edit_servicos.find(e => e.nome === s.nome);
+            return update ? { ...s, ...update } : s;
+        });
+    }
+
+    // Monta updates
+    const updates: any = {
+        ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
+        ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
+        ...(command.descricao_atividades && { descricao_atividades: command.descricao_atividades }),
+        materiais,
+        servicos,
+        ...(command.desconto_materiais !== undefined && { desconto_materiais: command.desconto_materiais }),
+        ...(command.desconto_servicos !== undefined && { desconto_servicos: command.desconto_servicos }),
+    };
+
+    // Atualiza no banco
+    const { data, error } = await supabase
+        .from('orcamentos')
+        .update(updates)
+        .eq('orcamento_numero', command.id)
+        .select();
+
+    if (error) {
+        console.error("Erro ao editar orçamento:", error);
+        return `⚠️ Não consegui editar o orçamento ${command.id}.`;
+    }
+
+    return `✏️ Orçamento atualizado com sucesso:\n\n${formatOrcamento(data[0])}`;
+}
             case 'delete': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
 
