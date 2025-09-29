@@ -337,5 +337,13 @@ async function handleOrcamentoCommand(command, userPhone) {
 
   return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
 }
+      default:
+        return '⚠️ Ação desconhecida.';
+    } // fecha switch
+  } catch (err) {
+    console.error("Erro ao processar comando:", err);
+    return "⚠️ Ocorreu um erro ao processar o comando.";
+  } // fecha try/catch
+}
 
 module.exports = handleOrcamentoCommand;
