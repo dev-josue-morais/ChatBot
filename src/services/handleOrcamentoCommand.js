@@ -336,6 +336,6 @@ async function handleOrcamentoCommand(command, userPhone) {
   await browser.close();
 
   return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
-}}
+}
 
 module.exports = handleOrcamentoCommand;
