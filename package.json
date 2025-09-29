@@ -15,6 +15,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "form-data": "^4.0.4",
+    "html-pdf-node": "^1.0.8",
     "luxon": "^3.7.2",
     "node-cron": "^4.2.1",
     "openai": "^5.19.1",
