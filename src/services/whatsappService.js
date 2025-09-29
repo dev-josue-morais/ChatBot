@@ -1,5 +1,7 @@
 // services/whatsappService.js
 const axios = require('axios');
+const path = require("path");
+const generatePDF = require("../utils/pdfGenerator");
 const FormData = require("form-data");
 const { formatPhone } = require("../utils/utils");
 const { WHATSAPP_TOKEN, PHONE_NUMBER_ID, DESTINO_FIXO } = require('../utils/config');
@@ -149,7 +151,63 @@ async function forwardMediaIfAny(msg, value, dest = DESTINO_FIXO) {
   }
 }
 
+async function sendPDFOrcamento(to, orcamento) {
+  try {
+    // 1️⃣ Gera o PDF
+    const pdfPath = await generatePDF(orcamento);
+    const filename = path.basename(pdfPath);
+
+    // 2️⃣ Lê o arquivo em buffer
+    const fs = require("fs");
+    const pdfBuffer = fs.readFileSync(pdfPath);
+
+    // 3️⃣ Faz upload do PDF para WhatsApp
+    const mediaId = await (async () => {
+      const formData = new FormData();
+      formData.append("file", pdfBuffer, {
+        filename,
+        contentType: "application/pdf"
+      });
+      formData.append("messaging_product", "whatsapp");
+
+      const resp = await axios.post(
+        `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/media`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+            ...formData.getHeaders()
+          }
+        }
+      );
+      return resp.data.id;
+    })();
+
+    if (!mediaId) throw new Error("Não foi possível fazer upload do PDF");
+
+    // 4️⃣ Envia o PDF como documento
+    const payload = {
+      messaging_product: "whatsapp",
+      to,
+      type: "document",
+      document: {
+        id: mediaId,
+        filename
+      }
+    };
+
+    await sendWhatsAppRaw(payload);
+    console.log(`✅ PDF do orçamento ${orcamento.orcamento_numero} enviado para ${to}`);
+    return true;
+
+  } catch (err) {
+    console.error("❌ Erro ao enviar PDF do orçamento:", err.response?.data || err.message || err);
+    return false;
+  }
+}
+
 module.exports = {
+  sendPDFOrcamento,
   sendWhatsAppMessage,
   sendWhatsAppRaw,
   extractTextFromMsg,
