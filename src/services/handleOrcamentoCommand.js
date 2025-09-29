@@ -276,18 +276,95 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return orcamentos.map(formatOrcamento).join("\n\n---\n\n");
             }
 
-            case 'pdf': {
-                if (!command.id) return '⚠️ É necessário informar o número do orçamento para gerar PDF.';
-                return `🖨 PDF do orçamento ${command.id} gerado com sucesso (simulado).`;
-            }
+            case 'gerar_pdf': {
+  if (!command.id) return '⚠️ É necessário informar o ID do orçamento.';
 
-            default:
-                return "⚠️ Comando de orçamento não reconhecido.";
-        }
-    } catch (err) {
-        console.error("Erro em handleOrcamentoCommand:", err);
-        return "⚠️ Erro interno ao processar comando de orçamento.";
-    }
-}
+  const { data: orcamentos, error } = await supabase
+    .from('orcamentos')
+    .select('*')
+    .eq('orcamento_numero', command.id)
+    .limit(1);
+
+  if (error) {
+    console.error("Erro ao buscar orçamento:", error);
+    return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
+  }
+
+  if (!orcamentos || orcamentos.length === 0) {
+    return `⚠️ Orçamento ${command.id} não encontrado.`;
+  }
+
+  const o = orcamentos[0];
+
+  // Gerar HTML (baseado no que você já tem no React Native, adaptando para Node)
+  const htmlContent = `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+          th { background: #eee; }
+        </style>
+      </head>
+      <body>
+        <h1>Orçamento ${o.orcamento_numero}</h1>
+        <p><b>Cliente:</b> ${o.nome_cliente}</p>
+        <p><b>Telefone:</b> ${o.telefone_cliente}</p>
+        <p><b>Observações:</b> ${o.descricao_atividades || '-'}</p>
+
+        <h2>Materiais</h2>
+        <table>
+          <tr><th>Nome</th><th>Qtd</th><th>Unidade</th><th>Valor</th><th>Total</th></tr>
+          ${(o.materiais || []).map(m => `
+            <tr>
+              <td>${m.nome}</td>
+              <td>${m.qtd}</td>
+              <td>${m.unidade || ''}</td>
+              <td>R$ ${m.valor.toFixed(2)}</td>
+              <td>R$ ${(m.qtd * m.valor).toFixed(2)}</td>
+            </tr>
+          `).join("")}
+        </table>
+
+        <h2>Serviços</h2>
+        <table>
+          <tr><th>Descrição</th><th>Valor</th></tr>
+          ${(o.servicos || []).map(s => `
+            <tr>
+              <td>${s.nome}</td>
+              <td>R$ ${s.valor.toFixed(2)}</td>
+            </tr>
+          `).join("")}
+        </table>
+
+        <h2>Total</h2>
+        <p><b>Total Geral:</b> R$ ${((
+          (o.materiais || []).reduce((t, m) => t + m.qtd * m.valor, 0) +
+          (o.servicos || []).reduce((t, s) => t + s.valor, 0)
+        )).toFixed(2)}</p>
+      </body>
+    </html>
+  `;
+
+  // Agora gerar o PDF
+  const { jsPDF } = require("jspdf");
+  const doc = new jsPDF();
+  const { default: html2canvas } = await import("html2canvas"); // se rodar em browser
+
+  // 👉 Se rodar só em Node (sem browser), use puppeteer ou pdfmake
+  const fs = require("fs");
+  const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
+
+  const puppeteer = require("puppeteer");
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setContent(htmlContent);
+  await page.pdf({ path: pdfPath, format: "A4" });
+  await browser.close();
+
+  return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
+}}
 
 module.exports = handleOrcamentoCommand;
