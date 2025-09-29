@@ -6,8 +6,7 @@
   "author": "dev-josue-morais <josue28jrd@hotmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "puppeteer install"
+    "start": "node index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
@@ -19,7 +18,6 @@
     "luxon": "^3.7.2",
     "node-cron": "^4.2.1",
     "openai": "^5.19.1",
-    "puppeteer": "^24.10.2",
     "pdf-lib": "^1.17.1"
   }
 }

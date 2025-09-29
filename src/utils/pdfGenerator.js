@@ -1,5 +1,5 @@
-const puppeteer = require("puppeteer");
-const formatCurrency = require("./formatCurrency");
+const pdf = require('html-pdf-node');
+const formatCurrency = require('./formatCurrency');
 
 async function generatePDF(o) {
   try {
@@ -93,17 +93,8 @@ async function generatePDF(o) {
 
     const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
 
-
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: puppeteer.executablePath()
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: "A4" });
-    await browser.close();
+    const file = { content: htmlContent };
+    await pdf.generatePdf(file, { path: pdfPath });
 
     return pdfPath;
   } catch (err) {
