@@ -1,6 +1,6 @@
 const pdf = require('html-pdf-node');
 const formatCurrency = require('./formatCurrency');
-const formatarData = require('./utils');
+const { formatarData } = require('./utils');
 
 async function generatePDF(orcamento, config = {}) {
   try {

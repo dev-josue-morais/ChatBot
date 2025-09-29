@@ -30,7 +30,7 @@ Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON v
   "nome_cliente": string (obrigatório em create),
   "telefone_cliente": string (obrigatório em create),
   "observacao": string ou null,
-
+  // para pdf use tambem "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial",
   // Para CREATE, use diretamente estes campos
   "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
@@ -43,6 +43,16 @@ Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON v
   "add_servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
   "edit_servicos": [{ "titulo": "string", "quantidade"?: número, "valor"?: número }],
   "remove_servicos": [{ "titulo": "string" }],
+
+  // Para PDF, gerar este campo com todas as "opcoes" defalt true assinaturas false
+  "opcoes": {
+    "listaServicos": true | false, (false quando tipo for "pedido")
+    "listaMateriais": true | false,
+    "ocultarValorServicos": true | false,
+    "garantia": true | false,
+    "assinaturaCliente": true | false,
+    "assinaturaUser": true | false,
+  }
 
   "desconto_materiais": número ou string com porcentagem (ex: 10 ou "10%") ou null,
   "desconto_servicos": número ou string com porcentagem (ex: 10 ou "10%") ou null
