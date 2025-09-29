@@ -253,24 +253,27 @@ async function handleOrcamentoCommand(command, userPhone) {
       case 'pdf': {
   if (!command.id) return '⚠️ É necessário informar o ID do orçamento.';
 
-  const { data: orcamentos, error } = await supabase
-    .from('orcamentos')
-    .select('*')
-    .eq('orcamento_numero', command.id)
-    .limit(1);
+  try {
+    // Buscar orçamento
+    const { data: orcamentos, error } = await supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('orcamento_numero', command.id)
+      .limit(1);
 
-  if (error) {
-    console.error("Erro ao buscar orçamento:", error);
-    return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
-  }
+    if (error) {
+      console.error("Erro ao buscar orçamento:", error);
+      return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
+    }
 
-  if (!orcamentos || orcamentos.length === 0) {
-    return `⚠️ Orçamento ${command.id} não encontrado.`;
-  }
+    if (!orcamentos || orcamentos.length === 0) {
+      return `⚠️ Orçamento ${command.id} não encontrado.`;
+    }
 
-  const o = orcamentos[0];
+    const o = orcamentos[0];
 
-  const htmlContent = `
+    // HTML do orçamento
+    const htmlContent = `
 <html>
   <head>
     <style>
@@ -319,22 +322,30 @@ async function handleOrcamentoCommand(command, userPhone) {
     ).toFixed(2)}</p>
   </body>
 </html>
-  `;
+    `;
 
-  const fs = require("fs");
-  const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
+    // Caminho do PDF
+    const fs = require("fs");
+    const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
 
-  const browser = await puppeteer.launch({
-  headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
-});
+    // Puppeteer
+    const puppeteer = require("puppeteer");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
 
-  const page = await browser.newPage();
-  await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-  await page.pdf({ path: pdfPath, format: "A4" });
-  await browser.close();
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    await page.pdf({ path: pdfPath, format: "A4" });
+    await browser.close();
 
-  return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
+    return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
+
+  } catch (err) {
+    console.error("Erro ao gerar PDF:", err);
+    return `⚠️ Ocorreu um erro ao gerar o PDF do orçamento ${command.id}.`;
+  }
 }
       default:
         return '⚠️ Ação desconhecida.';
