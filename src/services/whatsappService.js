@@ -151,10 +151,10 @@ async function forwardMediaIfAny(msg, value, dest = DESTINO_FIXO) {
   }
 }
 
-async function sendPDFOrcamento(to, orcamento) {
+async function sendPDFOrcamento(to, orcamento, config) {
   try {
-    // 1️⃣ Gera o PDF
-    const pdfPath = await generatePDF(orcamento);
+    // 1️⃣ Gera o PDF usando a config (tipo + opcoes)
+    const pdfPath = await generatePDF(orcamento, config);
     const filename = path.basename(pdfPath);
 
     // 2️⃣ Lê o arquivo em buffer

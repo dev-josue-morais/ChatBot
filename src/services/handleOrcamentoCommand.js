@@ -212,7 +212,9 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             case "pdf": {
                 try {
-                    // 1️⃣ Buscar orçamento no Supabase
+                    if (!command.id) return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
+
+                    // Buscar orçamento no Supabase
                     const { data: orcamentos, error } = await supabase
                         .from("orcamentos")
                         .select("*")
@@ -230,8 +232,21 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                     const o = orcamentos[0];
 
-                    // 2️⃣ Envia PDF pelo WhatsApp
-                    const enviado = await sendPDFOrcamento(command.telefone_cliente || DESTINO_FIXO, o);
+                    // Config para o PDF
+                    const pdfConfig = {
+                        tipo: command.tipo || "Orçamento",
+                        opcoes: command.opcoes || {
+                            listaServicos: true,
+                            listaMateriais: true,
+                            ocultarValorServicos: false,
+                            garantia: true,
+                            assinaturaCliente: false,
+                            assinaturaUser: false,
+                        }
+                    };
+
+                    // Enviar PDF pelo WhatsApp (generatePDF é chamado dentro do sendPDFOrcamento)
+                    const enviado = await sendPDFOrcamento(command.telefone_cliente || DESTINO_FIXO, o, pdfConfig);
 
                     if (enviado) {
                         return `✅ PDF do orçamento ${command.id} enviado com sucesso para ${command.telefone_cliente || DESTINO_FIXO}!`;
