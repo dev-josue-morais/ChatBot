@@ -1,6 +1,16 @@
 const pdf = require('html-pdf-node');
 const formatCurrency = require('./formatCurrency');
 const { formatarData } = require('./utils');
+const fs = require("fs");
+const path = require("path");
+
+// Caminhos das imagens
+const logoPath = path.join(__dirname, "../img/logo.png");
+const pixPath = path.join(__dirname, "../img/QrCode.jpeg");
+
+// Converte para Base64
+const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
+const pixBase64 = fs.readFileSync(pixPath, { encoding: "base64" });
 
 async function generatePDF(orcamento, config = {}) {
   try {
@@ -202,7 +212,7 @@ async function generatePDF(orcamento, config = {}) {
         <!-- Cabeçalho -->
         <div class="header">
             <div class="company-info">
-                <img src="../img/logo.png" alt="Logo da Empresa" class="logo">
+                <img src="data:image/png;base64,${logoBase64}" alt="Logo da Empresa" class="logo">
                 <div class="company-details">
                     <h2>EletriCaldas Eletricista Residencial e Predial</h2>
                     <p><strong>CNPJ:</strong> 56.259.116/0001-02 | <strong>Tel:</strong> 64 99286 9608</p>
@@ -290,7 +300,7 @@ async function generatePDF(orcamento, config = {}) {
         <!-- PIX -->
         <div class="pix-container"> 
             <div class="pix">
-                <img src="../img/QrCode.jpeg" alt="QR Code Pix">
+                <img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix">
             </div>             
             <div class="pixchave">
                 <h3 class="center">Pague com Pix</h3>
