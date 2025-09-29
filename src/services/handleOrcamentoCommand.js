@@ -208,14 +208,14 @@ async function handleOrcamentoCommand(command, userPhone) {
         }
 
         const updates = {
-          ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
-          ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
-          ...(command.descricao_atividades && { descricao_atividades: command.descricao_atividades }),
-          materiais,
-          servicos,
-          ...(command.desconto_materiais !== undefined && { desconto_materiais: command.desconto_materiais
-...(command.desconto_servicos !== undefined && { desconto_servicos: command.desconto_servicos }),
-        };
+  ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
+  ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
+  ...(command.descricao_atividades && { descricao_atividades: command.descricao_atividades }),
+  materiais,
+  servicos,
+  ...(command.desconto_materiais !== undefined && { desconto_materiais: command.desconto_materiais }),
+  ...(command.desconto_servicos !== undefined && { desconto_servicos: command.desconto_servicos }),
+};
 
         const { data, error } = await supabase
           .from('orcamentos')
