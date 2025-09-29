@@ -331,9 +331,10 @@ async function handleOrcamentoCommand(command, userPhone) {
     // Puppeteer
     const puppeteer = require("puppeteer");
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  executablePath: '/usr/bin/google-chrome' // caminho do Chrome no servidor
+});
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
