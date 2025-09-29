@@ -296,7 +296,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 
   const o = orcamentos[0];
 
-  // Gerar HTML (baseado no que você já tem no React Native, adaptando para Node)
   const htmlContent = `
     <html>
       <head>
@@ -348,12 +347,6 @@ async function handleOrcamentoCommand(command, userPhone) {
     </html>
   `;
 
-  // Agora gerar o PDF
-  const { jsPDF } = require("jspdf");
-  const doc = new jsPDF();
-  const { default: html2canvas } = await import("html2canvas"); // se rodar em browser
-
-  // 👉 Se rodar só em Node (sem browser), use puppeteer ou pdfmake
   const fs = require("fs");
   const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
 
@@ -365,6 +358,6 @@ async function handleOrcamentoCommand(command, userPhone) {
   await browser.close();
 
   return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
-}}
+}
 
 module.exports = handleOrcamentoCommand;
