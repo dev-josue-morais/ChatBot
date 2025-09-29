@@ -1,6 +1,7 @@
 const supabase = require("./supabase");
 const formatOrcamento = require("../utils/formatOrcamento");
 const sendPDFOrcamento = require("./whatsappService");
+const { DESTINO_FIXO } = require('../utils/config');
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
