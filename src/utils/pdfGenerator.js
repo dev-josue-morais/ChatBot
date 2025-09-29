@@ -12,22 +12,37 @@ const pixPath = path.join(__dirname, "../img/QrCode.jpeg");
 const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 const pixBase64 = fs.readFileSync(pixPath, { encoding: "base64" });
 
-async function generatePDF(orcamento, config = {}) {
-  try {
-    const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
-    const opcoes = {
-      listaServicos: true,
-      listaMateriais: true,
-      ocultarValorServicos: false,
-      garantia: true,
-      assinaturaCliente: false,
-      assinaturaUser: false,
-      observacoes: true,
-      ...rawOpcoes
-    };
-    const documentoTipo = tipo || "Orçamento";
+const totalMateriais = (orcamento.materiais || []).reduce(
+    (sum, m) => sum + (m.qtd || 0) * (m.valor || 0),
+    0
+);
+const totalServicos = (orcamento.servicos || []).reduce(
+    (sum, s) => sum + (s.quantidade || 0) * (s.valor || 0),
+    0
+);
 
-    const htmlContent = `
+const descontoMateriais = aplicarDesconto(totalMateriais, orcamento.desconto_materiais);
+const descontoServicos = aplicarDesconto(totalServicos, orcamento.desconto_servicos);
+
+const totalOriginal = totalMateriais + totalServicos;
+const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
+
+async function generatePDF(orcamento, config = {}) {
+    try {
+        const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
+        const opcoes = {
+            listaServicos: true,
+            listaMateriais: true,
+            ocultarValorServicos: false,
+            garantia: true,
+            assinaturaCliente: false,
+            assinaturaUser: false,
+            observacoes: true,
+            ...rawOpcoes
+        };
+        const documentoTipo = tipo || "Orçamento";
+
+        const htmlContent = `
     <html>
       <head>
           <style>
@@ -284,7 +299,16 @@ async function generatePDF(orcamento, config = {}) {
             </tr>
             `).join('')}
         </table>` : ''}
-            
+            <div class="containertotal">
+             <div class="totals">
+                 ${opcoes.listaMateriais ? `<p><strong>Total Materiais:</strong> ${descontoMateriais.descricao}</p>` : ''}
+                  ${opcoes.listaServicos ? `<p><strong>Total Serviços:</strong> ${descontoServicos.descricao}</p>` : ''}
+                <p><strong>Total Geral:</strong> ${totalFinal !== totalOriginal
+                ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
+                : formatCurrency(totalFinal)
+            }</p>
+             </div>
+            </div>
         <!-- Observações e Garantia -->
         ${(opcoes.observacoes || opcoes.garantia) ? `
         <div class="observacao">
@@ -319,14 +343,14 @@ async function generatePDF(orcamento, config = {}) {
       </body>
     </html>`;
 
-    const pdfPath = `/tmp/orcamento_${orcamento.orcamento_numero}.pdf`;
-    await pdf.generatePdf({ content: htmlContent }, { path: pdfPath });
-    return pdfPath;
+        const pdfPath = `/tmp/orcamento_${orcamento.orcamento_numero}.pdf`;
+        await pdf.generatePdf({ content: htmlContent }, { path: pdfPath });
+        return pdfPath;
 
-  } catch (err) {
-    console.error("Erro ao gerar PDF:", err);
-    throw err;
-  }
+    } catch (err) {
+        console.error("Erro ao gerar PDF:", err);
+        throw err;
+    }
 }
 
 module.exports = generatePDF;
