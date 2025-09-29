@@ -109,32 +109,46 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 // --- Serviços ---
                 if (command.servicos) {
-                    servicos = command.servicos.map(s => ({ nome: s.nome.trim(), valor: s.valor }));
+                    servicos = command.servicos.map(s => ({
+                        titulo: s.titulo.trim(),
+                        quantidade: s.quantidade ?? 1,
+                        valor: s.valor
+                    }));
                 }
 
                 if (command.add_servicos) {
                     for (const newItem of command.add_servicos) {
-                        const nomeNormalized = newItem.nome.trim().toLowerCase();
-                        const existing = servicos.find(s => s.nome.trim().toLowerCase() === nomeNormalized);
+                        const tituloNormalized = newItem.titulo.trim().toLowerCase();
+                        const existing = servicos.find(s => s.titulo.trim().toLowerCase() === tituloNormalized);
                         if (existing) {
+                            if (newItem.quantidade != null) existing.quantidade = newItem.quantidade;
                             if (newItem.valor != null) existing.valor = newItem.valor;
                         } else {
-                            servicos.push({ ...newItem, nome: newItem.nome.trim() });
+                            servicos.push({
+                                titulo: newItem.titulo.trim(),
+                                quantidade: newItem.quantidade ?? 1,
+                                valor: newItem.valor
+                            });
                         }
                     }
                 }
 
                 if (command.edit_servicos) {
                     for (const edit of command.edit_servicos) {
-                        const nomeNormalized = edit.nome.trim().toLowerCase();
-                        const item = servicos.find(s => s.nome.trim().toLowerCase() === nomeNormalized);
-                        if (item && edit.valor != null) item.valor = edit.valor;
+                        const tituloNormalized = edit.titulo.trim().toLowerCase();
+                        const item = servicos.find(s => s.titulo.trim().toLowerCase() === tituloNormalized);
+                        if (item) {
+                            if (edit.quantidade != null) item.quantidade = edit.quantidade;
+                            if (edit.valor != null) item.valor = edit.valor;
+                        }
                     }
                 }
 
                 if (command.remove_servicos) {
                     servicos = servicos.filter(
-                        s => !command.remove_servicos.some(r => r.nome.trim().toLowerCase() === s.nome.trim().toLowerCase())
+                        s => !command.remove_servicos.some(
+                            r => r.titulo.trim().toLowerCase() === s.titulo.trim().toLowerCase()
+                        )
                     );
                 }
 

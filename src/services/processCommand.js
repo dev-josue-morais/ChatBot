@@ -33,16 +33,16 @@ Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON v
 
   // Para CREATE, use diretamente estes campos
   "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-  "servicos": [{"nome": "string", "valor": número}],
+  "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
 
   // Para EDIT, use os campos granulares
   "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
   "remove_materiais": [{"nome": "string"}],
 
-  "add_servicos": [{"nome": "string", "valor": número}],
-  "edit_servicos": [{"nome": "string", "valor": número?}],
-  "remove_servicos": [{"nome": "string"}],
+  "add_servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
+  "edit_servicos": [{ "titulo": "string", "quantidade"?: número, "valor"?: número }],
+  "remove_servicos": [{ "titulo": "string" }],
 
   "desconto_materiais": número ou string com porcentagem (ex: 10 ou "10%") ou null,
   "desconto_servicos": número ou string com porcentagem (ex: 10 ou "10%") ou null
