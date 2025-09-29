@@ -103,5 +103,4 @@ async function generatePDF(o) {
   }
 }
 
-
 module.exports = generatePDF;

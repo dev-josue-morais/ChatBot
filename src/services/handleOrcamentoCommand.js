@@ -197,7 +197,7 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             case "pdf": {
                 try {
-                    // Buscar orçamento no Supabase
+                    // 1️⃣ Buscar orçamento no Supabase
                     const { data: orcamentos, error } = await supabase
                         .from("orcamentos")
                         .select("*")
@@ -215,12 +215,17 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                     const o = orcamentos[0];
 
-                    const pdfPath = await generatePDF(o);
+                    // 2️⃣ Envia PDF pelo WhatsApp
+                    const enviado = await sendPDFOrcamento(command.telefone_cliente || DESTINO_FIXO, o);
 
-                    return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
+                    if (enviado) {
+                        return `✅ PDF do orçamento ${command.id} enviado com sucesso para ${command.telefone_cliente || DESTINO_FIXO}!`;
+                    } else {
+                        return `⚠️ PDF do orçamento ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
+                    }
                 } catch (err) {
-                    console.error("Erro ao gerar PDF:", err);
-                    return `⚠️ Erro ao gerar PDF do orçamento ${command.id}.`;
+                    console.error("Erro ao gerar/enviar PDF:", err);
+                    return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
                 }
             }
             default:
