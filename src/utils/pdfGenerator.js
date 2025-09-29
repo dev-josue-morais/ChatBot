@@ -30,11 +30,10 @@ async function generatePDF(o) {
             <th>Nome</th><th>Qtd</th><th>Unidade</th>
             <th class="right">Valor</th><th class="right">Total</th>
           </tr>
-          ${
-            (o.materiais && o.materiais.length > 0)
-              ? o.materiais.map(m => {
-                  const subtotal = m.qtd * m.valor;
-                  return `
+          ${(o.materiais && o.materiais.length > 0)
+        ? o.materiais.map(m => {
+          const subtotal = m.qtd * m.valor;
+          return `
                     <tr>
                       <td>${m.nome}</td>
                       <td>${m.qtd}</td>
@@ -43,9 +42,9 @@ async function generatePDF(o) {
                       <td class="right">${formatCurrency(subtotal)}</td>
                     </tr>
                   `;
-                }).join("")
-              : `<tr><td colspan="5">Nenhum material informado</td></tr>`
-          }
+        }).join("")
+        : `<tr><td colspan="5">Nenhum material informado</td></tr>`
+      }
         </table>
 
         <h2>Serviços</h2>
@@ -53,16 +52,15 @@ async function generatePDF(o) {
           <tr>
             <th>Descrição</th><th class="right">Valor</th>
           </tr>
-          ${
-            (o.servicos && o.servicos.length > 0)
-              ? o.servicos.map(s => `
+          ${(o.servicos && o.servicos.length > 0)
+        ? o.servicos.map(s => `
                 <tr>
                   <td>${s.nome}</td>
                   <td class="right">${formatCurrency(s.valor)}</td>
                 </tr>
               `).join("")
-              : `<tr><td colspan="2">Nenhum serviço informado</td></tr>`
-          }
+        : `<tr><td colspan="2">Nenhum serviço informado</td></tr>`
+      }
         </table>
 
         <h2>Total</h2>
@@ -84,9 +82,9 @@ async function generatePDF(o) {
           <tr class="total">
             <td>Total Geral</td>
             <td class="right">${formatCurrency(
-              ((o.materiais || []).reduce((t, m) => t + m.qtd * m.valor, 0) - (o.desconto_materiais || 0)) +
-              ((o.servicos || []).reduce((t, s) => t + s.valor, 0) - (o.desconto_servicos || 0))
-            )}</td>
+        ((o.materiais || []).reduce((t, m) => t + m.qtd * m.valor, 0) - (o.desconto_materiais || 0)) +
+        ((o.servicos || []).reduce((t, s) => t + s.valor, 0) - (o.desconto_servicos || 0))
+      )}</td>
           </tr>
         </table>
       </body>
@@ -95,9 +93,11 @@ async function generatePDF(o) {
 
     const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
 
+
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: puppeteer.executablePath()
     });
 
     const page = await browser.newPage();

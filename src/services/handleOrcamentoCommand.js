@@ -192,7 +192,7 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
-                return orcamentos.map(formatOrcamento).join("\n\n---\n\n");
+                return orcamentos.map(formatOrcamento).join("\n\n----------------------------\n\n");
             }
 
             case "pdf": {
