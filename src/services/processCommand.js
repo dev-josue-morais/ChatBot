@@ -1,5 +1,4 @@
 const openai = require('./openai');
-const supabase = require('./supabase');
 const handleOrcamentoCommand = require('./handleOrcamentoCommand');
 const handleAgendaCommand = require('./handleAgendaCommand');
 const { getNowBRT } = require('../utils/utils');
@@ -30,7 +29,7 @@ Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON v
   "id": número (para edit/delete/pdf, obrigatório nesses casos),
   "nome_cliente": string (obrigatório em create),
   "telefone_cliente": string (obrigatório em create),
-  "descricao_atividades": string ou null,
+  "observacao": string ou null,
 
   // Para CREATE, use diretamente estes campos
   "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],

@@ -1,76 +1,6 @@
-const supabase = require('./supabase');
-
-function formatCurrency(value) {
-    return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-    }).format(value || 0);
-}
-
-function aplicarDesconto(total, desconto) {
-    if (!desconto) return { totalFinal: total, descricao: formatCurrency(total) };
-
-    // Caso percentual (termina com %)
-    if (typeof desconto === "string" && desconto.trim().endsWith("%")) {
-        const perc = parseFloat(desconto.replace("%", "").trim());
-        if (isNaN(perc)) return { totalFinal: total, descricao: formatCurrency(total) };
-
-        const valorComDesconto = total - (total * (perc / 100));
-        return {
-            totalFinal: valorComDesconto,
-            descricao: `~${formatCurrency(total)}~ ${formatCurrency(valorComDesconto)} (-${perc}%)`
-        };
-    }
-
-    // Caso valor absoluto
-    const valor = parseFloat(desconto);
-    if (isNaN(valor) || valor <= 0) return { totalFinal: total, descricao: formatCurrency(total) };
-
-    const valorComDesconto = total - valor;
-    return {
-        totalFinal: valorComDesconto,
-        descricao: `~${formatCurrency(total)}~ ${formatCurrency(valorComDesconto)} (-${formatCurrency(valor)})`
-    };
-}
-
-function formatOrcamento(o) {
-    const totalMateriais = (o.materiais || []).reduce((sum, m) => sum + (m.qtd || 0) * (m.valor || 0), 0);
-    const totalServicos = (o.servicos || []).reduce((sum, s) => sum + (s.valor || 0), 0);
-
-    const descontoMateriais = aplicarDesconto(totalMateriais, o.desconto_materiais);
-    const descontoServicos = aplicarDesconto(totalServicos, o.desconto_servicos);
-
-    const totalOriginal = totalMateriais + totalServicos;
-    const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
-
-    return `
-📝 Orçamento ${o.orcamento_numero}
-👤 Cliente: ${o.nome_cliente}
-📞 Telefone: ${o.telefone_cliente}
-📌 Observação: ${o.descricao_atividades || '-'}
-
-📦 Materiais:
-${(o.materiais && o.materiais.length > 0)
-            ? o.materiais.map(m => {
-                const total = (m.qtd || 0) * (m.valor || 0);
-                return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
-            }).join("\n")
-            : "   Nenhum"}
-
-💰 Total Materiais: ${descontoMateriais.descricao}
-
-🔧 Serviços:
-${(o.servicos && o.servicos.length > 0)
-            ? o.servicos.map(s => `   - ${s.nome} (Valor: ${formatCurrency(s.valor)})`).join("\n")
-            : "   Nenhum"}
-
-💰 Total Serviços: ${descontoServicos.descricao}
-
-🧾 Total Geral: ${totalFinal !== totalOriginal
-            ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
-            : formatCurrency(totalFinal)}
-`.trim();
-}
+const supabase = require("./supabase");
+const formatOrcamento = require("../utils/formatOrcamento");
+const generatePDF = require("../utils/pdfGenerator");
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
@@ -83,7 +13,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const { data, error } = await supabase.from('orcamentos').insert([{
                     nome_cliente: command.nome_cliente,
                     telefone_cliente: command.telefone_cliente,
-                    descricao_atividades: command.descricao_atividades || '',
+                    descricao_atividades: command.observacao || '',
                     materiais: command.materiais || [],
                     servicos: command.servicos || [],
                     desconto_materiais: command.desconto_materiais || 0,
@@ -210,7 +140,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const updates = {
                     ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
                     ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
-                    ...(command.descricao_atividades && { descricao_atividades: command.descricao_atividades }),
+                    ...(command.observacao && { descricao_atividades: command.observacao }),
                     materiais,
                     servicos,
                     ...(command.desconto_materiais !== undefined && { desconto_materiais: command.desconto_materiais }),
@@ -232,13 +162,28 @@ async function handleOrcamentoCommand(command, userPhone) {
             }
 
             case 'list': {
-                let query = supabase.from('orcamentos').select('*');
+                let orcamentos;
+                let error;
 
-                if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
-                if (command.nome_cliente) query = query.ilike('nome_cliente', `%${command.nome_cliente}%`);
-                if (command.id) query = query.eq('orcamento_numero', command.id);
+                // Se tiver telefone ou ID, usamos o filtro normal
+                if (command.telefone_cliente || command.id) {
+                    let query = supabase.from('orcamentos').select('*');
 
-                const { data: orcamentos, error } = await query;
+                    if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
+                    if (command.id) query = query.eq('orcamento_numero', command.id);
+
+                    ({ data: orcamentos, error } = await query);
+                }
+                // Se tiver nome_cliente, usamos a RPC unaccent
+                else if (command.nome_cliente) {
+                    const nome = command.nome_cliente.trim();
+                    ({ data: orcamentos, error } = await supabase
+                        .rpc('search_orcamentos_by_name', { name: nome }));
+                }
+                // Se não tiver nenhum filtro, retorna todos
+                else {
+                    ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
+                }
 
                 if (error) {
                     console.error("Erro ao listar orçamentos:", error);
@@ -250,15 +195,13 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return orcamentos.map(formatOrcamento).join("\n\n---\n\n");
             }
 
-            case 'pdf': {
-                if (!command.id) return '⚠️ É necessário informar o ID do orçamento.';
-
+            case "pdf": {
                 try {
-                    // Buscar orçamento
+                    // Buscar orçamento no Supabase
                     const { data: orcamentos, error } = await supabase
-                        .from('orcamentos')
-                        .select('*')
-                        .eq('orcamento_numero', command.id)
+                        .from("orcamentos")
+                        .select("*")
+                        .eq("orcamento_numero", command.id)
                         .limit(1);
 
                     if (error) {
@@ -272,89 +215,21 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                     const o = orcamentos[0];
 
-                    // HTML do orçamento
-                    const htmlContent = `
-<html>
-  <head>
-    <style>
-      body { font-family: Arial, sans-serif; padding: 20px; }
-      h1 { text-align: center; }
-      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-      th, td { border: 1px solid #000; padding: 6px; text-align: left; }
-      th { background: #eee; }
-    </style>
-  </head>
-  <body>
-    <h1>Orçamento ${o.orcamento_numero}</h1>
-    <p><b>Cliente:</b> ${o.nome_cliente}</p>
-    <p><b>Telefone:</b> ${o.telefone_cliente}</p>
-    <p><b>Observações:</b> ${o.descricao_atividades || '-'}</p>
-
-    <h2>Materiais</h2>
-    <table>
-      <tr><th>Nome</th><th>Qtd</th><th>Unidade</th><th>Valor</th><th>Total</th></tr>
-      ${(o.materiais || []).map(m => `
-        <tr>
-          <td>${m.nome}</td>
-          <td>${m.qtd}</td>
-          <td>${m.unidade || ''}</td>
-          <td>R$ ${m.valor.toFixed(2)}</td>
-          <td>R$ ${(m.qtd * m.valor).toFixed(2)}</td>
-        </tr>
-      `).join("")}
-    </table>
-
-    <h2>Serviços</h2>
-    <table>
-      <tr><th>Descrição</th><th>Valor</th></tr>
-      ${(o.servicos || []).map(s => `
-        <tr>
-          <td>${s.nome}</td>
-          <td>R$ ${s.valor.toFixed(2)}</td>
-        </tr>
-      `).join("")}
-    </table>
-
-    <h2>Total</h2>
-    <p><b>Total Geral:</b> R$ ${(
-                            (o.materiais || []).reduce((t, m) => t + m.qtd * m.valor, 0) +
-                            (o.servicos || []).reduce((t, s) => t + s.valor, 0)
-                        ).toFixed(2)}</p>
-  </body>
-</html>
-    `;
-
-                    // Caminho do PDF
-                    const fs = require("fs");
-                    const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
-
-                    // Puppeteer
-                    const puppeteer = require("puppeteer");
-
-                    const browser = await puppeteer.launch({
-                        headless: true,
-                        args: ['--no-sandbox', '--disable-setuid-sandbox']
-                    });
-
-                    const page = await browser.newPage();
-                    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-                    await page.pdf({ path: pdfPath, format: "A4" });
-                    await browser.close();
+                    const pdfPath = await generatePDF(o);
 
                     return `📄 PDF do orçamento ${command.id} gerado com sucesso! Arquivo salvo em: ${pdfPath}`;
-
                 } catch (err) {
                     console.error("Erro ao gerar PDF:", err);
-                    return `⚠️ Ocorreu um erro ao gerar o PDF do orçamento ${command.id}.`;
+                    return `⚠️ Erro ao gerar PDF do orçamento ${command.id}.`;
                 }
             }
             default:
                 return '⚠️ Ação desconhecida.';
-        } // fecha switch
+        }
     } catch (err) {
         console.error("Erro ao processar comando:", err);
         return "⚠️ Ocorreu um erro ao processar o comando.";
-    } // fecha try/catch
+    }
 }
 
 module.exports = handleOrcamentoCommand;

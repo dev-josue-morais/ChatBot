@@ -35,12 +35,13 @@ async function handleAgendaCommand(command, userPhone) {
         const start = DateTime.fromISO(datetimeUTC).minus({ minutes: 1 }).toISO();
         const end = DateTime.fromISO(datetimeUTC).plus({ minutes: 1 }).toISO();
 
+        // Busca eventos ignorando maiúsculas/minúsculas e espaços extras
         const { data: events, error: fetchError } = await supabase
           .from('events')
           .select('*')
-          .eq('title', command.title)
           .gte('date', start)
-          .lte('date', end);
+          .lte('date', end)
+          .ilike('title', command.title.trim().toLowerCase());
 
         if (fetchError || !events || events.length === 0) {
           return `⚠️ Nenhum evento encontrado para "${command.title}" em ${formatLocal(datetimeUTC)}.`;
@@ -53,6 +54,7 @@ async function handleAgendaCommand(command, userPhone) {
         }
         return `🗑 Evento "${command.title}" em ${formatLocal(datetimeUTC)} removido com sucesso.`;
       }
+
 
       case 'list': {
         const { data: events, error } = await supabase
