@@ -288,10 +288,10 @@ async function generatePDF(orcamento, config = {}) {
         <!-- Observações e Garantia -->
         ${(opcoes.observacoes || opcoes.garantia) ? `
         <div class="observacao">
-            ${opcoes.garantia ? `<p><strong>Garantia da mão de obra:</strong> 90 Dias</p>` : ""}
             ${opcoes.observacoes ? `
             <h3>Observações Importantes</h3>
             <ul>
+            ${opcoes.garantia ? `<li><strong>Garantia da mão de obra:</strong> 90 Dias</li>` : ""}    
                 <li>Todo o material é de responsabilidade do cliente.</li>
                 <li>Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês.</li>
             </ul>` : ""}
