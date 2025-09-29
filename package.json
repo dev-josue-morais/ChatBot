@@ -17,6 +17,8 @@
     "form-data": "^4.0.4",
     "luxon": "^3.7.2",
     "node-cron": "^4.2.1",
-    "openai": "^5.19.1"
+    "openai": "^5.19.1",
+    "puppeteer": "^23.7.0",
+    "pdf-lib": "^1.17.1"
   }
 }
