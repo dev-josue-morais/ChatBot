@@ -2,7 +2,7 @@ const openai = require('./openai');
 const supabase = require('./supabase');
 const handleOrcamentoCommand = require('./handleOrcamentoCommand');
 const handleAgendaCommand = require('./handleAgendaCommand');
-const { getNowBRT } = require('./utils');
+const { getNowBRT } = require('../utils/utils');
 
 // Processa comandos de agenda recebidos do WhatsApp
 async function processCommand(text, userPhone) {
@@ -10,7 +10,7 @@ async function processCommand(text, userPhone) {
     const gptPrompt = `
 Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil).
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-Você entende comandos de agenda ou orçamentos e sempre gera **JSON válido**, sem explicações, sem expressões ou textos descritivos.
+Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON válido**.
 
 📅 Para AGENDA, siga este formato:
 {
@@ -54,8 +54,7 @@ Regras importantes para ORÇAMENTO:
 1. Para CREATE, **use sempre \`materiais\` e \`servicos\`**, não \`add_\` ou \`edit_\`.
 2. Para EDIT, DELETE ou PDF, o campo "id" é obrigatório.  
 3. Nunca use expressões matemáticas ou textos descritivos no JSON.  
-4. Campos obrigatórios devem ter valores reais; campos opcionais podem ser null.  
-5. Sempre gere JSON **parseável e completo**, sem explicações ou comentários.  
+4. Campos obrigatórios devem ter valores reais; campos opcionais podem ser null. 
 6. Datas use formato ISO 8601 em GMT-3.
 
 Mensagem do usuário: "${text}"

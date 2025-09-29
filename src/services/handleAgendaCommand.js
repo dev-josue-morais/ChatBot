@@ -1,6 +1,6 @@
 const supabase = require('./supabase');
 const { DateTime } = require('luxon');
-const { formatLocal } = require('./utils');
+const { formatLocal } = require('../utils/utils');
 
 async function handleAgendaCommand(command, userPhone) {
   try {

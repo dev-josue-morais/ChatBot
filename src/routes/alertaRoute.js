@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getNowBRT, formatLocal } = require('../services/utils');
+const { getNowBRT, formatLocal } = require('../utils/utils');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
-const { DESTINO_FIXO } = require('../../config');
+const { DESTINO_FIXO } = require('../utils/config');
 
 router.get('/', async (req, res, next) => {
   try {
