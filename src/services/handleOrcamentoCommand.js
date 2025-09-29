@@ -324,12 +324,9 @@ async function handleOrcamentoCommand(command, userPhone) {
   const fs = require("fs");
   const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
 
-  const puppeteer = require("puppeteer");
-
-const browser = await puppeteer.launch({
+  const browser = await puppeteer.launch({
   headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  executablePath: puppeteer.executablePath() 
+  args: ['--no-sandbox', '--disable-setuid-sandbox']
 });
 
   const page = await browser.newPage();
