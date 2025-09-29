@@ -26,7 +26,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
                 }
 
-                return `✅ Orçamento criado com sucesso:\n\n${formatOrcamento(data[0])}`;
+                return `${formatOrcamento(data[0])}`;
             }
 
             case 'delete': {
@@ -173,7 +173,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return `⚠️ Não consegui editar o orçamento ${command.id}.`;
                 }
 
-                return `✏️ Orçamento atualizado com sucesso:\n\n${formatOrcamento(data[0])}`;
+                return `${formatOrcamento(data[0])}`;
             }
 
             case 'list': {
