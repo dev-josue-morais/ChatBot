@@ -6,7 +6,8 @@
   "author": "dev-josue-morais <josue28jrd@hotmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "puppeteer install"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
