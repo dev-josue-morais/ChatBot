@@ -5,6 +5,16 @@ const { DateTime } = require("luxon");
 function getNowBRT() {
   return DateTime.now().setZone("America/Sao_Paulo");
 }
+const formatarData = (dataString) => {
+  if (!dataString) return '';
+
+  const data = new Date(dataString);
+  const dia = String(data.getDate()).padStart(2, '0');
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const ano = String(data.getFullYear()).slice(-2);
+
+  return `${dia}/${mes}/${ano}`;
+}
 
 // Formata número de telefone brasileiro
 function formatPhone(num) {
@@ -30,5 +40,6 @@ function formatLocal(utcDate) {
 module.exports = {
   getNowBRT,
   formatPhone,
-  formatLocal
+  formatLocal,
+  formatarData
 };
