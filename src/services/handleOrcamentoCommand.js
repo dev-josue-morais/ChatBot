@@ -325,10 +325,12 @@ async function handleOrcamentoCommand(command, userPhone) {
   const pdfPath = `/tmp/orcamento_${o.orcamento_numero}.pdf`;
 
   const puppeteer = require("puppeteer");
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+
+const browser = await puppeteer.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  executablePath: puppeteer.executablePath() 
+});
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
