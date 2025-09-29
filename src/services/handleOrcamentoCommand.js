@@ -250,7 +250,7 @@ async function handleOrcamentoCommand(command, userPhone) {
         return orcamentos.map(formatOrcamento).join("\n\n---\n\n");
       }
 
-      case 'gerar_pdf': {
+      case 'pdf': {
         if (!command.id) return '⚠️ É necessário informar o ID do orçamento.';
 
         const { data: orcamentos, error } = await supabase
