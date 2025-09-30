@@ -3,6 +3,7 @@ const formatCurrency = require('./formatCurrency');
 const { formatarData } = require('./utils');
 const fs = require("fs");
 const path = require("path");
+const aplicarDesconto = require('./aplicarDesconto');
 
 // Caminhos das imagens
 const logoPath = path.join(__dirname, "../img/logo.png");
