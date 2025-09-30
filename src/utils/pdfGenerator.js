@@ -75,7 +75,22 @@ async function generatePDF(orcamento, config = {}) {
                     color: red;
                     margin-right: 8px;
                 }
-
+.atividades {
+    margin: 20px 0;
+    padding: 10px 15px;
+    border: 2px solid #000;
+    background-color: #f9f9f9;
+}
+.atividades h3 {
+    margin-bottom: 8px;
+    font-size: 16px;
+    color: #333;
+}
+.atividades p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #000;
+}
                 .new-price {
                     color: green;
                     font-weight: bold;
@@ -302,7 +317,14 @@ async function generatePDF(orcamento, config = {}) {
                     </div>
                 </div>
             </div>
-                
+                ${(orcamento.descricao_atividades && orcamento.descricao_atividades.trim() !== "")
+  ? `
+  <div class="atividades">
+      <h3>Descrição das Atividades</h3>
+      <p>${orcamento.descricao_atividades}</p>
+  </div>
+  `
+  : ""}
             <!-- Lista de Serviços -->
             ${(opcoes.listaServicos && orcamento?.servicos?.length > 0) ? `
             <table class="table-container">
