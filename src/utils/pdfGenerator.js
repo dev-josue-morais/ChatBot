@@ -12,6 +12,8 @@ const pixPath = path.join(__dirname, "../img/QrCode.jpeg");
 const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 const pixBase64 = fs.readFileSync(pixPath, { encoding: "base64" });
 
+async function generatePDF(orcamento, config = {}) {
+    try {
 const totalMateriais = (orcamento.materiais || []).reduce(
     (sum, m) => sum + (m.qtd || 0) * (m.valor || 0),
     0
@@ -26,9 +28,6 @@ const descontoServicos = aplicarDesconto(totalServicos, orcamento.desconto_servi
 
 const totalOriginal = totalMateriais + totalServicos;
 const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
-
-async function generatePDF(orcamento, config = {}) {
-    try {
         const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
         const opcoes = {
             listaServicos: true,
