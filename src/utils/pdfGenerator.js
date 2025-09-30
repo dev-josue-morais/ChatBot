@@ -363,35 +363,45 @@ async function generatePDF(orcamento, config = {}) {
                 `).join('')}
             </table>` : ''}
             ${(
-                  (opcoes.listaServicos && orcamento?.servicos?.length > 0) ||
-                  (opcoes.listaMateriais && orcamento?.materiais?.length > 0)
-                ) ? `
-                <div class="containertotal">
-                  <div class="totals">
-                    ${(opcoes.listaMateriais && orcamento?.materiais?.length > 0)
-                      ? `<p><strong>Total Materiais:</strong> ${
-                          descontoMateriais.totalFinal !== totalMateriais
-                            ? `<span class="old-price">${formatCurrency(totalMateriais)}</span><span class="new-price">${formatCurrency(descontoMateriais.totalFinal)}</span>`
-                            : `<span class="new-price">${formatCurrency(totalMateriais)}</span>`
-                        }</p>`
-                      : ''}
-                    
-                ${(opcoes.listaServicos && orcamento?.servicos?.length > 0)
-                  ? `<p><strong>Total Serviços:</strong> ${
-                      descontoServicos.totalFinal !== totalServicos
-                        ? `<span class="old-price">${formatCurrency(totalServicos)}</span><span class="new-price">${formatCurrency(descontoServicos.totalFinal)}</span>`
-                        : `<span class="new-price">${formatCurrency(totalServicos)}</span>`
-                    }</p>`
-                  : ''}
-                
-                <p><strong>Total Geral:</strong> ${
-                  totalFinal !== totalOriginal
-                    ? `<span class="old-price">${formatCurrency(totalOriginal)}</span><span class="new-price">${formatCurrency(totalFinal)}</span>`
-                    : `<span class="new-price">${formatCurrency(totalFinal)}</span>`
-                }</p>
-              </div>
-            </div>
-            ` : ''}
+  (opcoes.listaServicos && orcamento?.servicos?.length > 0) ||
+  (opcoes.listaMateriais && orcamento?.materiais?.length > 0)
+) ? `
+  <div class="containertotal">
+    <div class="totals">
+
+      ${(opcoes.listaMateriais && orcamento?.materiais?.length > 0)
+        ? `<p><strong>Total Materiais:</strong> ${
+            descontoMateriais.totalFinal !== totalMateriais
+              ? `${formatCurrency(totalMateriais)} - ${
+                  typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
+                    ? orcamento.desconto_materiais
+                    : formatCurrency(orcamento.desconto_materiais || 0)
+                } ${formatCurrency(descontoMateriais.totalFinal)}`
+              : `${formatCurrency(totalMateriais)}`
+          }</p>`
+        : ''}
+
+      ${(opcoes.listaServicos && orcamento?.servicos?.length > 0)
+        ? `<p><strong>Total Serviços:</strong> ${
+            descontoServicos.totalFinal !== totalServicos
+              ? `${formatCurrency(totalServicos)} - ${
+                  typeof orcamento.desconto_servicos === "string" && orcamento.desconto_servicos.includes("%")
+                    ? orcamento.desconto_servicos
+                    : formatCurrency(orcamento.desconto_servicos || 0)
+                } ${formatCurrency(descontoServicos.totalFinal)}`
+              : `${formatCurrency(totalServicos)}`
+          }</p>`
+        : ''}
+
+      <p><strong>Total Geral:</strong> ${
+        totalFinal !== totalOriginal
+          ? `<span class="old-price">${formatCurrency(totalOriginal)}</span><span class="new-price">${formatCurrency(totalFinal)}</span>`
+          : `<span class="new-price">${formatCurrency(totalFinal)}</span>`
+      }</p>
+
+    </div>
+  </div>
+` : ''}
                     
             <!-- Observações e Garantia -->
             ${(opcoes.observacoes || opcoes.garantia) ? `
@@ -414,7 +424,7 @@ async function generatePDF(orcamento, config = {}) {
                 <div class="pixchave">
                     <h1 class="center">Pague com Pix</h1>
                     <h2><strong>Chave Pix Tel:</strong> 64992869608</h2>
-                    <h2><strong>Nome:</strong> josue de Souza Morais</h2>
+                    <h2><strong>Nome:</strong> Josué de Souza Morais</h2>
                     <h2><strong>Instituição:</strong> Mercado Pago</h2>
                 </div>
             </div>
