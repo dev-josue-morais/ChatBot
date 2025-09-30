@@ -378,7 +378,7 @@ async function generatePDF(orcamento, config = {}) {
         ? `<p><strong>Total Materiais:</strong> ${
             descontoMateriais.totalFinal !== totalMateriais
               ? `<span class="old-price">${formatCurrency(totalMateriais)}</span> 
-                 <span class="discount">${
+                 <span class="discount">-${
                    typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
                      ? orcamento.desconto_materiais
                      : formatCurrency(orcamento.desconto_materiais || 0)
@@ -392,7 +392,7 @@ async function generatePDF(orcamento, config = {}) {
         ? `<p><strong>Total Serviços:</strong> ${
             descontoServicos.totalFinal !== totalServicos
               ? `<span class="old-price">${formatCurrency(totalServicos)}</span> 
-                 <span class="discount">${
+                 <span class="discount">-${
                    typeof orcamento.desconto_servicos === "string" && orcamento.desconto_servicos.includes("%")
                      ? orcamento.desconto_servicos
                      : formatCurrency(orcamento.desconto_servicos || 0)
