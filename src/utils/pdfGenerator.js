@@ -122,23 +122,29 @@ async function generatePDF(orcamento, config = {}) {
               }
 
               .containertotal {
-                  display: flex;
-                  justify-content: flex-end;
-                  margin-top: 15px;
-              }
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
 
-              .totals {
-                  background-color: #f2f2f2;
-                  padding: 10px;
-                  text-align: right;
-                  font-size: 16px;
-              }
+.totals {
+    background-color: #f9f9f9;
+    border: 2px solid #000;
+    padding: 15px 25px;
+    font-size: 16px;
+    line-height: 1.6;
+    text-align: right;
+    min-width: 250px;
+}
 
-              .total {
-                  background-color: #ddd;
-                  font-weight: bold;
-                  padding: 10px;
-              }
+.totals p {
+    margin: 5px 0;
+}
+
+.totals strong {
+    font-weight: bold;
+    color: #000;
+}
 
               .flex-container {
                   display: flex;
