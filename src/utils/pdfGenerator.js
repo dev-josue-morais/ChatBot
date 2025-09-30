@@ -95,6 +95,11 @@ async function generatePDF(orcamento, config = {}) {
                     color: green;
                     font-weight: bold;
                 }
+.discount {
+  color: #007bff; /* azul */
+  margin: 0 5px;
+  font-weight: bold;
+}
 
                 .header {
                     display: flex;
@@ -372,24 +377,28 @@ async function generatePDF(orcamento, config = {}) {
       ${(opcoes.listaMateriais && orcamento?.materiais?.length > 0)
         ? `<p><strong>Total Materiais:</strong> ${
             descontoMateriais.totalFinal !== totalMateriais
-              ? `${formatCurrency(totalMateriais)} - ${
-                  typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
-                    ? orcamento.desconto_materiais
-                    : formatCurrency(orcamento.desconto_materiais || 0)
-                } ${formatCurrency(descontoMateriais.totalFinal)}`
-              : `${formatCurrency(totalMateriais)}`
+              ? `<span class="old-price">${formatCurrency(totalMateriais)}</span> 
+                 <span class="discount">${
+                   typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
+                     ? orcamento.desconto_materiais
+                     : formatCurrency(orcamento.desconto_materiais || 0)
+                 }</span> 
+                 <span class="new-price">${formatCurrency(descontoMateriais.totalFinal)}</span>`
+              : `<span class="new-price">${formatCurrency(totalMateriais)}</span>`
           }</p>`
         : ''}
 
       ${(opcoes.listaServicos && orcamento?.servicos?.length > 0)
         ? `<p><strong>Total Serviços:</strong> ${
             descontoServicos.totalFinal !== totalServicos
-              ? `${formatCurrency(totalServicos)} - ${
-                  typeof orcamento.desconto_servicos === "string" && orcamento.desconto_servicos.includes("%")
-                    ? orcamento.desconto_servicos
-                    : formatCurrency(orcamento.desconto_servicos || 0)
-                } ${formatCurrency(descontoServicos.totalFinal)}`
-              : `${formatCurrency(totalServicos)}`
+              ? `<span class="old-price">${formatCurrency(totalServicos)}</span> 
+                 <span class="discount">${
+                   typeof orcamento.desconto_servicos === "string" && orcamento.desconto_servicos.includes("%")
+                     ? orcamento.desconto_servicos
+                     : formatCurrency(orcamento.desconto_servicos || 0)
+                 }</span> 
+                 <span class="new-price">${formatCurrency(descontoServicos.totalFinal)}</span>`
+              : `<span class="new-price">${formatCurrency(totalServicos)}</span>`
           }</p>`
         : ''}
 
