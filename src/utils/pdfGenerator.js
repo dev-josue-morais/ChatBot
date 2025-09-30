@@ -198,7 +198,9 @@ async function generatePDF(orcamento, config = {}) {
                     border: 2px solid #000;
                     padding: 15px;
                 }
-                
+                .pix-container {
+                   margin-top: 20px;
+                }
                 .observacao h3 {
                     margin-bottom: 10px;
                     font-size: 18px;
