@@ -121,6 +121,16 @@ const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
                   background-color: #e5e5e5;
               }
 
+/* Evita quebra dentro dessas seções */
+.table-container, .containertotal, .pix-container, .observacao, .assinaturas {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Garante que cada seção começa em página nova se não couber */
+.pix-container, .observacao, .assinaturas {
+    page-break-before: auto;
+}
               .containertotal {
     display: flex;
     justify-content: flex-end;
