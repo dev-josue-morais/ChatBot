@@ -390,10 +390,11 @@ async function generatePDF(orcamento, config = {}) {
                     <img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix">
                 </div>
                 <div class="pixchave">
-                    <h3 class="center">Pague com Pix</h3>
-                    <p><strong>Chave Pix Tel:</strong> 64992869608</p>
-                    <p><strong>Nome:</strong> josue de Souza Morais</p>
-                    <p><strong>Instituição:</strong> Mercado Pago</p>
+                    <h1 class="center">Pague com Pix</h1>
+                    <h2><strong>Chave Pix Tel:</strong> 64992869608</p
+h2>
+                    <h2><strong>Nome:</strong> josue de Souza Morais</h2>
+                    <h2><strong>Instituição:</strong> Mercado Pago</h2>
                 </div>
             </div>
                 
