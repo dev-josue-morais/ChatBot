@@ -69,7 +69,18 @@ async function generatePDF(orcamento, config = {}) {
                     border: 3px solid #000;
                     padding: 20px;
                 }
-                
+
+                .old-price {
+                    text-decoration: line-through;
+                    color: red;
+                    margin-right: 8px;
+                }
+
+                .new-price {
+                    color: green;
+                    font-weight: bold;
+                }
+
                 .header {
                     display: flex;
                     justify-content: space-between;
@@ -145,7 +156,7 @@ async function generatePDF(orcamento, config = {}) {
                 .containertotal {
                     display: flex;
                     justify-content: flex-end;
-                    margin-top: 20px;
+                    margin: 20px 30px 20px 50px;
                 }
                 
                 .totals {
@@ -328,25 +339,33 @@ async function generatePDF(orcamento, config = {}) {
                 `).join('')}
             </table>` : ''}
             ${(
-            (opcoes.listaServicos && orcamento?.servicos?.length > 0) ||
-            (opcoes.listaMateriais && orcamento?.materiais?.length > 0)
-            ) ? `
-            <div class="containertotal">
-                <div class="totals">
+                  (opcoes.listaServicos && orcamento?.servicos?.length > 0) ||
+                  (opcoes.listaMateriais && orcamento?.materiais?.length > 0)
+                ) ? `
+                <div class="containertotal">
+                  <div class="totals">
                     ${(opcoes.listaMateriais && orcamento?.materiais?.length > 0)
-                    ? `<p><strong>Total Materiais:</strong> ${descontoMateriais.descricao}</p>`
-                    : ''}
+                      ? `<p><strong>Total Materiais:</strong> ${
+                          descontoMateriais.totalFinal !== totalMateriais
+                            ? `<span class="old-price">${formatCurrency(totalMateriais)}</span><span class="new-price">${formatCurrency(descontoMateriais.totalFinal)}</span>`
+                            : `<span class="new-price">${formatCurrency(totalMateriais)}</span>`
+                        }</p>`
+                      : ''}
                     
-                    ${(opcoes.listaServicos && orcamento?.servicos?.length > 0)
-                    ? `<p><strong>Total Serviços:</strong> ${descontoServicos.descricao}</p>`
-                    : ''}
-                    
-                    <p><strong>Total Geral:</strong> ${
-                        totalFinal !== totalOriginal
-                        ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
-                        : formatCurrency(totalFinal)
-                        }</p>
-                </div>
+                ${(opcoes.listaServicos && orcamento?.servicos?.length > 0)
+                  ? `<p><strong>Total Serviços:</strong> ${
+                      descontoServicos.totalFinal !== totalServicos
+                        ? `<span class="old-price">${formatCurrency(totalServicos)}</span><span class="new-price">${formatCurrency(descontoServicos.totalFinal)}</span>`
+                        : `<span class="new-price">${formatCurrency(totalServicos)}</span>`
+                    }</p>`
+                  : ''}
+                
+                <p><strong>Total Geral:</strong> ${
+                  totalFinal !== totalOriginal
+                    ? `<span class="old-price">${formatCurrency(totalOriginal)}</span><span class="new-price">${formatCurrency(totalFinal)}</span>`
+                    : `<span class="new-price">${formatCurrency(totalFinal)}</span>`
+                }</p>
+              </div>
             </div>
             ` : ''}
                     
