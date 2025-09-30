@@ -391,8 +391,7 @@ async function generatePDF(orcamento, config = {}) {
                 </div>
                 <div class="pixchave">
                     <h1 class="center">Pague com Pix</h1>
-                    <h2><strong>Chave Pix Tel:</strong> 64992869608</p
-h2>
+                    <h2><strong>Chave Pix Tel:</strong> 64992869608</h2>
                     <h2><strong>Nome:</strong> josue de Souza Morais</h2>
                     <h2><strong>Instituição:</strong> Mercado Pago</h2>
                 </div>
