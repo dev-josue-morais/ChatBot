@@ -29,7 +29,7 @@ Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON v
   "id": número (para edit/delete/pdf, obrigatório nesses casos),
   "nome_cliente": string (obrigatório em create),
   "telefone_cliente": string (obrigatório em create),
-  "observacao": string ou null,
+"observacao": ["string", "string?", "string?"] ou null, // de 0 a 10 observações para o cliente. 
   // Para CREATE, use diretamente estes campos
   "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
   "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
