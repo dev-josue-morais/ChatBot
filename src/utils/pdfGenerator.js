@@ -102,22 +102,19 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
 }
 
 function renderObservacoes(orcamento, opcoes) {
-    if (!(opcoes.observacoes || opcoes.garantia || (orcamento.descricao_atividades?.trim()))) return '';
+    if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.observacao) && orcamento.observacao.length)))
+        return '';
     const defaultObs = [
         opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
         "Todo o material é de responsabilidade do cliente.",
         "Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês."
     ].filter(Boolean);
-    let gptObs = [];
-    if (orcamento.descricao_atividades?.trim()) {
-        try {
-            const parsed = JSON.parse(orcamento.descricao_atividades);
-            if (Array.isArray(parsed)) gptObs = parsed;
-        } catch {
-            gptObs = orcamento.descricao_atividades.split(/\n|;/).map(s => s.trim()).filter(Boolean);
-        }
-    }
+    const gptObs = Array.isArray(orcamento.observacao)
+        ? orcamento.observacao.filter(Boolean)
+        : [];
+
     const allObs = [...defaultObs, ...gptObs];
+
     return `
     <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
         <h3 style="margin-bottom:10px; font-size:18px; color:#333;">Observações Importantes</h3>
@@ -125,7 +122,8 @@ function renderObservacoes(orcamento, opcoes) {
             ${allObs.map(obs => `<li>${obs}</li>`).join('')}
         </ul>
     </div>
-`;}
+    `;
+}
 
 async function generatePDF(orcamento, config = {}) {
     try {
