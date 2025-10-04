@@ -33,7 +33,7 @@ function renderServicos(servicos, opcoes) {
     `;
 }
 
-function renderMateriais(materiais) {
+function renderMateriais(materiais, opcoes) {
     if (!opcoes.listaMateriais || !materiais?.length) return '';
     return `
     <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
