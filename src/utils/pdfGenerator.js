@@ -174,21 +174,20 @@ async function generatePDF(orcamento, config = {}) {
                 }
                 
                 .containertotal {
-                    display: flex;
-                    justify-content: flex-end;
-                    margin: 20px 30px 20px 50px;
-                }
-                
-                .totals {
-                    background-color: #f9f9f9;
-                    border: 2px solid #000;
-                    padding: 15px 25px;
-                    font-size: 16px;
-                    line-height: 1.6;
-                    text-align: right;
-                    min-width: 250px;
-                }
-                
+  display: flex;
+  justify-content: center; /* centraliza horizontalmente */
+  margin: 20px 0; /* igual às outras seções */
+}
+
+.totals {
+  width: 100%;
+  border: 2px solid #000;
+  background-color: #f9f9f9;
+  padding: 10px 15px;
+  margin-top: 10px;
+  text-align: right;
+  box-sizing: border-box;
+}
                 .totals p {
                     margin: 5px 0;
                 }
