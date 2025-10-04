@@ -322,14 +322,6 @@ async function generatePDF(orcamento, config = {}) {
                     </div>
                 </div>
             </div>
-                ${(orcamento.descricao_atividades && orcamento.descricao_atividades.trim() !== "")
-  ? `
-  <div class="atividades">
-      <h3>Descrição das Atividades</h3>
-      <p>${orcamento.descricao_atividades}</p>
-  </div>
-  `
-  : ""}
             <!-- Lista de Serviços -->
             ${(opcoes.listaServicos && orcamento?.servicos?.length > 0) ? `
             <table class="table-container">
@@ -411,7 +403,14 @@ async function generatePDF(orcamento, config = {}) {
     </div>
   </div>
 ` : ''}
-                    
+                    ${(orcamento.descricao_atividades && orcamento.descricao_atividades.trim() !== "")
+  ? `
+  <div class="atividades">
+      <h3>Descrição das Atividades</h3>
+      <p>${orcamento.descricao_atividades}</p>
+  </div>
+  `
+  : ""}
             <!-- Observações e Garantia -->
             ${(opcoes.observacoes || opcoes.garantia) ? `
             <div class="observacao">
