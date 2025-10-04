@@ -135,7 +135,7 @@ async function generatePDF(orcamento, config = {}) {
         <body style="font-family:Arial, sans-serif; font-size:14px; margin:20px; color:#333; border:3px solid #000; padding:20px;">
 
         <!-- Cabeçalho -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;  padding-bottom:10px; margin-bottom:20px;">
             <div style="display:flex; align-items:center; text-align:left; flex:1; gap:15px;">
                 <img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:100px; height:auto;">
                 <div style="display:flex; flex-direction:column;">
