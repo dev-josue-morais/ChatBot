@@ -14,7 +14,7 @@ const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 const pixBase64 = fs.readFileSync(pixPath, { encoding: "base64" });
 
 function renderServicos(servicos, opcoes) {
-    if (!servicos?.length) return '';
+      if (!opcoes.listaServicos || !servicos?.length) return '';
     return `
     <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
@@ -34,7 +34,7 @@ function renderServicos(servicos, opcoes) {
 }
 
 function renderMateriais(materiais) {
-    if (!materiais?.length) return '';
+    if (!opcoes.listaMateriais || !materiais?.length) return '';
     return `
     <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
@@ -169,7 +169,7 @@ async function generatePDF(orcamento, config = {}) {
         </div>
 
         ${renderServicos(orcamento.servicos, opcoes)}
-        ${renderMateriais(orcamento.materiais)}
+        ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
 
         ${ (opcoes.observacoes || opcoes.garantia || (orcamento.descricao_atividades?.trim() !== "")) ? `
