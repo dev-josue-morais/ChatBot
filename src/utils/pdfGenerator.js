@@ -101,6 +101,32 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
     `;
 }
 
+function renderObservacoes(orcamento, opcoes) {
+    if (!(opcoes.observacoes || opcoes.garantia || (orcamento.descricao_atividades?.trim()))) return '';
+    const defaultObs = [
+        opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
+        "Todo o material é de responsabilidade do cliente.",
+        "Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês."
+    ].filter(Boolean);
+    let gptObs = [];
+    if (orcamento.descricao_atividades?.trim()) {
+        try {
+            const parsed = JSON.parse(orcamento.descricao_atividades);
+            if (Array.isArray(parsed)) gptObs = parsed;
+        } catch {
+            gptObs = orcamento.descricao_atividades.split(/\n|;/).map(s => s.trim()).filter(Boolean);
+        }
+    }
+    const allObs = [...defaultObs, ...gptObs];
+    return `
+    <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
+        <h3 style="margin-bottom:10px; font-size:18px; color:#333;">Observações Importantes</h3>
+        <ul style="margin:0; padding-left:20px;">
+            ${allObs.map(obs => `<li>${obs}</li>`).join('')}
+        </ul>
+    </div>
+`;}
+
 async function generatePDF(orcamento, config = {}) {
     try {
         const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
@@ -171,18 +197,7 @@ async function generatePDF(orcamento, config = {}) {
         ${renderServicos(orcamento.servicos, opcoes)}
         ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
-
-        ${ (opcoes.observacoes || opcoes.garantia || (orcamento.descricao_atividades?.trim() !== "")) ? `
-            <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
-                <h3 style="margin-bottom:10px; font-size:18px; color:#333;">Observações Importantes</h3>
-                <ul style="margin:0; padding-left:20px;">
-                    ${opcoes.garantia ? `<li><strong>Garantia da mão de obra:</strong> 90 Dias</li>` : ""}
-                    <li>Todo o material é de responsabilidade do cliente.</li>
-                    <li>Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês.</li>
-                    ${orcamento.descricao_atividades?.trim() ? `<li>${orcamento.descricao_atividades}</li>` : ""}
-                </ul>
-            </div>` : ""}
-
+${renderObservacoes(orcamento, opcoes)}
         <!-- PIX -->
         <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
             <div style="text-align:center;">
