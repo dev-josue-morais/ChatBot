@@ -48,241 +48,41 @@ async function generatePDF(orcamento, config = {}) {
         const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
         const htmlContent = `
         <html>
-        <head>
-            <style>
-                @page {
-                    size: A4;
-                    margin: 10mm 5mm;
-                }
-                
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                
-                body {
-                    font-family: Arial, sans-serif;
-                    font-size: 14px;
-                    margin: 20px;
-                    color: #333;
-                    border: 3px solid #000;
-                    padding: 20px;
-                }
-
-                .old-price {
-                    text-decoration: line-through;
-                    color: red;
-                    margin-right: 8px;
-                }
-.atividades {
-    margin: 20px 0;
-    padding: 10px 15px;
-    border: 2px solid #000;
-    background-color: #f9f9f9;
-}
-.atividades h3 {
-    margin-bottom: 8px;
-    font-size: 16px;
-    color: #333;
-}
-.atividades p {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #000;
-}
-                .new-price {
-                    color: green;
-                    font-weight: bold;
-                }
-.discount {
-  color: #007bff; /* azul */
-  margin: 0 5px;
-  font-weight: bold;
-}
-
-                .header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-bottom: 2px solid #000;
-                    padding-bottom: 10px;
-                    margin-bottom: 20px;
-                }
-                
-                .header img {
-                    max-width: 120px;
-                    height: auto;
-                }
-                
-                .company-info {
-                    text-align: left;
-                    flex: 1;
-                }
-                
-                .container {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: flex-end;
-                    width: 40%;
-                }
-                
-                .orcamento-info,
-                .cliente-info {
-                    text-align: right;
-                    margin-bottom: 10px;
-                }
-                
-                .row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                
-                .table-container {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 15px;
-                }
-                
-                th,
-                td {
-                    border: 2px solid #000;
-                    padding: 8px;
-                    text-align: left;
-                }
-                
-                th {
-                    background-color: #e5e5e5;
-                }
-                
-                /* Evita quebra dentro dessas seções */
-                .table-container,
-                .containertotal,
-                .pix-container,
-                .observacao,
-                .assinaturas {
-                    page-break-inside: avoid;
-                    break-inside: avoid;
-                }
-                
-                /* Garante que cada seção começa em página nova se não couber */
-                .pix-container,
-                .observacao,
-                .assinaturas {
-                    page-break-before: auto;
-                }
-                
-                .containertotal {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-}
-
-.totals {
-  width: 100%;
-  border: 2px solid #000;
-  background-color: #f9f9f9;
-  padding: 10px 15px;
-  margin-top: 10px;
-  text-align: right;
-  box-sizing: border-box;
-}
-                .totals p {
-                    margin: 5px 0;
-                }
-                
-                .totals strong {
-                    font-weight: bold;
-                    color: #000;
-                }
-                
-                .flex-container {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                    gap: 20px;
-                    margin-top: 20px;
-                }
-                
-                .pixchave {
-                    margin-right: 5px;
-                }
-                
-                .pix-container,
-                .observacao {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    border: 2px solid #000;
-                    padding: 15px;
-                }
-                .pix-container {
-                   margin-top: 20px;
-                }
-                .observacao h3 {
-                    margin-bottom: 10px;
-                    font-size: 18px;
-                    color: #333;
-                }
-                
-                .observacao ul {
-                    margin: 0;
-                    padding-left: 20px;
-                }
-                
-                .observacao li {
-                    margin-bottom: 5px;
-                }
-                
-                .observacao {
-                    flex-direction: column;
-                }
-                
-                .pix {
-                    text-align: center;
-                }
-                
-                .pix img {
-                    width: 150px;
-                    height: 150px;
-                }
-                
-                .company-info {
-                    display: flex;
-                    align-items: center;
-                    /* Centraliza verticalmente */
-                    gap: 15px;
-                    /* Espaço entre logo e texto */
-                }
-                
-                .company-info .logo {
-                    max-width: 100px;
-                    /* Ajuste o tamanho da logo */
-                    height: auto;
-                }
-                
-                .company-details {
-                    display: flex;
-                    flex-direction: column;
-                }
-                
-                .assinaturas {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-top: 50px;
-                }
-                
-                .assinaturas div {
-                    width: 45%;
-                    text-align: center;
-                    border-top: 2px solid #000;
-                    padding-top: 5px;
-                    margin-top: 40px;
-                }
-            </style>
-        </head>
-                
+<head>
+  <style>
+    @page { size: A4; margin: 10mm 5mm; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 14px; margin: 20px; color: #333; border: 3px solid #000; padding: 20px; }
+    .old-price { text-decoration: line-through; color: red; margin-right: 8px; }
+    .new-price { color: green; font-weight: bold; }
+    .discount { color: #007bff; margin: 0 5px; font-weight: bold; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+    .header img { max-width: 120px; height: auto; }
+    .company-info { display: flex; align-items: center; text-align: left; flex: 1; gap: 15px; }
+    .company-info .logo { max-width: 100px; height: auto; }
+    .company-details { display: flex; flex-direction: column; }
+    .container { display: flex; flex-direction: column; align-items: flex-end; width: 40%; }
+    .orcamento-info, .cliente-info { text-align: right; margin-bottom: 10px; }
+    .row { display: flex; justify-content: space-between; align-items: center; }
+    .table-container { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-top: 15px; }
+    th, td { border: 2px solid #000; padding: 8px; text-align: left; }
+    th { background-color: #e5e5e5; }
+    .containertotal { display: flex; justify-content: center; margin: 20px 0; }
+    .totals { width: 100%; border: 2px solid #000; background-color: #f9f9f9; padding: 10px 15px; margin-top: 10px; text-align: right; box-sizing: border-box; }
+    .totals p { margin: 5px 0; }
+    .totals strong { font-weight: bold; color: #000; }
+    .pix-container, .observacao { display: flex; justify-content: center; align-items: center; border: 2px solid #000; padding: 15px; flex-direction: column; }
+    .pix-container { margin-top: 20px; }
+    .pix { text-align: center; }
+    .pix img { width: 150px; height: 150px; }
+    .pixchave { margin-right: 5px; }
+    .observacao h3 { margin-bottom: 10px; font-size: 18px; color: #333; }
+    .observacao ul { margin: 0; padding-left: 20px; }
+    .observacao li { margin-bottom: 5px; }
+    .assinaturas { display: flex; justify-content: space-between; margin-top: 50px; }
+    .assinaturas div { width: 45%; text-align: center; border-top: 2px solid #000; padding-top: 5px; margin-top: 40px; }
+  </style>
+</head>
         <body>
             <!-- Cabeçalho -->
             <div class="header">
