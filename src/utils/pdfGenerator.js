@@ -102,15 +102,17 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
 }
 
 function renderObservacoes(orcamento, opcoes) {
-    if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.observacao) && orcamento.observacao.length)))
+    if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.descricao_atividades) && orcamento.descricao_atividades.length)))
         return '';
+    
     const defaultObs = [
         opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
         "Todo o material é de responsabilidade do cliente.",
         "Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês."
     ].filter(Boolean);
-    const gptObs = Array.isArray(orcamento.observacao)
-        ? orcamento.observacao.filter(Boolean)
+
+    const gptObs = Array.isArray(orcamento.descricao_atividades)
+        ? orcamento.descricao_atividades.filter(Boolean)
         : [];
 
     const allObs = [...defaultObs, ...gptObs];
@@ -124,7 +126,6 @@ function renderObservacoes(orcamento, opcoes) {
     </div>
     `;
 }
-
 async function generatePDF(orcamento, config = {}) {
     try {
         const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
