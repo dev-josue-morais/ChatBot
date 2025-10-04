@@ -322,25 +322,31 @@ async function generatePDF(orcamento, config = {}) {
                     </div>
                 </div>
             </div>
-            <!-- Lista de Serviços -->
-            ${(opcoes.listaServicos && orcamento?.servicos?.length > 0) ? `
-            <table class="table-container">
-                <tr>
-                    <th>Serviço</th>
-                    ${!opcoes.ocultarValorServicos ? `<th>Preço</th>` : ""}
-                    <th>Quantidade</th>
-                    <th>Valor</th>
-                </tr>
-                ${orcamento.servicos.map(serv => `
-                <tr>
-                    <td>${serv.titulo}</td>
-                    ${!opcoes.ocultarValorServicos ? `<td>${formatCurrency(serv.valor)}</td>` : ""}
-                    <td>${serv.quantidade}</td>
-                    <td>${formatCurrency(serv.valor * serv.quantidade)}</td>
-                </tr>
-                `).join('')}
-            </table>` : ''}
-                
+ <!-- Lista de Serviços -->
+${
+  (opcoes.listaServicos && orcamento?.servicos?.length > 0)
+    ? `
+    <table class="table-container">
+      <tr>
+        <th>Serviço</th>
+        <th>Quantidade</th>
+        ${!opcoes.ocultarValorServicos ? `<th>Preço</th><th>Valor</th>` : ""}
+      </tr>
+      ${orcamento.servicos.map(serv => `
+        <tr>
+          <td>${serv.titulo}</td>
+          <td>${serv.quantidade}</td>
+          ${
+            !opcoes.ocultarValorServicos
+              ? `<td>${formatCurrency(serv.valor)}</td>
+                 <td>${formatCurrency(serv.valor * serv.quantidade)}</td>`
+              : ""
+          }
+        </tr>
+      `).join('')}
+    </table>`
+    : ''
+}
             <!-- Lista de Materiais -->
             ${(opcoes.listaMateriais && orcamento?.materiais?.length > 0) ? `
             <table class="table-container">
