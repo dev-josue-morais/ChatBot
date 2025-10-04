@@ -18,11 +18,10 @@ function formatOrcamento(o) {
   const totalFinal =
     descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
-  // Observações — novo formato (array)
   const observacoes =
-    Array.isArray(o.observacao) && o.observacao.length > 0
-      ? o.observacao.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
-      : "   -";
+  Array.isArray(o.descricao_atividades) && o.descricao_atividades.length > 0
+    ? o.descricao_atividades.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
+    : "   -";
 
   return `
 📝 Orçamento ${o.orcamento_numero}
