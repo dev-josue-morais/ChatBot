@@ -55,26 +55,32 @@ async function handleAgendaCommand(command, userPhone) {
         return `🗑 Evento "${command.title}" em ${formatLocal(datetimeUTC)} removido com sucesso.`;
       }
 
+   case 'list': {
+  const start = command.start_date
+    ? DateTime.fromISO(command.start_date, { zone: 'America/Sao_Paulo' }).toUTC().toISO()
+    : DateTime.now().startOf('day').toUTC().toISO(); // Início do dia atual
+  const end = command.end_date
+    ? DateTime.fromISO(command.end_date, { zone: 'America/Sao_Paulo' }).toUTC().toISO()
+    : DateTime.now().endOf('day').toUTC().toISO(); // Fim do dia atual
 
-      case 'list': {
-        const { data: events, error } = await supabase
-          .from('events')
-          .select('*')
-          .gte('date', command.start_date)
-          .lte('date', command.end_date);
+  const { data: events, error } = await supabase
+    .from('events')
+    .select('*')
+    .gte('date', start)
+    .lte('date', end);
 
-        if (error) {
-          console.error("Erro ao buscar eventos:", error);
-          return "⚠️ Não foi possível buscar os eventos.";
-        }
+  if (error) {
+    console.error("Erro ao buscar eventos:", error);
+    return "⚠️ Não foi possível buscar os eventos.";
+  }
 
-        if (!events || events.length === 0) {
-          return `📅 Nenhum evento encontrado entre ${formatLocal(command.start_date)} e ${formatLocal(command.end_date)}.`;
-        }
+  if (!events || events.length === 0) {
+    return `📅 Nenhum evento encontrado entre ${formatLocal(start)} e ${formatLocal(end)}.`;
+  }
 
-        const list = events.map(e => `- ${e.title} em ${formatLocal(e.date)}`).join('\n');
-        return `📅 Seus eventos:\n${list}`;
-      }
+  const list = events.map(e => `- ${e.title} em ${formatLocal(e.date)}`).join('\n');
+  return `📅 Seus eventos:\n${list}`;
+}
 
       default:
         return "⚠️ Comando de agenda não reconhecido.";
