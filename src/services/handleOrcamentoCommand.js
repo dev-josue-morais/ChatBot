@@ -186,34 +186,38 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             // ------------------- LIST -------------------
             case 'list': {
-                let orcamentos;
-                let error;
+    let orcamentos;
+    let error;
 
-                if (command.telefone_cliente || command.id) {
-                    let query = supabase.from('orcamentos').select('*');
-                    if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
-                    if (command.id) query = query.eq('orcamento_numero', command.id);
-                    ({ data: orcamentos, error } = await query);
-                }
-                else if (command.nome_cliente) {
-                    const nome = command.nome_cliente.trim();
-                    ({ data: orcamentos, error } = await supabase
-                        .rpc('search_orcamentos_by_name', { name: nome }));
-                }
-                else {
-                    ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
-                }
+    if (command.telefone_cliente || command.id) {
+        let query = supabase.from('orcamentos').select('*');
 
-                if (error) {
-                    console.error("Erro ao listar orçamentos:", error);
-                    return "⚠️ Não foi possível listar os orçamentos.";
-                }
+        if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
+        if (command.id) query = query.eq('orcamento_numero', command.id);
 
-                if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
+        ({ data: orcamentos, error } = await query);
+    } else if (command.nome_cliente) {
+        const nome = command.nome_cliente.trim();
+        ({ data: orcamentos, error } = await supabase
+            .rpc('search_orcamentos_by_name', { name: nome }));
+    } else {
+        ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
+    }
 
-                return orcamentos.map(formatOrcamento).join("\n\n----------------------------\n\n");
-            }
+    if (error) {
+        console.error("Erro ao listar orçamentos:", error);
+        return "⚠️ Não foi possível listar os orçamentos.";
+    }
 
+    if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
+
+    // Enviar cada orçamento individualmente
+    for (const o of orcamentos) {
+        await sendWhatsAppMessage(userPhone || DESTINO_FIXO, formatOrcamento(o));
+    }
+
+    return `✅ ${orcamentos.length} orçamento(s) enviados.`;
+}
             // ------------------- PDF -------------------
             case "pdf": {
                 try {
