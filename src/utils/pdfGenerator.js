@@ -175,8 +175,8 @@ async function generatePDF(orcamento, config = {}) {
                 
                 .containertotal {
   display: flex;
-  justify-content: center; /* centraliza horizontalmente */
-  margin: 20px 0; /* igual às outras seções */
+  justify-content: center;
+  margin: 20px 0;
 }
 
 .totals {
