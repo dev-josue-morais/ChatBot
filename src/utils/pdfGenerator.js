@@ -147,7 +147,7 @@ async function generatePDF(orcamento, config = {}) {
                 
                 th,
                 td {
-                    border: 1px solid #000;
+                    border: 2px solid #000;
                     padding: 8px;
                     text-align: left;
                 }
@@ -408,27 +408,26 @@ ${
     </div>
   </div>
 ` : ''}
-                    ${(orcamento.descricao_atividades && orcamento.descricao_atividades.trim() !== "")
-  ? `
-  <div class="atividades">
-      <h3>Descrição das Atividades</h3>
-      <p>${orcamento.descricao_atividades}</p>
-  </div>
-  `
-  : ""}
-            <!-- Observações e Garantia -->
-            ${(opcoes.observacoes || opcoes.garantia) ? `
-            <div class="observacao">
-                ${opcoes.observacoes ? `
-                <h3>Observações Importantes</h3>
-                <ul>
-                    ${opcoes.garantia ? `<li><strong>Garantia da mão de obra:</strong> 90 Dias</li>` : ""}
-                    <li>Todo o material é de responsabilidade do cliente.</li>
-                    <li>Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês.
-                    </li>
-                </ul>` : ""}
-            </div>` : ''}
-                
+<!-- Observações e Garantia -->
+${
+  (opcoes.observacoes || opcoes.garantia || (orcamento.descricao_atividades && orcamento.descricao_atividades.trim() !== ""))
+    ? `
+    <div class="observacao">
+        <h3>Observações Importantes</h3>
+        <ul>
+            ${opcoes.garantia ? `<li><strong>Garantia da mão de obra:</strong> 90 Dias</li>` : ""}
+            <li>Todo o material é de responsabilidade do cliente.</li>
+            <li>Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês.</li>
+            ${
+              (orcamento.descricao_atividades && orcamento.descricao_atividades.trim() !== "")
+                ? `<li>${orcamento.descricao_atividades}</li>`
+                : ""
+            }
+        </ul>
+    </div>
+    `
+    : ""
+}
             <!-- PIX -->
             <div class="pix-container">
                 <div class="pix">
