@@ -7,14 +7,17 @@ async function handleOrcamentoCommand(command, userPhone) {
     try {
         switch (command.action) {
 
+            // ------------------- CREATE -------------------
             case 'create': {
                 if (!command.nome_cliente) return "⚠️ O campo *nome do cliente* é obrigatório.";
                 if (!command.telefone_cliente) return "⚠️ O campo *telefone do cliente* é obrigatório.";
 
+                const observacoes = Array.isArray(command.observacao) ? command.observacao.filter(Boolean) : [];
+
                 const { data, error } = await supabase.from('orcamentos').insert([{
                     nome_cliente: command.nome_cliente,
                     telefone_cliente: command.telefone_cliente,
-                    descricao_atividades: command.observacao || '',
+                    descricao_atividades: observacoes,
                     materiais: command.materiais || [],
                     servicos: command.servicos || [],
                     desconto_materiais: command.desconto_materiais || 0,
@@ -29,6 +32,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return `${formatOrcamento(data[0])}`;
             }
 
+            // ------------------- DELETE -------------------
             case 'delete': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
 
@@ -48,6 +52,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return `🗑 Orçamento ${command.id} deletado com sucesso.`;
             }
 
+            // ------------------- EDIT -------------------
             case 'edit': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
@@ -152,10 +157,13 @@ async function handleOrcamentoCommand(command, userPhone) {
                     );
                 }
 
+                // Observações sempre array
+                const observacoes = Array.isArray(command.observacao) ? command.observacao.filter(Boolean) : currentData.descricao_atividades || [];
+
                 const updates = {
                     ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
                     ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
-                    ...(command.observacao && { descricao_atividades: command.observacao }),
+                    descricao_atividades: observacoes,
                     materiais,
                     servicos,
                     ...(command.desconto_materiais !== undefined && { desconto_materiais: command.desconto_materiais }),
@@ -176,26 +184,22 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return `${formatOrcamento(data[0])}`;
             }
 
+            // ------------------- LIST -------------------
             case 'list': {
                 let orcamentos;
                 let error;
 
-                // Se tiver telefone ou ID, usamos o filtro normal
                 if (command.telefone_cliente || command.id) {
                     let query = supabase.from('orcamentos').select('*');
-
                     if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
                     if (command.id) query = query.eq('orcamento_numero', command.id);
-
                     ({ data: orcamentos, error } = await query);
                 }
-                // Se tiver nome_cliente, usamos a RPC unaccent
                 else if (command.nome_cliente) {
                     const nome = command.nome_cliente.trim();
                     ({ data: orcamentos, error } = await supabase
                         .rpc('search_orcamentos_by_name', { name: nome }));
                 }
-                // Se não tiver nenhum filtro, retorna todos
                 else {
                     ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
                 }
@@ -210,11 +214,11 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return orcamentos.map(formatOrcamento).join("\n\n----------------------------\n\n");
             }
 
+            // ------------------- PDF -------------------
             case "pdf": {
                 try {
                     if (!command.id) return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
 
-                    // Buscar orçamento no Supabase
                     const { data: orcamentos, error } = await supabase
                         .from("orcamentos")
                         .select("*")
@@ -232,7 +236,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                     const o = orcamentos[0];
 
-                    // Config para o PDF
                     const pdfConfig = {
                         tipo: command.tipo || "Orçamento",
                         opcoes: command.opcoes || {
@@ -245,7 +248,6 @@ async function handleOrcamentoCommand(command, userPhone) {
                         }
                     };
 
-                    // Enviar PDF pelo WhatsApp (generatePDF é chamado dentro do sendPDFOrcamento)
                     const enviado = await sendPDFOrcamento(command.telefone_cliente || DESTINO_FIXO, o, pdfConfig);
 
                     if (enviado) {
@@ -258,6 +260,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
                 }
             }
+
             default:
                 return '⚠️ Ação desconhecida.';
         }
