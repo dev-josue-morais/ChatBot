@@ -1,15 +1,16 @@
-import { openai } from './openaiClient.js';
+const { openai } = require('./openaiClient');
 
-export async function handleGPTCommand(text) {
+async function handleGPTCommand(text) {
   const lower = text.toLowerCase();
   let modulo = null;
   let action = null;
   let prompt = '';
 
-  // 🔹 Identificação do módulo e ação
+  // 🔹 Identificação do módulo
   if (lower.includes('orcamento')) modulo = 'orcamento';
   else if (lower.includes('agenda')) modulo = 'agenda';
 
+  // 🔹 Identificação da ação
   if (lower.includes('criar') || lower.includes('novo')) action = 'create';
   else if (lower.includes('editar')) action = 'edit';
   else if (lower.includes('listar') || lower.includes('ver')) action = 'list';
@@ -120,11 +121,18 @@ Responda apenas:
   }
 
   // 🔹 Chamar GPT
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'system', content: prompt }]
-  });
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: prompt }]
+    });
 
-  const content = completion.choices[0].message.content;
-  return JSON.parse(content);
+    const content = completion.choices[0].message.content;
+    return JSON.parse(content);
+  } catch (err) {
+    console.error('Erro ao processar GPT:', err);
+    return { erro: 'Falha ao chamar GPT', modulo, action };
+  }
 }
+
+module.exports = { handleGPTCommand };
