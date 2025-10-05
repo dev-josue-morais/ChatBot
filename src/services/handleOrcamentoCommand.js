@@ -118,15 +118,16 @@ async function handleOrcamentoCommand(command, userPhone) {
                 try {
                     if (!command.id) return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
 
-                    const { data: orcamentos, error } = await supabase
+                    // Busca o orçamento
+                    const { data: orcamentos, error: errOrc } = await supabase
                         .from("orcamentos")
                         .select("*")
                         .eq("orcamento_numero", command.id)
                         .eq("user_telefone", userPhone)
                         .limit(1);
 
-                    if (error) {
-                        console.error("Erro ao buscar orçamento:", error);
+                    if (errOrc) {
+                        console.error("Erro ao buscar orçamento:", errOrc);
                         return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
                     }
 
@@ -136,6 +137,21 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                     const o = orcamentos[0];
 
+                    // Busca os dados do usuário
+                    const { data: users, error: errUser } = await supabase
+                        .from("users")
+                        .select("*")
+                        .eq("telefone", userPhone)
+                        .limit(1);
+
+                    if (errUser || !users || users.length === 0) {
+                        console.error("Erro ao buscar usuário:", errUser);
+                        return "⚠️ Usuário não encontrado para gerar o PDF.";
+                    }
+
+                    const user = users[0];
+
+                    // Config do PDF
                     const pdfConfig = {
                         tipo: command.tipo || "Orçamento",
                         opcoes: command.opcoes || {
@@ -148,7 +164,10 @@ async function handleOrcamentoCommand(command, userPhone) {
                         }
                     };
 
-                    const enviado = await sendPDFOrcamento(command.telefone_cliente || DESTINO_FIXO, o, pdfConfig);
+                    // Gera o PDF passando o usuário
+                    const pdfPath = await generatePDF(o, user, pdfConfig);
+
+                    const enviado = await sendPDFOrcamento(command.telefone_cliente || DESTINO_FIXO, pdfPath);
 
                     if (enviado) {
                         return `✅ PDF do orçamento ${command.id} enviado com sucesso para ${command.telefone_cliente || DESTINO_FIXO}!`;

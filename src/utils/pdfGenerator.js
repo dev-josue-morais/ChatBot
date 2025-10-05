@@ -121,7 +121,8 @@ function renderObservacoes(orcamento, opcoes) {
     </div>
     `;
 }
-async function generatePDF(orcamento, config = {}) {
+
+async function generatePDF(orcamento, user, config = {}) {
     try {
         const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
         const opcoes = {
@@ -150,6 +151,15 @@ async function generatePDF(orcamento, config = {}) {
         const totalOriginal = totalMateriais + totalServicos;
         const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
+        // Base64 do logo e Pix do usuário, se existirem
+        const logoBase64 = user.logo_url
+            ? fs.readFileSync(path.join(__dirname, '../uploads', user.logo_url), { encoding: 'base64' })
+            : null;
+
+        const pixBase64 = user.pix_img_url
+            ? fs.readFileSync(path.join(__dirname, '../uploads', user.pix_img_url), { encoding: 'base64' })
+            : null;
+
         const htmlContent = `
         <html>
         <body style="font-family:Arial, sans-serif; font-size:14px; margin:20px; color:#333; border:3px solid #000; padding:20px;">
@@ -157,12 +167,12 @@ async function generatePDF(orcamento, config = {}) {
         <!-- Cabeçalho -->
         <div style="display:flex; justify-content:space-between; align-items:center;  padding-bottom:2px; margin-bottom:3px;">
             <div style="display:flex; align-items:center; text-align:left; flex:1; gap:15px;">
-                <img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:100px; height:auto;">
+                ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:100px; height:auto;">` : ""}
                 <div style="display:flex; flex-direction:column;">
-                    <h2>EletriCaldas Eletricista Residencial e Predial</h2>
-                    <p><strong>CNPJ:</strong> 56.259.116/0001-02 | <strong>Tel:</strong> 64 99286 9608</p>
-                    <p><strong>Cidade:</strong> Caldas Novas <strong>Estado:</strong> Goiás</p>
-                    <p><strong>CEP:</strong> 75690-000</p>
+                    <h2>${user.empresa_nome || "Sua Empresa"}</h2>
+                    <p><strong>${user.tipo_doc || "CNPJ"}:</strong> ${user.numero_doc || "-"} | <strong>Tel:</strong> ${user.empresa_telefone || "-"}</p>
+                    <p><strong>Cidade:</strong> ${user.cidade || "-"} <strong>Estado:</strong> ${user.estado || "-"}</p>
+                    <p><strong>CEP:</strong> ${user.cep || "-"}</p>
                 </div>
             </div>
 
@@ -195,21 +205,19 @@ async function generatePDF(orcamento, config = {}) {
         
         <!-- PIX -->
         <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px;">
-          <div style="text-align:center;">
-            <img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;">
-          </div>
+          ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
           <div style="text-align:left;">
             <h1 style="margin:0;">Pague com Pix</h1>
-            <h2 style="margin:5px 0;"><strong>Chave Pix Tel:</strong> 64992869608</h2>
-            <h2 style="margin:5px 0;"><strong>Nome:</strong> Josué de Souza Morais</h2>
-            <h2 style="margin:5px 0;"><strong>Instituição:</strong> Mercado Pago</h2>
+            <h2 style="margin:5px 0;"><strong>Chave Pix Tel:</strong> ${user.pix_chave || "-"}</h2>
+            <h2 style="margin:5px 0;"><strong>Nome:</strong> ${user.pix_nome || "-"}</h2>
+            <h2 style="margin:5px 0;"><strong>Instituição:</strong> ${user.pix_banco || "-"}</h2>
           </div>
         </div>
 
         <!-- Assinaturas -->
         ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
             <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>EletriCaldas Eletricista Residencial</strong></div>` : ""}
+                ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>${user.empresa_nome || "Sua Empresa"}</strong></div>` : ""}
                 ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
             </div>` : ""}
 

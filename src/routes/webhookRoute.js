@@ -21,18 +21,6 @@ const questions = [
   { key: "pix_banco", text: "🏦 Qual é o banco ou instituição da chave Pix?" }
 ];
 
-const commandList = [
-  { regex: /^criar orçamento/i, description: "Criar orçamento para <nome> com número <telefone>..." },
-  { regex: /^editar orçamento/i, description: "Editar orçamento <ID>..." },
-  { regex: /^listar orçamentos/i, description: "Listar orçamentos para <telefone> | <nome> | <ID>" },
-  { regex: /^criar pdf do orçamento/i, description: "Gerar PDF do orçamento <ID> tipo..." },
-  { regex: /^deletar orçamento/i, description: "Deletar orçamento <ID>" },
-  { regex: /^criar atendimento/i, description: "Criar agenda/atendimento para <nome> em <data> às <hora>" },
-  { regex: /^editar agenda/i, description: "Editar agenda <ID>" },
-  { regex: /^deletar agenda/i, description: "Deletar agenda <ID>" },
-  { regex: /^listar atendimentos/i, description: "Listar agenda" },
-];
-
 // ✅ GET webhook (verificação do Meta)
 router.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
@@ -308,13 +296,15 @@ router.post('/', async (req, res, next) => {
 
       // --- Comando de ajuda: "opcoes" ou "opções" ---
       if (/^op(c|ç)oes?$/i.test(myText)) {
-        let helpMessage = "📋 **Comandos disponíveis no bot**\n\n";
+        const helpMessage = `
+        📋 **Digite um dos comandos disponíveis:**
 
-        commandList.forEach((cmd, index) => {
-          // Mostra regex original e descrição
-          helpMessage += `${index + 1}️⃣ **${cmd.regex}**\n${cmd.description}\n\n`;
-        });
-
+        - "premium" → mostra seu tempo premium
+        - "criar orçamento" → dicas de padrões para criar orçamentos
+        - "criar atendimento" → dicas de padrões para criar agenda
+        - "enviar logo" → envia sua logo em png para integrar no PDF
+        - "enviar pix" → envia uma imagem do seu QR code para integrar no PDF
+        `;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
@@ -322,14 +312,13 @@ router.post('/', async (req, res, next) => {
           text: { body: helpMessage }
         });
 
-        continue; // evita que a mensagem passe para outros blocos
+        continue;
       }
 
       // --- Comandos principais ---
       if (/^criar or[cç]amento/i.test(myText)) {
         const helpMessage = `
-        📋 **Criar orçamento**
-        
+        1️⃣ **Criar orçamento**
         criar orçamento para <nome> com número <telefone>
         Serviços:
         quantidade serviço valor
@@ -341,52 +330,15 @@ router.post('/', async (req, res, next) => {
         Observações:
         observação 1
         observação 2
-          `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        // Aqui você poderia chamar processCommand("criar orçamento ...") ou sua lógica de criação
-        continue;
-      }
 
-      if (/^editar or[cç]amento/i.test(myText)) {
-        const helpMessage = `
-        📋 **Editar orçamento**
-
+        2️⃣ **Editar orçamento**
         editar orçamento <ID>
         alterar ou adicionar serviços, materiais, descontos ou observações
-          `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        continue;
-      }
 
-      if (/^listar or[cç]amentos/i.test(myText)) {
-        const helpMessage = `
-        📋 **Listar orçamentos**
+        3️⃣ **Listar orçamentos**
+        listar orçamentos para <telefone> | <nome> | <ID>
 
-        listar orçamentos para <telefone> ou <nome> ou <ID>
-          `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        continue;
-      }
-
-      if (/^criar pdf do or[cç]amento/i.test(myText)) {
-        const helpMessage = `
-        📋 **Gerar PDF do orçamento**
-
+        4️⃣ **Gerar PDF do orçamento**
         criar pdf do orçamento <ID> tipo "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido de Materiais" | "Proposta Comercial"
         Opções:
         ocultar valor dos serviços
@@ -394,20 +346,8 @@ router.post('/', async (req, res, next) => {
         remover garantia
         mostrar assinatura do cliente
         mostrar assinatura da empresa
-          `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        continue;
-      }
 
-      if (/^deletar or[cç]amento/i.test(myText)) {
-        const helpMessage = `
-        📋 **Deletar orçamento**
-
+        5️⃣ **Deletar orçamento**
         deletar orçamento <ID>
           `;
         await sendWhatsAppRaw({
@@ -423,53 +363,15 @@ router.post('/', async (req, res, next) => {
         const helpMessage = `
         📋 **Criar agenda/atendimento**
 
-        riar atendimento para <nome> em <data> às <hora>
-         `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        continue;
-      }
+        1️⃣ **Criar agenda/atendimento**
+        criar atendimento para <nome> em <data> às <hora>
 
-      if (/^editar agenda/i.test(myText)) {
-        const helpMessage = `
-        📋 **Editar agenda**
-
+        2️⃣ **Editar agenda**
         editar agenda <ID>
-          `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        continue;
-      }
 
-      if (/^deletar atendiment[oó]/i.test(myText)) {
-        const helpMessage = `
-        📋 **Deletar agenda/atendimento**
-
+        3️⃣ **Deletar agenda**
         deletar agenda <ID>
-          `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
-        });
-        continue;
-      }
-
-      if (/^listar atendimentos/i.test(myText)) {
-        const helpMessage = `
-        📋 **Listar agenda/atendimentos**
-
-        listar atendimentos
-          `;
+         `;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
@@ -546,6 +448,47 @@ router.post('/', async (req, res, next) => {
         continue;
       }
 
+      // --- Comando "premium" ---
+      if (/^premium$/i.test(myText) && userData) {
+        const now = new Date();
+        const premiumDate = userData.premium ? new Date(userData.premium) : null;
+
+        if (!premiumDate || premiumDate <= now) {
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: { body: "⚠️ Você não possui premium ativo. Digite renovar." }
+          });
+        } else {
+          const diffMs = premiumDate - now;
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: {
+              body: `⏳ Seu premium está ativo até ${premiumDate.toLocaleDateString('pt-BR')} ${premiumDate.toLocaleTimeString('pt-BR')}.\n` +
+                `Tempo restante: ${diffDays} dias, ${diffHours} horas e ${diffMinutes} minutos.`
+            }
+          });
+        }
+        continue;
+      }
+      // --- Comando "renovar" ---
+      if (/^renovar$/i.test(myText) && userData) {
+        // Aqui você pode futuramente implementar a lógica de adicionar dias de premium
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: "✅ Premium renovado!" }
+        });
+        continue;
+      }
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText);
       await sendWhatsAppRaw({
