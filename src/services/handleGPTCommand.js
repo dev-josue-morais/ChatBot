@@ -1,4 +1,4 @@
-const { openai } = require('./openaiClient');
+const openai = require('./openai');
 
 async function handleGPTCommand(text) {
   const lower = text.toLowerCase();
