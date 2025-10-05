@@ -135,7 +135,7 @@ async function generatePDF(orcamento, config = {}) {
             ocultarValorServicos: false,
             garantia: true,
             assinaturaCliente: false,
-            assinaturaUser: false,
+            assinaturaEmpresa: false,
             observacoes: true,
             ...rawOpcoes
         };
@@ -211,9 +211,9 @@ ${renderObservacoes(orcamento, opcoes)}
         </div>
 
         <!-- Assinaturas -->
-        ${ (opcoes.assinaturaCliente || opcoes.assinaturaUser) ? `
+        ${ (opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
             <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                ${opcoes.assinaturaUser ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>EletriCaldas Eletricista Residencial</strong></div>` : ""}
+                ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>EletriCaldas Eletricista Residencial</strong></div>` : ""}
                 ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
             </div>` : ""}
 

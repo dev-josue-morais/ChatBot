@@ -135,7 +135,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                             listaMateriais: true,
                             ocultarValorServicos: false,
                             garantia: true,
-                            assinaturaCliente: false,
+                            assinaturaEmpresa: false,
                             assinaturaUser: false,
                         }
                     };

@@ -110,13 +110,14 @@ Retorne apenas **JSON válido**:
   "modulo": "orcamento",
   "action": "pdf",
   "id": número "obrigatório",
+  "tipo": "Orçamento" defalt | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial",
 "opcoes": {
   "listaServicos" (true, se tipo=pedido usa false),
   "listaMateriais" (true),
   "ocultarValorServicos" (false),
   "garantia" (true),
   "assinaturaCliente" (false),
-  "assinaturaUser" (false)
+  "assinaturaEmpresa" (false)
 }}
 
 // Para "opcoes" Campos booleanos — valor padrão entre parênteses.
