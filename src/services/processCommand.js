@@ -1,4 +1,3 @@
-const { getNowBRT } = require('../utils/utils');
 const { handleGPTCommand } = require('./handleGPTCommand');
 const handleOrcamentoCommand = require('./handleOrcamentoCommand');
 const handleAgendaCommand = require('./handleAgendaCommand');
@@ -19,7 +18,7 @@ Analise a frase e retorne apenas JSON:
 {
   "modulo": "orcamento" | "agenda",
   "action": "create" | "edit" | "delete" | "list" | "pdf",
-  "id": número de 8 dígitos ou null
+  "id": número de 10 dígitos ou null "nao e telefone"
 }
 Frase: "${firstWords}"
 `;
@@ -44,7 +43,7 @@ Frase: "${firstWords}"
     console.log("🧠 Classificação GPT:", classification);
 
     // 2️⃣ Gera o JSON final a partir do novo handler
-    const gptData = await handleGPTCommand(userMessage);
+    const gptData = await handleGPTCommand(userMessage, modulo, action, id);
 
     // Garante que módulo e ação do classificador são mantidos
     gptData.modulo ??= modulo;
