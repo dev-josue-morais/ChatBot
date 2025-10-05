@@ -55,6 +55,30 @@ async function handleAgendaCommand(command, userPhone) {
         return `🗑 Evento "${command.title}" em ${formatLocal(datetimeUTC)} removido com sucesso.`;
       }
 
+case 'edit': {
+  if (!command.id) return '⚠️ É necessário informar o ID do evento para editar.';
+
+  const updates = {
+    title: command.title,
+    date: DateTime.fromISO(command.date, { zone: 'America/Sao_Paulo' }).toUTC().toISO(),
+    reminder_minutes: command.reminder_minutes ?? 30,
+    notified: command.notified ?? false
+  };
+
+  const { data, error } = await supabase
+    .from('events')
+    .update(updates)
+    .eq('event_numero', command.id)
+    .select();
+
+  if (error) {
+    console.error("Erro ao editar evento:", error);
+    return `⚠️ Não consegui editar o evento ${command.id}.`;
+  }
+
+  return `✅ Evento "${data[0].title}" atualizado com sucesso.`;
+}
+
    case 'list': {
   const start = command.start_date
     ? DateTime.fromISO(command.start_date, { zone: 'America/Sao_Paulo' }).toUTC().toISO()

@@ -57,123 +57,10 @@ async function handleOrcamentoCommand(command, userPhone) {
             case 'edit': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
-                const { data: currentData, error: fetchError } = await supabase
-                    .from('orcamentos')
-                    .select('materiais, servicos, nome_cliente, telefone_cliente, descricao_atividades, desconto_materiais, desconto_servicos')
-                    .eq('orcamento_numero', command.id)
-                    .single();
-
-                if (fetchError) {
-                    console.error("Erro ao buscar orçamento:", fetchError);
-                    return `⚠️ Não consegui buscar o orçamento ${command.id}.`;
-                }
-
-                let materiais = [...(currentData.materiais || [])];
-                let servicos = [...(currentData.servicos || [])];
-
-                // --- Materiais ---
-                if (command.materiais) {
-                    materiais = command.materiais.map(m => ({
-                        nome: m.nome.trim(),
-                        qtd: m.qtd,
-                        valor: m.valor,
-                        unidade: m.unidade?.trim()
-                    }));
-                }
-
-                if (command.add_materiais) {
-                    for (const newItem of command.add_materiais) {
-                        const nomeNormalized = newItem.nome.trim().toLowerCase();
-                        const existing = materiais.find(m => m.nome.trim().toLowerCase() === nomeNormalized);
-                        if (existing) {
-                            if (newItem.qtd != null) existing.qtd = newItem.qtd;
-                            if (newItem.valor != null) existing.valor = newItem.valor;
-                            if (newItem.unidade != null) existing.unidade = newItem.unidade.trim();
-                        } else {
-                            materiais.push({ ...newItem, nome: newItem.nome.trim(), unidade: newItem.unidade?.trim() });
-                        }
-                    }
-                }
-
-                if (command.edit_materiais) {
-                    for (const edit of command.edit_materiais) {
-                        const nomeNormalized = edit.nome.trim().toLowerCase();
-                        const item = materiais.find(m => m.nome.trim().toLowerCase() === nomeNormalized);
-                        if (item) {
-                            if (edit.qtd != null) item.qtd = edit.qtd;
-                            if (edit.valor != null) item.valor = edit.valor;
-                            if (edit.unidade != null) item.unidade = edit.unidade.trim();
-                        }
-                    }
-                }
-
-                if (command.remove_materiais) {
-                    materiais = materiais.filter(
-                        m => !command.remove_materiais.some(r => r.nome.trim().toLowerCase() === m.nome.trim().toLowerCase())
-                    );
-                }
-
-                // --- Serviços ---
-                if (command.servicos) {
-                    servicos = command.servicos.map(s => ({
-                        titulo: s.titulo.trim(),
-                        quantidade: s.quantidade ?? 1,
-                        valor: s.valor
-                    }));
-                }
-
-                if (command.add_servicos) {
-                    for (const newItem of command.add_servicos) {
-                        const tituloNormalized = newItem.titulo.trim().toLowerCase();
-                        const existing = servicos.find(s => s.titulo.trim().toLowerCase() === tituloNormalized);
-                        if (existing) {
-                            if (newItem.quantidade != null) existing.quantidade = newItem.quantidade;
-                            if (newItem.valor != null) existing.valor = newItem.valor;
-                        } else {
-                            servicos.push({
-                                titulo: newItem.titulo.trim(),
-                                quantidade: newItem.quantidade ?? 1,
-                                valor: newItem.valor
-                            });
-                        }
-                    }
-                }
-
-                if (command.edit_servicos) {
-                    for (const edit of command.edit_servicos) {
-                        const tituloNormalized = edit.titulo.trim().toLowerCase();
-                        const item = servicos.find(s => s.titulo.trim().toLowerCase() === tituloNormalized);
-                        if (item) {
-                            if (edit.quantidade != null) item.quantidade = edit.quantidade;
-                            if (edit.valor != null) item.valor = edit.valor;
-                        }
-                    }
-                }
-
-                if (command.remove_servicos) {
-                    servicos = servicos.filter(
-                        s => !command.remove_servicos.some(
-                            r => r.titulo.trim().toLowerCase() === s.titulo.trim().toLowerCase()
-                        )
-                    );
-                }
-
-                // Observações sempre array
-                const observacoes = Array.isArray(command.observacao) ? command.observacao.filter(Boolean) : currentData.descricao_atividades || [];
-
-                const updates = {
-                    ...(command.nome_cliente && { nome_cliente: command.nome_cliente }),
-                    ...(command.telefone_cliente && { telefone_cliente: command.telefone_cliente }),
-                    descricao_atividades: observacoes,
-                    materiais,
-                    servicos,
-                    ...(command.desconto_materiais !== undefined && { desconto_materiais: command.desconto_materiais }),
-                    ...(command.desconto_servicos !== undefined && { desconto_servicos: command.desconto_servicos }),
-                };
-
+                // Aqui 'command' já é o JSON completo do GPT
                 const { data, error } = await supabase
                     .from('orcamentos')
-                    .update(updates)
+                    .update(command)
                     .eq('orcamento_numero', command.id)
                     .select();
 
@@ -187,38 +74,38 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             // ------------------- LIST -------------------
             case 'list': {
-    let orcamentos;
-    let error;
+                let orcamentos;
+                let error;
 
-    if (command.telefone_cliente || command.id) {
-        let query = supabase.from('orcamentos').select('*');
+                if (command.telefone_cliente || command.id) {
+                    let query = supabase.from('orcamentos').select('*');
 
-        if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
-        if (command.id) query = query.eq('orcamento_numero', command.id);
+                    if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
+                    if (command.id) query = query.eq('orcamento_numero', command.id);
 
-        ({ data: orcamentos, error } = await query);
-    } else if (command.nome_cliente) {
-        const nome = command.nome_cliente.trim();
-        ({ data: orcamentos, error } = await supabase
-            .rpc('search_orcamentos_by_name', { name: nome }));
-    } else {
-        ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
-    }
+                    ({ data: orcamentos, error } = await query);
+                } else if (command.nome_cliente) {
+                    const nome = command.nome_cliente.trim();
+                    ({ data: orcamentos, error } = await supabase
+                        .rpc('search_orcamentos_by_name', { name: nome }));
+                } else {
+                    ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
+                }
 
-    if (error) {
-        console.error("Erro ao listar orçamentos:", error);
-        return "⚠️ Não foi possível listar os orçamentos.";
-    }
+                if (error) {
+                    console.error("Erro ao listar orçamentos:", error);
+                    return "⚠️ Não foi possível listar os orçamentos.";
+                }
 
-    if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
+                if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
-    // Enviar cada orçamento individualmente
-    for (const o of orcamentos) {
-        await sendWhatsAppMessage(userPhone || DESTINO_FIXO, formatOrcamento(o));
-    }
+                // Enviar cada orçamento individualmente
+                for (const o of orcamentos) {
+                    await sendWhatsAppMessage(userPhone || DESTINO_FIXO, formatOrcamento(o));
+                }
 
-    return `✅ ${orcamentos.length} orçamento(s) enviados.`;
-}
+                return `✅ ${orcamentos.length} orçamento(s) enviados.`;
+            }
             // ------------------- PDF -------------------
             case "pdf": {
                 try {
