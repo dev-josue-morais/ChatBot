@@ -200,8 +200,8 @@ router.post('/', async (req, res, next) => {
           now.hour >= 5 && now.hour < 12
             ? "Bom dia"
             : now.hour < 18
-            ? "Boa tarde"
-            : "Boa noite";
+              ? "Boa tarde"
+              : "Boa noite";
 
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
@@ -296,19 +296,56 @@ router.post('/', async (req, res, next) => {
 
       // --- Usuário sem cadastro ---
       if (!userData) {
+        const formattedNumber = senderNumber; // ou formate se quiser
         const saudacao =
           now.hour >= 5 && now.hour < 12
             ? "Bom dia"
             : now.hour < 18
-            ? "Boa tarde"
-            : "Boa noite";
+              ? "Boa tarde"
+              : "Boa noite";
 
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: { body: `${saudacao}! Você está tentando falar com Josué Eletricista.\nFavor entrar em contato no novo número (064) 99286-9608.` }
-        });
+        // 🔹 Redireciona mensagens de texto
+        const text = extractTextFromMsg(msg);
+        if (text) {
+          const forwardText = `📥 Mensagem de ${senderName} ${formattedNumber}:\n\n${text}`;
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: DESTINO_FIXO,
+            type: "text",
+            text: { body: forwardText },
+          });
+        }
+
+        // 🔹 Redireciona mídia (imagens, docs, áudio)
+        await forwardMediaIfAny(msg, value, DESTINO_FIXO);
+
+        // 🔹 Evita enviar aviso repetido para o mesmo usuário
+        const { data: alreadySent } = await supabase
+          .from('redirects')
+          .select('*')
+          .eq('phone', senderNumber)
+          .maybeSingle();
+
+        if (!alreadySent) {
+          await supabase
+            .from('redirects')
+            .delete()
+            .lt('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+          // envia aviso de novo número
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: {
+              body: `${saudacao}! Você está tentando falar com Josué Eletricista.\nFavor entrar em contato no novo número (064) 99286-9608.`,
+            },
+          });
+
+          // registra que o aviso foi enviado
+          await supabase.from('redirects').insert([{ phone: senderNumber }]);
+        }
+
         continue;
       }
 
