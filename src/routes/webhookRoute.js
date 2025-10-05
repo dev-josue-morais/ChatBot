@@ -3,7 +3,7 @@ const router = express.Router();
 const fetch = require('node-fetch'); // necessário para baixar a imagem do WhatsApp
 const { getNowBRT } = require('../utils/utils');
 const { processCommand } = require('../services/processCommand');
-const { sendWhatsAppRaw, extractTextFromMsg } = require('../services/whatsappService');
+const { sendWhatsAppRaw, extractTextFromMsg, forwardMediaIfAny } = require('../services/whatsappService');
 const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO } = require('../utils/config');
 
@@ -19,6 +19,18 @@ const questions = [
   { key: "pix_chave", text: "💳 Qual é a sua chave Pix (celular, CNPJ, CPF ou e-mail)?" },
   { key: "pix_nome", text: "👤 Qual é o nome que consta na chave Pix?" },
   { key: "pix_banco", text: "🏦 Qual é o banco ou instituição da chave Pix?" }
+];
+
+const commandList = [
+  { regex: /^criar orçamento/i, description: "Criar orçamento para <nome> com número <telefone>..." },
+  { regex: /^editar orçamento/i, description: "Editar orçamento <ID>..." },
+  { regex: /^listar orçamentos/i, description: "Listar orçamentos para <telefone> | <nome> | <ID>" },
+  { regex: /^criar pdf do orçamento/i, description: "Gerar PDF do orçamento <ID> tipo..." },
+  { regex: /^deletar orçamento/i, description: "Deletar orçamento <ID>" },
+  { regex: /^criar atendimento/i, description: "Criar agenda/atendimento para <nome> em <data> às <hora>" },
+  { regex: /^editar agenda/i, description: "Editar agenda <ID>" },
+  { regex: /^deletar agenda/i, description: "Deletar agenda <ID>" },
+  { regex: /^listar atendimentos/i, description: "Listar agenda" },
 ];
 
 // ✅ GET webhook (verificação do Meta)
@@ -244,7 +256,7 @@ router.post('/', async (req, res, next) => {
               messaging_product: "whatsapp",
               to: senderNumber,
               type: "text",
-              text: { body: "✅ Usuário criado com sucesso! Premium válido por 10 dias." }
+              text: { body: "✅ Usuário criado com sucesso! Premium válido por 10 dias. digite Opções para informaçoes" }
             });
           }
         } else {
@@ -290,6 +302,179 @@ router.post('/', async (req, res, next) => {
           telefone: senderNumber,
           step: -2,
           answers: { type: "pix_img" }
+        });
+        continue;
+      }
+
+      // --- Comando de ajuda: "opcoes" ou "opções" ---
+      if (/^op(c|ç)oes?$/i.test(myText)) {
+        let helpMessage = "📋 **Comandos disponíveis no bot**\n\n";
+
+        commandList.forEach((cmd, index) => {
+          // Mostra regex original e descrição
+          helpMessage += `${index + 1}️⃣ **${cmd.regex}**\n${cmd.description}\n\n`;
+        });
+
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+
+        continue; // evita que a mensagem passe para outros blocos
+      }
+
+      // --- Comandos principais ---
+      if (/^criar or[cç]amento/i.test(myText)) {
+        const helpMessage = `
+        📋 **Criar orçamento**
+        
+        criar orçamento para <nome> com número <telefone>
+        Serviços:
+        quantidade serviço valor
+        Materiais:
+        quantidade material unidade valor
+        Descontos:
+        desconto serviço: 4%
+        desconto material: R$5
+        Observações:
+        observação 1
+        observação 2
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        // Aqui você poderia chamar processCommand("criar orçamento ...") ou sua lógica de criação
+        continue;
+      }
+
+      if (/^editar or[cç]amento/i.test(myText)) {
+        const helpMessage = `
+        📋 **Editar orçamento**
+
+        editar orçamento <ID>
+        alterar ou adicionar serviços, materiais, descontos ou observações
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^listar or[cç]amentos/i.test(myText)) {
+        const helpMessage = `
+        📋 **Listar orçamentos**
+
+        listar orçamentos para <telefone> ou <nome> ou <ID>
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^criar pdf do or[cç]amento/i.test(myText)) {
+        const helpMessage = `
+        📋 **Gerar PDF do orçamento**
+
+        criar pdf do orçamento <ID> tipo "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido de Materiais" | "Proposta Comercial"
+        Opções:
+        ocultar valor dos serviços
+        ocultar materiais
+        remover garantia
+        mostrar assinatura do cliente
+        mostrar assinatura da empresa
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^deletar or[cç]amento/i.test(myText)) {
+        const helpMessage = `
+        📋 **Deletar orçamento**
+
+        deletar orçamento <ID>
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^criar atendiment[oó]/i.test(myText)) {
+        const helpMessage = `
+        📋 **Criar agenda/atendimento**
+
+        riar atendimento para <nome> em <data> às <hora>
+         `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^editar agenda/i.test(myText)) {
+        const helpMessage = `
+        📋 **Editar agenda**
+
+        editar agenda <ID>
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^deletar atendiment[oó]/i.test(myText)) {
+        const helpMessage = `
+        📋 **Deletar agenda/atendimento**
+
+        deletar agenda <ID>
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
+        continue;
+      }
+
+      if (/^listar atendimentos/i.test(myText)) {
+        const helpMessage = `
+        📋 **Listar agenda/atendimentos**
+
+        listar atendimentos
+          `;
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
         });
         continue;
       }

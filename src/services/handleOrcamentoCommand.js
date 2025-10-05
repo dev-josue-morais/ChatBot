@@ -22,6 +22,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     materiais: command.materiais || [],
                     servicos: command.servicos || [],
                     desconto_materiais: command.desconto_materiais || 0,
+                    user_telefone: userPhone,
                     desconto_servicos: command.desconto_servicos || 0
                 }]).select();
 
@@ -41,6 +42,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     .from('orcamentos')
                     .delete()
                     .eq('orcamento_numero', command.id)
+                    .eq('user_telefone', userPhone)
                     .select();
 
                 if (error) {
@@ -62,6 +64,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     .from('orcamentos')
                     .update(command)
                     .eq('orcamento_numero', command.id)
+                    .eq('user_telefone', userPhone)
                     .select();
 
                 if (error) {
@@ -74,11 +77,10 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             // ------------------- LIST -------------------
             case 'list': {
-                let orcamentos;
-                let error;
+                let orcamentos, error;
 
                 if (command.telefone_cliente || command.id) {
-                    let query = supabase.from('orcamentos').select('*');
+                    let query = supabase.from('orcamentos').select('*').eq('user_telefone', userPhone);
 
                     if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
                     if (command.id) query = query.eq('orcamento_numero', command.id);
@@ -86,10 +88,15 @@ async function handleOrcamentoCommand(command, userPhone) {
                     ({ data: orcamentos, error } = await query);
                 } else if (command.nome_cliente) {
                     const nome = command.nome_cliente.trim();
-                    ({ data: orcamentos, error } = await supabase
-                        .rpc('search_orcamentos_by_name', { name: nome }));
+                    ({ data: orcamentos, error } = await supabase.rpc(
+                        'search_orcamentos_by_name',
+                        { name: nome, user_tel: userPhone }
+                    ));
                 } else {
-                    ({ data: orcamentos, error } = await supabase.from('orcamentos').select('*'));
+                    ({ data: orcamentos, error } = await supabase
+                        .from('orcamentos')
+                        .select('*')
+                        .eq('user_telefone', userPhone));
                 }
 
                 if (error) {
@@ -99,13 +106,13 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
-                // Enviar cada orçamento individualmente
                 for (const o of orcamentos) {
                     await sendWhatsAppMessage(userPhone || DESTINO_FIXO, formatOrcamento(o));
                 }
 
                 return `✅ ${orcamentos.length} orçamento(s) enviados.`;
             }
+
             // ------------------- PDF -------------------
             case "pdf": {
                 try {
@@ -115,6 +122,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                         .from("orcamentos")
                         .select("*")
                         .eq("orcamento_numero", command.id)
+                        .eq("user_telefone", userPhone)
                         .limit(1);
 
                     if (error) {
