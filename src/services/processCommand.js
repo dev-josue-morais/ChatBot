@@ -1,101 +1,66 @@
-const openai = require('./openai');
+const { getNowBRT } = require('../utils/utils');
+const { handleGPTCommand } = require('./handleGPTCommand');
 const handleOrcamentoCommand = require('./handleOrcamentoCommand');
 const handleAgendaCommand = require('./handleAgendaCommand');
-const { getNowBRT } = require('../utils/utils');
+const openai = require('./openai');
 
-// Processa comandos de agenda recebidos do WhatsApp
-async function processCommand(text, userPhone) {
+// 🧠 Função para limitar primeiras palavras (melhor contexto curto)
+function getFirstWords(text, limit = 8) {
+  return text.trim().split(/\s+/).slice(0, limit).join(' ');
+}
+
+async function processCommand(userMessage, userPhone) {
   try {
-    const gptPrompt = `
-Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil).
-A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-Você entende comandos de agenda ou orçamentos e sempre gera apenas em **JSON válido**.
+    // 1️⃣ Classificação rápida (módulo, ação, id)
+    const firstWords = getFirstWords(userMessage);
 
-Para AGENDA, siga este formato:
+    const classificationPrompt = `
+Analise a frase e retorne apenas JSON:
 {
-  "modulo": "agenda",
-  "action": "create" | "list" | "delete",
-  "title": "Somente nome do cliente ou do local",
-  "datetime": "Data/hora ISO no GMT-3 (obrigatório para create/delete)",
-  "reminder_minutes": número (default 30),
-  "start_date": "Data/hora início ISO no GMT-3 (obrigatório para list, mesmo que seja o dia atual)",
-  "end_date": "Data/hora fim ISO no GMT-3 (obrigatório para list, mesmo que seja o dia atual)"
+  "modulo": "orcamento" | "agenda",
+  "action": "create" | "edit" | "delete" | "list" | "pdf",
+  "id": número de 8 dígitos ou null
 }
-
-Para ORÇAMENTO:
-{
-  "modulo": "orcamento",
-  "action": "create" | "list" | "edit" | "delete" | "pdf",
-  "id": número (para edit/delete/pdf, obrigatório nesses casos),
-  "nome_cliente": string (obrigatório em create),
-  "telefone_cliente": string (obrigatório em create),
-"observacao": ["string", "string?", "string?"] ou null, // de 0 a 10 observações para o cliente. 
-  // Para CREATE, use diretamente estes campos
-  "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-  "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
-
-  // Para EDIT, use os campos granulares
-  "add_materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-  "edit_materiais": [{"nome": "string", "qtd": número?, "unidade": "string?", "valor": número?}],
-  "remove_materiais": [{"nome": "string"}],
-
-  "add_servicos": [{ "titulo": "string", "quantidade": número, "valor": número }],
-  "edit_servicos": [{ "titulo": "string", "quantidade"?: número, "valor"?: número }],
-  "remove_servicos": [{ "titulo": "string" }],
-
-// para pdf use tambem "tipo": "Orçamento" defalt | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial",
-// Para PDF, gerar este campo com todas as "opcoes" Campos booleanos — valor padrão entre parênteses.
-"opcoes": {
-  "listaServicos" (true, se tipo=pedido usa false),
-  "listaMateriais" (true),
-  "ocultarValorServicos" (false),
-  "garantia" (true),
-  "assinaturaCliente" (false),
-  "assinaturaUser" (false)
-}
-
-  "desconto_materiais": número ou string com porcentagem (ex: 10 ou "10%") ou null,
-  "desconto_servicos": número ou string com porcentagem (ex: 10 ou "10%") ou null
-}
-
-Regras importantes para ORÇAMENTO:
-
-1. Para CREATE, **use sempre \`materiais\` e \`servicos\`**, não \`add_\` ou \`edit_\`.
-2. Para EDIT, DELETE ou PDF, o campo "id" é obrigatório.  
-3. Nunca use expressões matemáticas ou textos descritivos no JSON.  
-4. Campos obrigatórios devem ter valores reais; campos opcionais podem ser null. 
-6. Datas use formato ISO 8601 em GMT-3.
-
-Mensagem do usuário: "${text}"
+Frase: "${firstWords}"
 `;
 
-    // 1️⃣ Chama GPT
-    const gptResponse = await openai.chat.completions.create({
+    const quickResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: gptPrompt }],
+      messages: [{ role: "user", content: classificationPrompt }],
     });
 
-    let gptJSON = gptResponse.choices[0].message.content;
-    gptJSON = gptJSON.replace(/```json\s*|```/g, "").trim();
+    let quickJSON = quickResponse.choices[0].message.content;
+    quickJSON = quickJSON.replace(/```json\s*|```/g, "").trim();
 
-    // 2️⃣ Parse JSON
-    let command;
+    let classification;
     try {
-      command = JSON.parse(gptJSON);
+      classification = JSON.parse(quickJSON);
     } catch (err) {
-      console.error("Erro ao parsear JSON do GPT:", gptJSON);
-      return "⚠️ Não consegui entender o comando.";
+      console.error("Erro ao parsear classificação GPT:", quickJSON);
+      return "⚠️ Não consegui identificar o tipo de comando.";
     }
 
-    console.log("🧠 GPT output:", command);
+    const { modulo, action, id } = classification;
+    console.log("🧠 Classificação GPT:", classification);
 
-    // 3️⃣ Executa módulo correto
-    if (command.modulo === "agenda") {
-      return await handleAgendaCommand(command, userPhone);
-    } else if (command.modulo === "orcamento") {
-      return await handleOrcamentoCommand(command, userPhone);
-    } else {
-      return "⚠️ Não entendi se é agenda ou orçamento.";
+    // 2️⃣ Gera o JSON final a partir do novo handler
+    const gptData = await handleGPTCommand(userMessage);
+
+    // Garante que módulo e ação do classificador são mantidos
+    gptData.modulo ??= modulo;
+    gptData.action ??= action;
+    if (!gptData.id && id) gptData.id = id;
+
+    console.log("🧩 GPT Parsed JSON:", gptData);
+
+    // 3️⃣ Direciona execução
+    switch (gptData.modulo) {
+      case "agenda":
+        return await handleAgendaCommand(gptData, userPhone);
+      case "orcamento":
+        return await handleOrcamentoCommand(gptData, userPhone);
+      default:
+        return "⚠️ Não entendi se é AGENDA ou ORÇAMENTO.";
     }
 
   } catch (err) {
@@ -104,6 +69,4 @@ Mensagem do usuário: "${text}"
   }
 }
 
-module.exports = {
-  processCommand
-};
+module.exports = { processCommand };
