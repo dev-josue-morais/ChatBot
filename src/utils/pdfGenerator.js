@@ -14,7 +14,7 @@ const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 const pixBase64 = fs.readFileSync(pixPath, { encoding: "base64" });
 
 function renderServicos(servicos, opcoes) {
-      if (!opcoes.listaServicos || !servicos?.length) return '';
+    if (!opcoes.listaServicos || !servicos?.length) return '';
     return `
     <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
@@ -26,7 +26,7 @@ function renderServicos(servicos, opcoes) {
         <tr>
           <td style="border:2px solid #000; padding:8px;">${s.titulo}</td>
           <td style="border:2px solid #000; padding:8px;">${s.quantidade}</td>
-          ${!opcoes.ocultarValorServicos ? `<td style="border:2px solid #000; padding:8px;">${formatCurrency(s.valor)}</td><td style="border:2px solid #000; padding:8px;">${formatCurrency(s.valor*s.quantidade)}</td>` : ''}
+          ${!opcoes.ocultarValorServicos ? `<td style="border:2px solid #000; padding:8px;">${formatCurrency(s.valor)}</td><td style="border:2px solid #000; padding:8px;">${formatCurrency(s.valor * s.quantidade)}</td>` : ''}
         </tr>
       `).join('')}
     </table>
@@ -48,7 +48,7 @@ function renderMateriais(materiais, opcoes) {
           <td style="border:2px solid #000; padding:8px;">${m.nome}</td>
           <td style="border:2px solid #000; padding:8px;">${formatCurrency(m.valor)}</td>
           <td style="border:2px solid #000; padding:8px;">${m.qtd} (${m.unidade})</td>
-          <td style="border:2px solid #000; padding:8px;">${formatCurrency(m.valor*m.qtd)}</td>
+          <td style="border:2px solid #000; padding:8px;">${formatCurrency(m.valor * m.qtd)}</td>
         </tr>
       `).join('')}
     </table>
@@ -57,36 +57,31 @@ function renderMateriais(materiais, opcoes) {
 
 function renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento) {
     const materiaisHTML = (opcoes.listaMateriais && totalMateriais > 0) ? `
-        <p style="margin:5px 0;"><strong>Total Materiais:</strong> ${
-            descontoMateriais.totalFinal !== totalMateriais
-                ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalMateriais)}</span>
-                   <span style="color:#007bff; margin:0 5px; font-weight:bold;">-${
-                     typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
-                     ? orcamento.desconto_materiais
-                     : formatCurrency(orcamento.desconto_materiais || 0)
-                   }</span>
+        <p style="margin:5px 0;"><strong>Total Materiais:</strong> ${descontoMateriais.totalFinal !== totalMateriais
+            ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalMateriais)}</span>
+                   <span style="color:#007bff; margin:0 5px; font-weight:bold;">-${typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
+                ? orcamento.desconto_materiais
+                : formatCurrency(orcamento.desconto_materiais || 0)
+            }</span>
                    <span style="color:green; font-weight:bold;">${formatCurrency(descontoMateriais.totalFinal)}</span>`
-                : `<span style="color:green; font-weight:bold;">${formatCurrency(totalMateriais)}</span>`
+            : `<span style="color:green; font-weight:bold;">${formatCurrency(totalMateriais)}</span>`
         }</p>` : '';
 
     const servicosHTML = (opcoes.listaServicos && totalServicos > 0) ? `
-        <p style="margin:5px 0;"><strong>Total Serviços:</strong> ${
-            descontoServicos.totalFinal !== totalServicos
-                ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalServicos)}</span>
-                   <span style="color:#007bff; margin:0 5px; font-weight:bold;">-${
-                     typeof orcamento.desconto_servicos === "string" && orcamento.desconto_servicos.includes("%")
-                     ? orcamento.desconto_servicos
-                     : formatCurrency(orcamento.desconto_servicos || 0)
-                   }</span>
+        <p style="margin:5px 0;"><strong>Total Serviços:</strong> ${descontoServicos.totalFinal !== totalServicos
+            ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalServicos)}</span>
+                   <span style="color:#007bff; margin:0 5px; font-weight:bold;">-${typeof orcamento.desconto_servicos === "string" && orcamento.desconto_servicos.includes("%")
+                ? orcamento.desconto_servicos
+                : formatCurrency(orcamento.desconto_servicos || 0)
+            }</span>
                    <span style="color:green; font-weight:bold;">${formatCurrency(descontoServicos.totalFinal)}</span>`
-                : `<span style="color:green; font-weight:bold;">${formatCurrency(totalServicos)}</span>`
+            : `<span style="color:green; font-weight:bold;">${formatCurrency(totalServicos)}</span>`
         }</p>` : '';
 
     const totalHTML = `
-        <p style="margin:5px 0;"><strong>Total Geral:</strong> ${
-            totalFinal !== totalOriginal
-                ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalOriginal)}</span><span style="color:green; font-weight:bold;">${formatCurrency(totalFinal)}</span>`
-                : `<span style="color:green; font-weight:bold;">${formatCurrency(totalFinal)}</span>`
+        <p style="margin:5px 0;"><strong>Total Geral:</strong> ${totalFinal !== totalOriginal
+            ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalOriginal)}</span><span style="color:green; font-weight:bold;">${formatCurrency(totalFinal)}</span>`
+            : `<span style="color:green; font-weight:bold;">${formatCurrency(totalFinal)}</span>`
         }</p>
     `;
 
@@ -104,7 +99,7 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
 function renderObservacoes(orcamento, opcoes) {
     if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.descricao_atividades) && orcamento.descricao_atividades.length)))
         return '';
-    
+
     const defaultObs = [
         opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
         "Todo o material é de responsabilidade do cliente.",
@@ -160,7 +155,7 @@ async function generatePDF(orcamento, config = {}) {
         <body style="font-family:Arial, sans-serif; font-size:14px; margin:20px; color:#333; border:3px solid #000; padding:20px;">
 
         <!-- Cabeçalho -->
-        <div style="display:flex; justify-content:space-between; align-items:center;  padding-bottom:10px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;  padding-bottom:2px; margin-bottom:3px;">
             <div style="display:flex; align-items:center; text-align:left; flex:1; gap:15px;">
                 <img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:100px; height:auto;">
                 <div style="display:flex; flex-direction:column;">
@@ -172,7 +167,7 @@ async function generatePDF(orcamento, config = {}) {
             </div>
 
             <div style="display:flex; flex-direction:column; align-items:flex-end; width:40%;">
-                <div style="text-align:right; margin-bottom:10px;">
+                <div style="text-align:right; margin-bottom:3px;">
                     <h2>${documentoTipo}</h2>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -186,7 +181,7 @@ async function generatePDF(orcamento, config = {}) {
                     </div>
                 </div>
 
-                <div style="text-align:right; margin-bottom:10px;">
+                <div style="text-align:right; margin-bottom:3px;">
                     <p><strong>Cliente:</strong> ${orcamento.nome_cliente}</p>
                     <p><strong>Tel:</strong> ${orcamento.telefone_cliente}</p>
                 </div>
@@ -196,22 +191,23 @@ async function generatePDF(orcamento, config = {}) {
         ${renderServicos(orcamento.servicos, opcoes)}
         ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
-${renderObservacoes(orcamento, opcoes)}
+        ${renderObservacoes(orcamento, opcoes)}
+        
         <!-- PIX -->
-        <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
-            <div style="text-align:center;">
-                <img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;">
-            </div>
-            <div style="margin-right:5px; text-align:center;">
-                <h1>Pague com Pix</h1>
-                <h2><strong>Chave Pix Tel:</strong> 64992869608</h2>
-                <h2><strong>Nome:</strong> Josué de Souza Morais</h2>
-                <h2><strong>Instituição:</strong> Mercado Pago</h2>
-            </div>
+        <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px;">
+          <div style="text-align:center;">
+            <img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;">
+          </div>
+          <div style="text-align:left;">
+            <h1 style="margin:0;">Pague com Pix</h1>
+            <h2 style="margin:5px 0;"><strong>Chave Pix Tel:</strong> 64992869608</h2>
+            <h2 style="margin:5px 0;"><strong>Nome:</strong> Josué de Souza Morais</h2>
+            <h2 style="margin:5px 0;"><strong>Instituição:</strong> Mercado Pago</h2>
+          </div>
         </div>
 
         <!-- Assinaturas -->
-        ${ (opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
+        ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
             <div style="display:flex; justify-content:space-between; margin-top:50px;">
                 ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>EletriCaldas Eletricista Residencial</strong></div>` : ""}
                 ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
