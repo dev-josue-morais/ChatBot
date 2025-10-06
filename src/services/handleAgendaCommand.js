@@ -41,7 +41,6 @@ async function handleAgendaCommand(command, userPhone) {
           .select('*')
           .gte('date', start)
           .lte('date', end)
-          .ilike('title', command.title.trim().toLowerCase())
           .eq('user_telefone', userPhone);
 
         if (fetchError || !events || events.length === 0) {
