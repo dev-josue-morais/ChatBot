@@ -8,6 +8,7 @@ const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO, WHATSAPP_TOKEN } = require('../utils/config');
 const AdmZip = require("adm-zip");
 const sharp = require("sharp");
+const { createPixPayment } = require('../utils/mercadopago');
 
 const questions = [
   { key: "user_name", text: "📛 Qual é o seu nome completo?" },
@@ -622,15 +623,49 @@ router.post('/', async (req, res, next) => {
       }
       // --- Comando "renovar" ---
       if (/^renovar$/i.test(myText) && userData) {
-        // Aqui você pode futuramente implementar a lógica de adicionar dias de premium
+        const payment = await createPixPayment(15, `Renovação Premium - ${senderNumber}`);
+
+        if (!payment) {
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: { body: "⚠️ Não foi possível gerar o Pix no momento. Tente novamente em instantes." }
+          });
+          continue;
+        }
+
+        const qrMessage = `
+💎 *Renovação Premium (R$15,00)*
+
+Envie o pagamento via Pix usando o QR Code abaixo ou copie o código.
+
+🔢 *Código Copia e Cola:*
+${payment.qr_code}
+
+Após o pagamento, o sistema confirmará automaticamente. ✅
+  `;
+
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
-          type: "text",
-          text: { body: "Comando nao integrado ainda\nPor favor envie um pix de R$15,00 para 64992869608\nE o comprovante para o numero (064) 99286-9608" }
+          type: "image",
+          image: {
+            link: `data:image/png;base64,${payment.qr_base64}`,
+            caption: qrMessage
+          }
         });
+
+        // Salva no Supabase para monitorar depois
+        await supabase.from('payments').insert([{
+          user_telefone: senderNumber,
+          mp_payment_id: payment.id,
+          status: 'pending'
+        }]);
+
         continue;
       }
+
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText, senderNumber);
       await sendWhatsAppRaw({

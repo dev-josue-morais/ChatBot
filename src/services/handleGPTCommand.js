@@ -147,16 +147,6 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
             break;
           }
         
-          case 'agenda_delete': {
-            prompt = `
-      Você é um assistente que exclui compromissos de agenda.
-      Retorne:
-      { "modulo": "agenda", "action": "delete", "id": numero }
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
-
     case 'agenda_list': {
       prompt = `
       Você é um assistente para listar agenda. O usuário está no fuso GMT-3 (Brasil).

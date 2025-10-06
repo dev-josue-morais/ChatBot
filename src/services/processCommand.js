@@ -14,15 +14,15 @@ async function processCommand(userMessage, userPhone) {
     const firstWords = getFirstWords(userMessage);
 
     const classificationPrompt = `
-Analise a frase e retorne apenas JSON:
-{
-  "modulo": "orcamento" | "agenda",
-  "action": "create" | "edit" | "delete" | "list" | "pdf",
-  "id": número de 10 dígitos ou null "nao e telefone"
-}
-  obs: atendimento/evento = agenda
-Frase: "${firstWords}"
-`;
+      Analise a frase e retorne apenas JSON:
+      {
+        "modulo": "orcamento" | "agenda",
+        "action": "create" | "edit" | "delete" | "list" | "pdf",
+        "id": número de 10 dígitos ou null "nao e telefone"
+      }
+        obs: atendimento/evento = agenda
+      Frase: "${firstWords}"
+      `;
 
     const quickResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -41,26 +41,31 @@ Frase: "${firstWords}"
     }
 
     const { modulo, action, id } = classification;
-    console.log("🧠 Classificação GPT:", classification);
 
-    // 2️⃣ Gera o JSON final a partir do novo handler
-    const gptData = await handleGPTCommand(userMessage, modulo, action, id);
+    if (modulo === 'agenda' && action === 'delete' && id) {
+      const result = await handleAgendaCommand({
+        modulo,
+        action,
+        id,
+        userPhone: senderNumber
+      });
+      return result;
+    } else {
+      const gptData = await handleGPTCommand(userMessage, modulo, action, id);
 
-    // Garante que módulo e ação do classificador são mantidos
-    gptData.modulo ??= modulo;
-    gptData.action ??= action;
-    if (!gptData.id && id) gptData.id = id;
+      gptData.modulo ??= modulo;
+      gptData.action ??= action;
+      if (!gptData.id && id) gptData.id = id;
 
-    console.log("🧩 GPT Parsed JSON:", gptData);
-
-    // 3️⃣ Direciona execução
-    switch (gptData.modulo) {
-      case "agenda":
-        return await handleAgendaCommand(gptData, userPhone);
-      case "orcamento":
-        return await handleOrcamentoCommand(gptData, userPhone);
-      default:
-        return "⚠️ Não entendi se é AGENDA ou ORÇAMENTO.";
+      // 3️⃣ Direciona execução
+      switch (gptData.modulo) {
+        case "agenda":
+          return await handleAgendaCommand(gptData, userPhone);
+        case "orcamento":
+          return await handleOrcamentoCommand(gptData, userPhone);
+        default:
+          return "⚠️ Não entendi se é AGENDA ou ORÇAMENTO.";
+      }
     }
 
   } catch (err) {
