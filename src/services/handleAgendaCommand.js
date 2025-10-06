@@ -68,7 +68,7 @@ async function handleAgendaCommand(command, userPhone) {
         const { data, error } = await supabase
           .from('events')
           .update(updates)
-          .eq('event_numero', command.id)
+          .eq('event_numero', command.event_numero)
           .eq('user_telefone', userPhone)
           .select('event_numero, title, date');
 
