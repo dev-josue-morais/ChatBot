@@ -178,7 +178,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     const enviado = await sendPDFOrcamento(userPhone, o, { ...pdfConfig, user });
 
                     if (enviado) {
-                        return `✅ PDF do orçamento ${command.id} enviado com sucesso para ${userPhone}!`;
+                        return `✅ PDF do orçamento ${command.id} enviado com sucesso!`;
                     } else {
                         return `⚠️ PDF do orçamento ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
                     }
