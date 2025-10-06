@@ -502,6 +502,9 @@ router.post('/', async (req, res, next) => {
 
         3️⃣ **Deletar agenda**
         deletar agenda <ID>
+
+        4️⃣ **listar agenda**
+        Lista meus atendimentos do dia <data>
          `;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
@@ -623,7 +626,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "Comando nao integrado ainda\nPor favor envie um pix para 64992869608\nE o comprovante para o numero (064) 99286-9608" }
+          text: { body: "Comando nao integrado ainda\nPor favor envie um pix de R$15,00 para 64992869608\nE o comprovante para o numero (064) 99286-9608" }
         });
         continue;
       }

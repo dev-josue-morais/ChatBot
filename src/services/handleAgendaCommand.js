@@ -31,28 +31,25 @@ async function handleAgendaCommand(command, userPhone) {
       }
 
       case 'delete': {
-        const datetimeUTC = command.datetime;
-        const start = DateTime.fromISO(datetimeUTC).minus({ minutes: 1 }).toISO();
-        const end = DateTime.fromISO(datetimeUTC).plus({ minutes: 1 }).toISO();
+        if (!command.id) return '⚠️ É necessário informar o ID do evento para deletar.';
 
-        // Busca eventos ignorando maiúsculas/minúsculas e espaços extras
-        const { data: events, error: fetchError } = await supabase
+        const { data, error } = await supabase
           .from('events')
-          .select('*')
-          .gte('date', start)
-          .lte('date', end)
-          .eq('user_telefone', userPhone);
+          .delete()
+          .eq('event_numero', command.id)
+          .eq('user_telefone', userPhone)
+          .select('event_numero, title');
 
-        if (fetchError || !events || events.length === 0) {
-          return `⚠️ Nenhum evento encontrado para "${command.title}" em ${formatLocal(datetimeUTC)}.`;
+        if (error) {
+          console.error('Erro ao deletar evento:', error);
+          return '⚠️ Ocorreu um erro ao tentar deletar o evento.';
         }
 
-        const ids = events.map(ev => ev.id);
-        const { error: delError } = await supabase.from('events').delete().in('id', ids);
-        if (delError) {
-          return `⚠️ Não consegui apagar o evento "${command.title}".`;
+        if (!data || data.length === 0) {
+          return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
         }
-        return `🗑 Evento "${command.title}" em ${formatLocal(datetimeUTC)} removido com sucesso.`;
+
+        return `🗑 Evento "${data[0].title}" (${data[0].event_numero}) removido com sucesso.`;
       }
 
       case 'edit': {
@@ -81,7 +78,7 @@ async function handleAgendaCommand(command, userPhone) {
           return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
         }
 
-        return `✅ Evento "${data[0].title}" ${data[0].event_numero} atualizado com sucesso.`;
+        return `✅ Evento atualizado "${data[0].title}" ${data[0].event_numero} em ${formatLocal(data[0].date)}.`;
       }
 
       case 'list': {
