@@ -59,81 +59,88 @@ router.post('/', async (req, res, next) => {
 
       if (session && msg.type === "image" && session.answers?.type) {
         try {
-          const imageType = session.answers.type; // "logo_img" ou "pix_img"
-          const mediaId = msg.image.id;
+          // --- Upload de imagem do WhatsApp ---
+const imageType = session.answers.type; // "logo_img" ou "pix_img"
+const mediaId = msg.image.id;
 
-          if (!mediaId) {
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: senderNumber,
-              type: "text",
-              text: { body: "⚠️ Não consegui obter a imagem. Tente novamente." }
-            });
-            continue;
-          }
+if (!mediaId) {
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: { body: "⚠️ Não consegui obter a imagem. Tente novamente." }
+  });
+  continue;
+}
 
-          // 1️⃣ Pega a URL da mídia do WhatsApp
-          const mediaInfoResp = await fetch(`https://graph.facebook.com/v16.0/${mediaId}`, {
-            headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
-          });
-          const mediaInfo = await mediaInfoResp.json();
-          const mediaUrl = mediaInfo.url;
+// 1️⃣ Pega a URL da mídia do WhatsApp
+const mediaInfoResp = await fetch(`https://graph.facebook.com/v16.0/${mediaId}`, {
+  headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
+});
+const mediaInfo = await mediaInfoResp.json();
+const mediaUrl = mediaInfo.url;
 
-          if (!mediaUrl) {
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: senderNumber,
-              type: "text",
-              text: { body: "⚠️ Não consegui obter a URL da imagem. Tente novamente." }
-            });
-            continue;
-          }
+if (!mediaUrl) {
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: { body: "⚠️ Não consegui obter a URL da imagem. Tente novamente." }
+  });
+  continue;
+}
 
-          // 2️⃣ Baixa o conteúdo da imagem
-          const mediaResp = await fetch(mediaUrl, {
-            headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
-          });
-          const buffer = await mediaResp.arrayBuffer();
+// 2️⃣ Baixa o conteúdo da imagem
+const mediaResp = await fetch(mediaUrl, {
+  headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
+});
+const arrayBuffer = await mediaResp.arrayBuffer();
+const fileExt = imageType === "logo_img" ? "png" : "jpeg";
+const fileName = `${senderNumber}_${imageType}_${Date.now()}.${fileExt}`;
 
-          const fileExt = imageType === "logo_img" ? "png" : "jpeg";
-          const fileName = `${senderNumber}_${imageType}_${Date.now()}.${fileExt}`;
+// 3️⃣ Envia para o Supabase Storage
+const { error: uploadError } = await supabase.storage
+  .from("user_files")
+  .upload(fileName, Buffer.from(arrayBuffer), {
+    contentType: `image/${fileExt}`,
+    upsert: true,
+  });
 
-          // 3️⃣ Envia para o Supabase Storage
-          const { error: uploadError } = await supabase.storage
-            .from('user_files')
-            .upload(fileName, Buffer.from(buffer), {
-              contentType: `image/${fileExt}`,
-              upsert: true
-            });
+if (uploadError) {
+  console.error("Erro upload:", uploadError);
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: { body: "⚠️ Falha ao salvar imagem. Tente novamente mais tarde." },
+  });
+  continue;
+}
 
-          if (uploadError) {
-            console.error("Erro upload:", uploadError);
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: senderNumber,
-              type: "text",
-              text: { body: "⚠️ Falha ao salvar imagem. Tente novamente mais tarde." }
-            });
-            continue;
-          }
+// 4️⃣ Gera URL pública
+const { data: urlData, error: urlError } = supabase.storage
+  .from("user_files")
+  .getPublicUrl(fileName);
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('user_files')
-            .getPublicUrl(fileName);
+if (urlError || !urlData?.publicUrl) {
+  console.error("Erro ao gerar URL pública:", urlError);
+  continue;
+}
 
-          const field = imageType === "logo_img" ? "logo_url" : "pix_img_url";
-          await supabase.from('users').update({ [field]: publicUrl }).eq('telefone', senderNumber);
-          await supabase.from('user_sessions').delete().eq('telefone', senderNumber);
+const publicUrl = urlData.publicUrl;
 
-          await sendWhatsAppRaw({
-            messaging_product: "whatsapp",
-            to: senderNumber,
-            type: "text",
-            text: {
-              body: `✅ Imagem ${imageType === "logo_img" ? "da LOGO" : "do Pix"} atualizada com sucesso!`
-            }
-          });
+// 5️⃣ Atualiza campo correto no usuário
+const field = imageType === "logo_img" ? "logo_url" : "pix_img_url";
+await supabase.from("users").update({ [field]: publicUrl }).eq("telefone", senderNumber);
+await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
 
+// 6️⃣ Confirma envio
+await sendWhatsAppRaw({
+  messaging_product: "whatsapp",
+  to: senderNumber,
+  type: "text",
+  text: { body: `✅ Imagem ${imageType === "logo_img" ? "da LOGO" : "do Pix"} atualizada com sucesso!` },
+});
         } catch (err) {
           console.error("Erro ao processar imagem:", err);
           await sendWhatsAppRaw({
