@@ -164,40 +164,39 @@ async function generatePDF(orcamento, user, config = {}) {
         <html>
         <body style="font-family:Arial, sans-serif; font-size:14px; margin:20px; color:#333; border:3px solid #000; padding:20px;">
 
-        <!-- Cabeçalho -->
-        <div style="display:flex; justify-content:space-between; align-items:center;  padding-bottom:2px; margin-bottom:3px;">
-            <div style="display:flex; align-items:center; text-align:left; flex:1; gap:5px;">
-                ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:100px; height:auto;">` : ""}
-                <div style="display:flex; flex-direction:column;">
-                    <h2>${user.empresa_nome || "Sua Empresa"}</h2>
-                    <p><strong>${user.tipo_doc || "CNPJ"}:</strong> ${user.numero_doc || "-"} | <strong>Tel:</strong> ${user.empresa_telefone || "-"}</p>
-                    <p><strong>Cidade:</strong> ${user.cidade || "-"} <strong>Estado:</strong> ${user.estado || "-"}</p>
-                    <p><strong>CEP:</strong> ${user.cep || "-"}</p>
-                </div>
-            </div>
+<!-- Cabeçalho -->
+<div style="display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:5px; margin-bottom:5px;">
+    <div style="display:flex; align-items:flex-start; text-align:left; flex:1; gap:8px;">
+        ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:90px; height:auto;">` : ""}
+        <div style="display:flex; flex-direction:column; line-height:1.2;">
+            <h2 style="margin:0; font-size:18px;">${user.empresa_nome || "Sua Empresa"}</h2>
+            <p style="margin:2px 0;"><strong>${user.tipo_doc || "CNPJ"}:</strong> ${user.numero_doc || "-"} | <strong>Tel:</strong> ${user.empresa_telefone || "-"}</p>
+            <p style="margin:2px 0;"><strong>Cidade:</strong> ${user.cidade || "-"} <strong>Estado:</strong> ${user.estado || "-"}</p>
+            <p style="margin:2px 0;"><strong>CEP:</strong> ${user.cep || "-"}</p>
+        </div>
+    </div>
 
-            <div style="display:flex; flex-direction:column; align-items:flex-end; width:40%;">
-                <div style="text-align:right; margin-bottom:3px;">
-                    <h2>${documentoTipo}</h2>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <p><strong>Nº do Documento:</strong></p>
-                            <p><strong>Data do Documento:</strong></p>
-                        </div>
-                        <div>
-                            <p>${orcamento.orcamento_numero}</p>
-                            <p>${formatarData(orcamento.criado_em)}</p>
-                        </div>
-                    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; width:40%; line-height:1.2;">
+        <div style="text-align:right; margin-bottom:4px;">
+            <h2 style="margin:0; font-size:18px;">${documentoTipo}</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div style="text-align:right;">
+                    <p style="margin:2px 0;"><strong>Nº do Documento:</strong></p>
+                    <p style="margin:2px 0;"><strong>Data do Documento:</strong></p>
                 </div>
-
-                <div style="text-align:right; margin-bottom:3px;">
-                    <p><strong>Cliente:</strong> ${orcamento.nome_cliente}</p>
-                    <p><strong>Tel:</strong> ${orcamento.telefone_cliente}</p>
+                <div style="text-align:right;">
+                    <p style="margin:2px 0;">${orcamento.orcamento_numero}</p>
+                    <p style="margin:2px 0;">${formatarData(orcamento.criado_em)}</p>
                 </div>
             </div>
         </div>
 
+        <div style="text-align:right;">
+            <p style="margin:2px 0;"><strong>Cliente:</strong> ${orcamento.nome_cliente}</p>
+            <p style="margin:2px 0;"><strong>Tel:</strong> ${orcamento.telefone_cliente}</p>
+        </div>
+    </div>
+</div>
         ${renderServicos(orcamento.servicos, opcoes)}
         ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
