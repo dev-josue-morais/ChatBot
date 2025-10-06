@@ -27,7 +27,7 @@ async function handleAgendaCommand(command, userPhone) {
           }])
           .select('event_numero, title, date');
 
-        return `✅ Evento criado: "${data[0].title}" (ID: ${data[0].event_numero}) em ${formatLocal(data[0].date)}`;
+        return `✅ Evento criado: "${data[0].title}" ${data[0].event_numero} em ${formatLocal(data[0].date)}`;
       }
 
       case 'delete': {
@@ -72,7 +72,16 @@ async function handleAgendaCommand(command, userPhone) {
           .eq('user_telefone', userPhone)
           .select('event_numero, title, date');
 
-        return `✅ Evento "${data[0].title}" (ID: ${data[0].event_numero}) atualizado com sucesso.`;
+        if (error) {
+          console.error('Erro ao atualizar evento:', error);
+          return '⚠️ Ocorreu um erro ao atualizar o evento.';
+        }
+
+        if (!data || !data.length) {
+          return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
+        }
+
+        return `✅ Evento "${data[0].title}" ${data[0].event_numero} atualizado com sucesso.`;
       }
 
       case 'list': {
@@ -100,7 +109,7 @@ async function handleAgendaCommand(command, userPhone) {
         }
 
         const list = events
-          .map(e => `- ${e.title} (ID: ${e.event_numero}) em ${formatLocal(e.date)}`)
+          .map(e => `- ${e.title} ${e.event_numero} em ${formatLocal(e.date)}`)
           .join('\n');
 
         return `📅 Seus eventos:\n${list}`;

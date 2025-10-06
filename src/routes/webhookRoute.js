@@ -429,29 +429,14 @@ router.post('/', async (req, res, next) => {
       // --- Comando de ajuda: "opcoes" ou "opções" ---
       if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
         const helpMessage = `
-        📋 **Digite um dos comandos disponíveis:**
+        📋 Digite um dos comandos disponíveis:
 
-        - "premium" → mostra seu tempo premium
-        - "criar orçamento" → dicas de padrões para criar orçamentos
-        - "criar atendimento" → dicas de padrões para criar agenda
-        - "enviar logo" → envia sua logo em png para integrar no PDF
-        - "enviar pix" → envia uma imagem do seu QR code para integrar no PDF
-        `;
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          text: {
-            body: `
-            📋 Comandos disponíveis:
-
-            - Digite 💎 para ver seu tempo premium
-            - Digite 🧾 para criar um orçamento
-            - Digite 📅 para criar um atendimento
-            - Digite 🖼️ para enviar sua logo
-            - Digite 💳 para enviar seu Pix
-            `.trim()
-          }
-        });
+        - premium → mostra seu tempo premium 💎
+        - criar orçamento → dicas de padrões para criar um orçamento 🧾
+        - criar atendimento → dicas de padrões para criar um atendimento 📅
+        - enviar logo → enviar sua logo 🖼️ para integrar no PDF
+        - enviar pix → enviar seu Pix 💳 QrCode para integrar no PDF
+          `.trim();
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
