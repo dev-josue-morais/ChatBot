@@ -13,7 +13,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 if (!command.nome_cliente) return "⚠️ O campo *nome do cliente* é obrigatório.";
                 if (!command.telefone_cliente) return "⚠️ O campo *telefone do cliente* é obrigatório.";
 
-                const observacoes = Array.isArray(command.observacao) ? command.observacao.filter(Boolean) : [];
+                const observacoes = Array.isArray(command.observacoes) ? command.observacoes.filter(Boolean) : [];
 
                 const { data, error } = await supabase.from('orcamentos').insert([{
                     nome_cliente: command.nome_cliente,
@@ -57,19 +57,19 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             // ------------------- EDIT -------------------
             case 'edit': {
-                if (!command.id) return '⚠️ É necessário informar o ID do orçamento para editar.';
+                if (!command.orcamento_numero) return '⚠️ É necessário informar o ID do orçamento para editar.';
 
                 // Aqui 'command' já é o JSON completo do GPT
                 const { data, error } = await supabase
                     .from('orcamentos')
                     .update(command)
-                    .eq('orcamento_numero', command.id)
+                    .eq('orcamento_numero', command.orcamento_numero)
                     .eq('user_telefone', userPhone)
                     .select();
 
                 if (error) {
                     console.error("Erro ao editar orçamento:", error);
-                    return `⚠️ Não consegui editar o orçamento ${command.id}.`;
+                    return `⚠️ Não consegui editar o orçamento ${command.orcamento_numero}.`;
                 }
 
                 return `${formatOrcamento(data[0])}`;
@@ -107,7 +107,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
 
                 for (const o of orcamentos) {
-                    await sendWhatsAppMessage(userPhone || DESTINO_FIXO, formatOrcamento(o));
+                    await sendWhatsAppMessage(userPhone, formatOrcamento(o));
                 }
 
                 return `✅ ${orcamentos.length} orçamento(s) enviados.`;
