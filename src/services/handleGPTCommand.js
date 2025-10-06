@@ -65,8 +65,9 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       Mensagem do usuário:
       "${userMessage}"
           
-      Retorne o mesmo orçamento em JSON, **mantendo toda a estrutura original**, 
+      Retorne o mesmo orçamento em JSON, **mantendo toda a estrutura original nao crie colunas**, 
       mas ajustando conforme o que o usuário pediu (adicionar/remover itens, alterar quantidades, etc.).
+      a coluna "descricao_atividades: []", corresponde a "observações".
       Não altere campos que não foram mencionados.
       `;
 
