@@ -634,6 +634,7 @@ router.post('/', async (req, res, next) => {
           });
           continue;
         }
+        console.log(payment.qr_code)
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
