@@ -252,20 +252,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          type: "interactive",
-          interactive: {
-            type: "button",
-            body: { text: "❌ Cadastro cancelado." },
-            footer: { text: "Clique abaixo para recomeçar o cadastro 👇" },
-            action: {
-              buttons: [
-                {
-                  type: "reply",
-                  reply: { id: "criar_usuario_btn", title: "🧾 Criar usuário" }
-                }
-              ]
-            }
-          }
+          text: { body: "❌ Cadastro cancelado.\npara recomeçar digite Criar usuário" }
         });
         continue;
       }
@@ -389,20 +376,7 @@ router.post('/', async (req, res, next) => {
               messaging_product: "whatsapp",
               to: senderNumber,
               type: "text",
-              type: "interactive",
-              interactive: {
-                type: "button",
-                body: { text: "✅ Usuário criado com sucesso!" },
-                footer: { text: "Premium válido por 10 dias. Escolha uma opção:" },
-                action: {
-                  buttons: [
-                    {
-                      type: "reply",
-                      reply: { id: "opcoes_btn", title: "⚙️ Opções" }
-                    }
-                  ]
-                }
-              }
+              text: { body: "✅ Usuário criado com sucesso!\nPremium válido por 10 dias.\nDigite ⚙️ para ver as opções disponíveis." }
             });
           }
         } else {
@@ -427,7 +401,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "📸 Envie agora um arquivo zip com a imagem da LOGO em formato PNG." }
+          text: { body: "📸 Envie agora um arquivo zip com a imagem quadrada da LOGO em formato PNG." }
         });
         await supabase.from('user_sessions').upsert({
           telefone: senderNumber,
@@ -442,7 +416,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "💳 Envie agora a imagem do QR Code Pix em formato JPEG." }
+          text: { body: "💳 Envie agora a imagem quadrada do QR Code Pix em formato JPEG." }
         });
         await supabase.from('user_sessions').upsert({
           telefone: senderNumber,
@@ -466,19 +440,16 @@ router.post('/', async (req, res, next) => {
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
-          type: "interactive",
-          interactive: {
-            type: "button",
-            body: { text: "📋 Escolha uma das opções abaixo:" },
-            action: {
-              buttons: [
-                { type: "reply", reply: { id: "premium_btn", title: "💎 Premium" } },
-                { type: "reply", reply: { id: "criar_orcamento_btn", title: "🧾 Criar orçamento" } },
-                { type: "reply", reply: { id: "criar_atendimento_btn", title: "📅 Criar atendimento" } },
-                { type: "reply", reply: { id: "enviar_logo_btn", title: "🖼️ Enviar logo" } },
-                { type: "reply", reply: { id: "enviar_pix_btn", title: "💳 Enviar Pix" } },
-              ]
-            }
+          text: {
+            body: `
+            📋 Comandos disponíveis:
+
+            - Digite 💎 para ver seu tempo premium
+            - Digite 🧾 para criar um orçamento
+            - Digite 📅 para criar um atendimento
+            - Digite 🖼️ para enviar sua logo
+            - Digite 💳 para enviar seu Pix
+            `.trim()
           }
         });
 
@@ -619,18 +590,8 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          type: "interactive",
-          interactive: {
-            type: "button",
-            body: { text: "⚠️ Seu premium expirou." },
-            footer: { text: "Clique abaixo para renovar 👇" },
-            action: {
-              buttons: [
-                { type: "reply", reply: { id: "renovar_btn", title: "🔁 Renovar" } }
-              ]
-            }
-          }
-        });
+          text: { body: "⚠️ Seu premium expirou.\ndigite Renovar." }
+          });
         continue;
       }
 
@@ -644,17 +605,8 @@ router.post('/', async (req, res, next) => {
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
-            type: "interactive",
-            interactive: {
-              type: "button",
-              body: { text: "⚠️ Seu premium expirou." },
-              footer: { text: "Clique abaixo para renovar 👇" },
-              action: {
-                buttons: [
-                  { type: "reply", reply: { id: "renovar_btn", title: "🔁 Renovar" } }
-                ]
-              }
-            }
+            
+          text: { body: "⚠️ Seu premium expirou.\ndigite Renovar." }
           });
         } else {
           const diffMs = premiumDate - now;

@@ -205,7 +205,7 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
           ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
           <div style="text-align:left;">
             <h1 style="margin:0;">Pague com Pix</h1>
-            <h2 style="margin:5px 0;"><strong>Chave Pix Tel:</strong> ${user.pix_chave || "-"}</h2>
+            <h2 style="margin:5px 0;"><strong>Chave Pix:</strong> ${user.pix_chave || "-"}</h2>
             <h2 style="margin:5px 0;"><strong>Nome:</strong> ${user.pix_nome || "-"}</h2>
             <h2 style="margin:5px 0;"><strong>Instituição:</strong> ${user.pix_banco || "-"}</h2>
           </div>
