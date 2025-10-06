@@ -645,7 +645,7 @@ router.post('/', async (req, res, next) => {
             Envie o pagamento via Pix usando o código:
 
             🔢 *Código Copia e Cola:*
-            ${pix.qr_code} 
+            ${payment.qr_code} 
 
             Após o pagamento, o sistema confirmará automaticamente. ✅
             `

@@ -25,11 +25,7 @@ async function createPixPayment(amount, description) {
     );
 
     const { id, point_of_interaction } = response.data;
-    return {
-      id,
-      qr_code: point_of_interaction.transaction_data.qr_code,
-      qr_base64: point_of_interaction.transaction_data.qr_code_base64
-    };
+    return { id, qr_code: point_of_interaction.transaction_data.qr_code };
   } catch (err) {
     console.error('Erro ao criar pagamento Pix:', err.response?.data || err.message);
     return null;
