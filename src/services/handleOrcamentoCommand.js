@@ -57,12 +57,23 @@ async function handleOrcamentoCommand(command, userPhone) {
 
             // ------------------- EDIT -------------------
             case 'edit': {
-                if (!command.orcamento_numero) return '⚠️ É necessário informar o ID do orçamento para editar.';
+                if (!command.orcamento_numero)
+                    return '⚠️ É necessário informar o ID do orçamento para editar.';
 
-                // Aqui 'command' já é o JSON completo do GPT
+                const validFields = {
+                    nome_cliente: command.nome_cliente,
+                    telefone_cliente: command.telefone_cliente,
+                    etapa: command.etapa,
+                    descricao_atividades: command.descricao_atividades,
+                    materiais: command.materiais,
+                    servicos: command.servicos,
+                    desconto_materiais: command.desconto_materiais,
+                    desconto_servicos: command.desconto_servicos
+                };
+
                 const { data, error } = await supabase
                     .from('orcamentos')
-                    .update(command)
+                    .update(validFields)
                     .eq('orcamento_numero', command.orcamento_numero)
                     .eq('user_telefone', userPhone)
                     .select();
@@ -72,46 +83,51 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return `⚠️ Não consegui editar o orçamento ${command.orcamento_numero}.`;
                 }
 
+                if (!data || data.length === 0) {
+                    return `⚠️ Nenhum orçamento encontrado com o número ${command.orcamento_numero}.`;
+                }
+
                 return `${formatOrcamento(data[0])}`;
             }
-
             // ------------------- LIST -------------------
             case 'list': {
-                let orcamentos, error;
+                let query = supabase
+                    .from('orcamentos')
+                    .select('*')
+                    .eq('user_telefone', userPhone);
 
-                if (command.telefone_cliente || command.id) {
-                    let query = supabase.from('orcamentos').select('*').eq('user_telefone', userPhone);
-
-                    if (command.telefone_cliente) query = query.eq('telefone_cliente', command.telefone_cliente);
-                    if (command.id) query = query.eq('orcamento_numero', command.id);
-
-                    ({ data: orcamentos, error } = await query);
+                // Filtros opcionais
+                if (command.id) {
+                    query = query.eq('orcamento_numero', command.id);
+                } else if (command.telefone_cliente) {
+                    query = query.eq('telefone_cliente', command.telefone_cliente);
                 } else if (command.nome_cliente) {
                     const nome = command.nome_cliente.trim();
-                    ({ data: orcamentos, error } = await supabase.rpc(
-                        'search_orcamentos_by_name',
-                        { name: nome, user_tel: userPhone }
-                    ));
-                } else {
-                    ({ data: orcamentos, error } = await supabase
-                        .from('orcamentos')
-                        .select('*')
-                        .eq('user_telefone', userPhone));
+                    query = query.ilike('nome_cliente', `%${nome}%`);
                 }
+
+                // Ordenar resultados (mais recentes primeiro)
+                query = query.order('criado_em', { ascending: false });
+
+                const { data: orcamentos, error } = await query;
 
                 if (error) {
                     console.error("Erro ao listar orçamentos:", error);
                     return "⚠️ Não foi possível listar os orçamentos.";
                 }
 
-                if (!orcamentos || orcamentos.length === 0) return "📄 Nenhum orçamento encontrado.";
+                if (!orcamentos || orcamentos.length === 0) {
+                    return "📄 Nenhum orçamento encontrado.";
+                }
 
+                // Envia cada orçamento separadamente
                 for (const o of orcamentos) {
-                    await sendWhatsAppMessage(userPhone, formatOrcamento(o));
+                    await sendWhatsAppMessage(userPhone || DESTINO_FIXO, formatOrcamento(o));
                 }
 
                 return `✅ ${orcamentos.length} orçamento(s) enviados.`;
             }
+
 
             // ------------------- PDF -------------------
             case "pdf": {

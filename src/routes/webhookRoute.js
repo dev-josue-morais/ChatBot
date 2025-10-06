@@ -5,7 +5,7 @@ const { getNowBRT } = require('../utils/utils');
 const { processCommand } = require('../services/processCommand');
 const { sendWhatsAppRaw, extractTextFromMsg, forwardMediaIfAny } = require('../services/whatsappService');
 const supabase = require('../services/supabase');
-const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO } = require('../utils/config');
+const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO, WHATSAPP_TOKEN } = require('../utils/config');
 
 const questions = [
   { key: "user_name", text: "📛 Qual é o seu nome completo?" },
@@ -58,60 +58,95 @@ router.post('/', async (req, res, next) => {
         .maybeSingle();
 
       if (session && msg.type === "image" && session.answers?.type) {
-        const imageType = session.answers.type; // "logo_img" ou "pix_img"
-        const fileUrl = msg.image?.link;
+        try {
+          const imageType = session.answers.type; // "logo_img" ou "pix_img"
+          const mediaId = msg.image.id;
 
-        if (!fileUrl) {
-          await sendWhatsAppRaw({
-            messaging_product: "whatsapp",
-            to: senderNumber,
-            type: "text",
-            text: { body: "⚠️ Não consegui obter a imagem. Tente novamente." }
-          });
-          continue;
-        }
-
-        const response = await fetch(fileUrl);
-        const buffer = await response.arrayBuffer();
-        const fileExt = imageType === "logo_img" ? "png" : "jpeg";
-        const fileName = `${senderNumber}_${imageType}_${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('user_files')
-          .upload(fileName, buffer, {
-            contentType: `image/${fileExt}`,
-            upsert: true
-          });
-
-        if (uploadError) {
-          console.error("Erro upload:", uploadError);
-          await sendWhatsAppRaw({
-            messaging_product: "whatsapp",
-            to: senderNumber,
-            type: "text",
-            text: { body: "⚠️ Falha ao salvar imagem. Tente novamente mais tarde." }
-          });
-          continue;
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('user_files')
-          .getPublicUrl(fileName);
-
-        const field = imageType === "logo_img" ? "logo_url" : "pix_img_url";
-        await supabase.from('users').update({ [field]: publicUrl }).eq('telefone', senderNumber);
-        await supabase.from('user_sessions').delete().eq('telefone', senderNumber);
-
-        await sendWhatsAppRaw({
-          messaging_product: "whatsapp",
-          to: senderNumber,
-          type: "text",
-          text: {
-            body: `✅ Imagem ${imageType === "logo_img" ? "da LOGO" : "do Pix"} atualizada com sucesso!`
+          if (!mediaId) {
+            await sendWhatsAppRaw({
+              messaging_product: "whatsapp",
+              to: senderNumber,
+              type: "text",
+              text: { body: "⚠️ Não consegui obter a imagem. Tente novamente." }
+            });
+            continue;
           }
-        });
+
+          // 1️⃣ Pega a URL da mídia do WhatsApp
+          const mediaInfoResp = await fetch(`https://graph.facebook.com/v16.0/${mediaId}`, {
+            headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
+          });
+          const mediaInfo = await mediaInfoResp.json();
+          const mediaUrl = mediaInfo.url;
+
+          if (!mediaUrl) {
+            await sendWhatsAppRaw({
+              messaging_product: "whatsapp",
+              to: senderNumber,
+              type: "text",
+              text: { body: "⚠️ Não consegui obter a URL da imagem. Tente novamente." }
+            });
+            continue;
+          }
+
+          // 2️⃣ Baixa o conteúdo da imagem
+          const mediaResp = await fetch(mediaUrl, {
+            headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
+          });
+          const buffer = await mediaResp.arrayBuffer();
+
+          const fileExt = imageType === "logo_img" ? "png" : "jpeg";
+          const fileName = `${senderNumber}_${imageType}_${Date.now()}.${fileExt}`;
+
+          // 3️⃣ Envia para o Supabase Storage
+          const { error: uploadError } = await supabase.storage
+            .from('user_files')
+            .upload(fileName, Buffer.from(buffer), {
+              contentType: `image/${fileExt}`,
+              upsert: true
+            });
+
+          if (uploadError) {
+            console.error("Erro upload:", uploadError);
+            await sendWhatsAppRaw({
+              messaging_product: "whatsapp",
+              to: senderNumber,
+              type: "text",
+              text: { body: "⚠️ Falha ao salvar imagem. Tente novamente mais tarde." }
+            });
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('user_files')
+            .getPublicUrl(fileName);
+
+          const field = imageType === "logo_img" ? "logo_url" : "pix_img_url";
+          await supabase.from('users').update({ [field]: publicUrl }).eq('telefone', senderNumber);
+          await supabase.from('user_sessions').delete().eq('telefone', senderNumber);
+
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: {
+              body: `✅ Imagem ${imageType === "logo_img" ? "da LOGO" : "do Pix"} atualizada com sucesso!`
+            }
+          });
+
+        } catch (err) {
+          console.error("Erro ao processar imagem:", err);
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: senderNumber,
+            type: "text",
+            text: { body: "⚠️ Ocorreu um erro ao processar a imagem. Tente novamente." }
+          });
+        }
+
         continue;
       }
+
 
       // --- Cancelar cadastro ---
       if (session && /^cancelar$/i.test(myText)) {
@@ -120,7 +155,20 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "❌ Cadastro cancelado. Envie 'criar usuário' para começar novamente." }
+          type: "interactive",
+          interactive: {
+            type: "button",
+            body: { text: "❌ Cadastro cancelado." },
+            footer: { text: "Clique abaixo para recomeçar o cadastro 👇" },
+            action: {
+              buttons: [
+                {
+                  type: "reply",
+                  reply: { id: "criar_usuario_btn", title: "🧾 Criar usuário" }
+                }
+              ]
+            }
+          }
         });
         continue;
       }
@@ -244,7 +292,20 @@ router.post('/', async (req, res, next) => {
               messaging_product: "whatsapp",
               to: senderNumber,
               type: "text",
-              text: { body: "✅ Usuário criado com sucesso! Premium válido por 10 dias. digite Opções para informaçoes" }
+              type: "interactive",
+              interactive: {
+                type: "button",
+                body: { text: "✅ Usuário criado com sucesso!" },
+                footer: { text: "Premium válido por 10 dias. Escolha uma opção:" },
+                action: {
+                  buttons: [
+                    {
+                      type: "reply",
+                      reply: { id: "opcoes_btn", title: "⚙️ Opções" }
+                    }
+                  ]
+                }
+              }
             });
           }
         } else {
@@ -295,7 +356,7 @@ router.post('/', async (req, res, next) => {
       }
 
       // --- Comando de ajuda: "opcoes" ou "opções" ---
-      if (/^op(c|ç)oes?$/i.test(myText)) {
+      if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
         const helpMessage = `
         📋 **Digite um dos comandos disponíveis:**
 
@@ -308,8 +369,20 @@ router.post('/', async (req, res, next) => {
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
-          type: "text",
-          text: { body: helpMessage }
+          type: "interactive",
+          interactive: {
+            type: "button",
+            body: { text: "📋 Escolha uma das opções abaixo:" },
+            action: {
+              buttons: [
+                { type: "reply", reply: { id: "premium_btn", title: "💎 Premium" } },
+                { type: "reply", reply: { id: "criar_orcamento_btn", title: "🧾 Criar orçamento" } },
+                { type: "reply", reply: { id: "criar_atendimento_btn", title: "📅 Criar atendimento" } },
+                { type: "reply", reply: { id: "enviar_logo_btn", title: "🖼️ Enviar logo" } },
+                { type: "reply", reply: { id: "enviar_pix_btn", title: "💳 Enviar Pix" } },
+              ]
+            }
+          }
         });
 
         continue;
@@ -391,6 +464,12 @@ router.post('/', async (req, res, next) => {
               ? "Boa tarde"
               : "Boa noite";
 
+        let myText;
+        if (msg.type === "interactive" && msg.interactive.button_reply) {
+          myText = msg.interactive.button_reply.title.toLowerCase();
+        } else {
+          myText = extractTextFromMsg(msg)?.trim();
+        }
         // 🔹 Redireciona mensagens de texto
         const text = extractTextFromMsg(msg);
         if (text) {
@@ -443,7 +522,17 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "⚠️ Seu premium expirou. Entre em contato para renovar." }
+          type: "interactive",
+          interactive: {
+            type: "button",
+            body: { text: "⚠️ Seu premium expirou." },
+            footer: { text: "Clique abaixo para renovar 👇" },
+            action: {
+              buttons: [
+                { type: "reply", reply: { id: "renovar_btn", title: "🔁 Renovar" } }
+              ]
+            }
+          }
         });
         continue;
       }
@@ -458,7 +547,17 @@ router.post('/', async (req, res, next) => {
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
-            text: { body: "⚠️ Você não possui premium ativo. Digite renovar." }
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: { text: "⚠️ Seu premium expirou." },
+              footer: { text: "Clique abaixo para renovar 👇" },
+              action: {
+                buttons: [
+                  { type: "reply", reply: { id: "renovar_btn", title: "🔁 Renovar" } }
+                ]
+              }
+            }
           });
         } else {
           const diffMs = premiumDate - now;
@@ -485,7 +584,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "✅ Premium renovado!" }
+          text: { body: "Comando nao integrado ainda\nPor favor envie um pix para 64992869608\nE o comprovante para o numero (064) 99286-9608" }
         });
         continue;
       }
