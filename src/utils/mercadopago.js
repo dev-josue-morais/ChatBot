@@ -1,7 +1,8 @@
 // utils/mercadopago.js
 const axios = require('axios');
 const { MP_ACCESS_TOKEN } = require('./config');
-
+const { v4: uuidv4 } = require('uuid');
+yarn
 async function createPixPayment(amount, description) {
   try {
     const response = await axios.post(
@@ -17,7 +18,8 @@ async function createPixPayment(amount, description) {
       {
         headers: {
           Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': uuidv4()
         }
       }
     );
