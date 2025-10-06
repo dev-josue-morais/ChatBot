@@ -1,8 +1,6 @@
 // utils/mercadopago.js
 const axios = require('axios');
-
-// Use seu token de acesso do Mercado Pago (adicione no .env)
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
+const { MP_ACCESS_TOKEN } = require('./config');
 
 async function createPixPayment(amount, description) {
   try {

@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const supabase = require('../supabase');
-
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
+const supabase = require('../services/supabase');
+const { MP_ACCESS_TOKEN } = require('../utils/config');
 
 router.post('/', async (req, res) => {
   try {
