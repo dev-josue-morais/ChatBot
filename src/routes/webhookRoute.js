@@ -432,6 +432,7 @@ router.post('/', async (req, res, next) => {
         📋 Digite um dos comandos disponíveis:
 
         - premium → mostra seu tempo premium 💎
+        - renovar → renovar tempo premium 💎
         - criar orçamento → dicas de padrões para criar um orçamento 🧾
         - criar atendimento → dicas de padrões para criar um atendimento 📅
         - enviar logo → enviar sua logo 🖼️ para integrar no PDF

@@ -2,6 +2,29 @@ const supabase = require('./supabase');
 const { DateTime } = require('luxon');
 const { formatLocal } = require('../utils/utils');
 
+// 🔹 Função auxiliar para limpar eventos antigos
+async function deleteOldEvents(userPhone) {
+  try {
+    const twoDaysAgoUTC = DateTime.now()
+      .minus({ days: 2 })
+      .startOf('day')
+      .toUTC()
+      .toISO();
+
+    const { error } = await supabase
+      .from('events')
+      .delete()
+      .lt('date', twoDaysAgoUTC)
+      .eq('user_telefone', userPhone);
+
+    if (error) {
+      console.error('Erro ao deletar eventos antigos:', error);
+    }
+  } catch (err) {
+    console.error('Erro interno ao deletar eventos antigos:', err);
+  }
+}
+
 async function handleAgendaCommand(command, userPhone) {
   try {
     // Converte datas GMT-3 do GPT para UTC
@@ -27,6 +50,9 @@ async function handleAgendaCommand(command, userPhone) {
           }])
           .select('event_numero, title, date');
 
+        // 🔹 Após inserir, limpar eventos antigos
+        await deleteOldEvents(userPhone);
+
         return `✅ Evento criado: "${data[0].title}" ${data[0].event_numero} em ${formatLocal(data[0].date)}`;
       }
 
@@ -49,7 +75,7 @@ async function handleAgendaCommand(command, userPhone) {
           return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
         }
 
-        return `🗑 Evento "${data[0].title}" (${data[0].event_numero}) removido com sucesso.`;
+        return `🗑 Evento "${data[0].title}" ${data[0].event_numero} removido com sucesso.`;
       }
 
       case 'edit': {
@@ -77,6 +103,9 @@ async function handleAgendaCommand(command, userPhone) {
         if (!data || !data.length) {
           return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
         }
+
+        // 🔹 Após atualizar, limpar eventos antigos
+        await deleteOldEvents(userPhone);
 
         return `✅ Evento atualizado "${data[0].title}" ${data[0].event_numero} em ${formatLocal(data[0].date)}.`;
       }
