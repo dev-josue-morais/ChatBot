@@ -452,7 +452,12 @@ router.post('/', async (req, res, next) => {
             `.trim()
           }
         });
-
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: helpMessage }
+        });
         continue;
       }
 
@@ -591,7 +596,7 @@ router.post('/', async (req, res, next) => {
           to: senderNumber,
           type: "text",
           text: { body: "⚠️ Seu premium expirou.\ndigite Renovar." }
-          });
+        });
         continue;
       }
 
@@ -605,8 +610,8 @@ router.post('/', async (req, res, next) => {
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
-            
-          text: { body: "⚠️ Seu premium expirou.\ndigite Renovar." }
+
+            text: { body: "⚠️ Seu premium expirou.\ndigite Renovar." }
           });
         } else {
           const diffMs = premiumDate - now;
