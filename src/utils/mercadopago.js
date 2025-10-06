@@ -13,7 +13,7 @@ async function createPixPayment(amount, description) {
         description,
         payment_method_id: 'pix',
         payer: {
-          email: 'pagador@exemplo.com' // não precisa ser real, é obrigatório no schema
+          email: 'pagador@exemplo.com'
         }
       },
       {
