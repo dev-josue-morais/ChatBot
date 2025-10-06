@@ -7,6 +7,7 @@ const { sendWhatsAppRaw, extractTextFromMsg, forwardMediaIfAny } = require('../s
 const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO, WHATSAPP_TOKEN } = require('../utils/config');
 const AdmZip = require("adm-zip");
+const sharp = require("sharp");
 
 const questions = [
   { key: "user_name", text: "📛 Qual é o seu nome completo?" },
@@ -49,12 +50,18 @@ async function processLogoZip(senderNumber, mediaId) {
     if (!logoEntry) throw new Error("Nenhum PNG encontrado no ZIP.");
 
     const logoBuffer = logoEntry.getData(); // Buffer do PNG
-    const fileName = `${senderNumber}_logo_${Date.now()}.png`;
+
+    // 🔹 Redimensiona a logo para 350x350
+    const resizedLogo = await sharp(logoBuffer)
+      .resize(350, 350, { fit: 'cover' })
+      .png()
+      .toBuffer();
 
     // 5️⃣ Salva no Supabase
+    const fileName = `${senderNumber}_logo_${Date.now()}.png`;
     const { error: uploadError } = await supabase.storage
       .from("user_files")
-      .upload(fileName, logoBuffer, {
+      .upload(fileName, resizedLogo, {
         contentType: "image/png",
         upsert: true
       });
@@ -182,12 +189,19 @@ router.post('/', async (req, res, next) => {
             headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
           });
           const arrayBuffer = await mediaResp.arrayBuffer();
-          const fileName = `${senderNumber}_pix_img_${Date.now()}.jpeg`;
+          const originalBuffer = Buffer.from(arrayBuffer);
+
+          // 🔹 Redimensiona a imagem para 350x350 quadrados
+          const resizedBuffer = await sharp(originalBuffer)
+            .resize(350, 350, { fit: 'cover' })
+            .jpeg({ quality: 90 }) // ajusta a qualidade se quiser
+            .toBuffer();
 
           // 3️⃣ Envia para o Supabase Storage
+          const fileName = `${senderNumber}_pix_img_${Date.now()}.jpeg`;
           const { error: uploadError } = await supabase.storage
             .from("user_files")
-            .upload(fileName, Buffer.from(arrayBuffer), {
+            .upload(fileName, resizedBuffer, {
               contentType: "image/jpeg",
               upsert: true,
             });
