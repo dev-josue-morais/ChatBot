@@ -4,14 +4,18 @@ const { formatarData } = require('./utils');
 const fs = require("fs");
 const path = require("path");
 const aplicarDesconto = require('./aplicarDesconto');
+const axios = require("axios");
 
-// Caminhos das imagens
-const logoPath = path.join(__dirname, "../img/logo.png");
-const pixPath = path.join(__dirname, "../img/QrCode.jpeg");
-
-// Converte para Base64
-const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
-const pixBase64 = fs.readFileSync(pixPath, { encoding: "base64" });
+async function getBase64FromUrl(url) {
+    try {
+        if (!url) return null;
+        const response = await axios.get(url, { responseType: "arraybuffer" });
+        return Buffer.from(response.data).toString("base64");
+    } catch (err) {
+        console.error("Erro ao converter imagem para base64:", err.message);
+        return null;
+    }
+}
 
 function renderServicos(servicos, opcoes) {
     if (!opcoes.listaServicos || !servicos?.length) return '';
@@ -151,14 +155,8 @@ async function generatePDF(orcamento, user, config = {}) {
         const totalOriginal = totalMateriais + totalServicos;
         const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
-        // Base64 do logo e Pix do usuário, se existirem
-        const logoBase64 = user.logo_url
-            ? fs.readFileSync(path.join(__dirname, '../uploads', user.logo_url), { encoding: 'base64' })
-            : null;
-
-        const pixBase64 = user.pix_img_url
-            ? fs.readFileSync(path.join(__dirname, '../uploads', user.pix_img_url), { encoding: 'base64' })
-            : null;
+const logoBase64 = await getBase64FromUrl(user.logo_url);
+const pixBase64 = await getBase64FromUrl(user.pix_img_url);
 
         const htmlContent = `
         <html>
