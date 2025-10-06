@@ -634,27 +634,24 @@ router.post('/', async (req, res, next) => {
           });
           continue;
         }
-
-        const qrMessage = `
-💎 *Renovação Premium (R$15,00)*
-
-Envie o pagamento via Pix usando o QR Code abaixo ou copie o código.
-
-🔢 *Código Copia e Cola:*
-${payment.qr_code}
-
-Após o pagamento, o sistema confirmará automaticamente. ✅
-  `;
-
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
-          type: "image",
-          image: {
-            link: `data:image/png;base64,${payment.qr_base64}`,
-            caption: qrMessage
+          type: "text",
+          text: {
+            body: `
+            💎 *Renovação Premium (R$15,00)*
+
+            Envie o pagamento via Pix usando o código:
+
+            🔢 *Código Copia e Cola:*
+            ${pix.qr_code} 
+
+            Após o pagamento, o sistema confirmará automaticamente. ✅
+            `
           }
         });
+
 
         // Salva no Supabase para monitorar depois
         await supabase.from('payments').insert([{
