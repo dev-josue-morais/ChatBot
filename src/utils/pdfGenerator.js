@@ -166,7 +166,7 @@ async function generatePDF(orcamento, user, config = {}) {
 
         <!-- Cabeçalho -->
         <div style="display:flex; justify-content:space-between; align-items:center;  padding-bottom:2px; margin-bottom:3px;">
-            <div style="display:flex; align-items:center; text-align:left; flex:1; gap:15px;">
+            <div style="display:flex; align-items:center; text-align:left; flex:1; gap:5px;">
                 ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" style="max-width:100px; height:auto;">` : ""}
                 <div style="display:flex; flex-direction:column;">
                     <h2>${user.empresa_nome || "Sua Empresa"}</h2>
