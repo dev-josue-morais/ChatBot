@@ -20,6 +20,7 @@ Analise a frase e retorne apenas JSON:
   "action": "create" | "edit" | "delete" | "list" | "pdf",
   "id": número de 10 dígitos ou null "nao e telefone"
 }
+  obs: atendimento/evento = agenda
 Frase: "${firstWords}"
 `;
 
