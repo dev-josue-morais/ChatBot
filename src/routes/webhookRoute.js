@@ -589,7 +589,7 @@ router.post('/', async (req, res, next) => {
         continue;
       }
       // --- Processa comandos normais ---
-      const responseText = await processCommand(myText);
+      const responseText = await processCommand(myText, senderNumber);
       await sendWhatsAppRaw({
         messaging_product: "whatsapp",
         to: senderNumber,
