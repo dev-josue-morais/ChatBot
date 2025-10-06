@@ -11,9 +11,8 @@ async function createPixPayment(amount, description) {
         transaction_amount: amount,
         description,
         payment_method_id: 'pix',
-        payer: {
-          email: 'pagador@exemplo.com'
-        }
+        payer: { email: 'pagador@exemplo.com' },
+        notification_url: "https://chatbot-6viu.onrender.com/mp-web"
       },
       {
         headers: {
