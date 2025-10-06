@@ -123,28 +123,17 @@ router.post('/', async (req, res, next) => {
         .eq('telefone', senderNumber)
         .maybeSingle();
       // --- Upload de logo via ZIP ---
-      if (msg.type === "document" && session.answers?.type === "logo_img" && msg.document.mime_type === "application/zip") {
+      if (msg.type === "document" && session?.answers?.type === "logo_img" && msg.document.mime_type === "application/zip") {
         try {
           const mediaId = msg.document.id;
-          const urls = await processZipFromWhatsapp(mediaId, senderNumber, "logo_img"); // função que extrai e salva PNGs do ZIP
+          if (!mediaId) throw new Error("ID do documento não encontrado.");
 
-          if (urls.length) {
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: senderNumber,
-              type: "text",
-              text: { body: `✅ Logo atualizada com sucesso!` }
-            });
-          } else {
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: senderNumber,
-              type: "text",
-              text: { body: "⚠️ Nenhuma imagem válida encontrada no ZIP." }
-            });
-          }
+          // Chama a função que processa o ZIP e envia a confirmação
+          await processLogoZip(senderNumber, mediaId);
 
+          // Limpa sessão
           await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
+
         } catch (err) {
           console.error("Erro ao processar ZIP:", err);
           await sendWhatsAppRaw({
@@ -156,12 +145,11 @@ router.post('/', async (req, res, next) => {
         }
         continue;
       }
-      if (session && msg.type === "image" && session.answers?.type) {
-        try {
-          // --- Upload de imagem do WhatsApp ---
-          const imageType = session.answers.type; // "logo_img" ou "pix_img"
-          const mediaId = msg.image.id;
 
+      // --- Upload de imagem do Pix ---
+      if (msg.type === "image" && session?.answers?.type === "pix_img") {
+        try {
+          const mediaId = msg.image?.id;
           if (!mediaId) {
             await sendWhatsAppRaw({
               messaging_product: "whatsapp",
@@ -194,30 +182,20 @@ router.post('/', async (req, res, next) => {
             headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
           });
           const arrayBuffer = await mediaResp.arrayBuffer();
-          const fileExt = imageType === "logo_img" ? "png" : "jpeg";
-          const fileName = `${senderNumber}_${imageType}_${Date.now()}.${fileExt}`;
+          const fileName = `${senderNumber}_pix_img_${Date.now()}.jpeg`;
 
           // 3️⃣ Envia para o Supabase Storage
           const { error: uploadError } = await supabase.storage
             .from("user_files")
             .upload(fileName, Buffer.from(arrayBuffer), {
-              contentType: `image/${fileExt}`,
+              contentType: "image/jpeg",
               upsert: true,
             });
 
-          if (uploadError) {
-            console.error("Erro upload:", uploadError);
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: senderNumber,
-              type: "text",
-              text: { body: "⚠️ Falha ao salvar imagem. Tente novamente mais tarde." },
-            });
-            continue;
-          }
+          if (uploadError) throw uploadError;
 
-          // 4️⃣ Gera URL pública
-          const { data: urlData, error: urlError } = supabase.storage
+          // 4️⃣ Gera URL pública corretamente
+          const { data: urlData, error: urlError } = await supabase.storage
             .from("user_files")
             .getPublicUrl(fileName);
 
@@ -228,32 +206,31 @@ router.post('/', async (req, res, next) => {
 
           const publicUrl = urlData.publicUrl;
 
-          // 5️⃣ Atualiza campo correto no usuário
-          const field = imageType === "logo_img" ? "logo_url" : "pix_img_url";
-          await supabase.from("users").update({ [field]: publicUrl }).eq("telefone", senderNumber);
+          // 5️⃣ Atualiza campo pix_img_url no usuário
+          await supabase.from("users").update({ pix_img_url: publicUrl }).eq("telefone", senderNumber);
+
+          // 6️⃣ Limpa sessão
           await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
 
-          // 6️⃣ Confirma envio
+          // 7️⃣ Confirma envio
           await sendWhatsAppRaw({
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
-            text: { body: `✅ Imagem ${imageType === "logo_img" ? "da LOGO" : "do Pix"} atualizada com sucesso!` },
+            text: { body: "✅ Imagem do Pix atualizada com sucesso!" },
           });
+
         } catch (err) {
-          console.error("Erro ao processar imagem:", err);
+          console.error("Erro ao processar imagem do Pix:", err);
           await sendWhatsAppRaw({
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
-            text: { body: "⚠️ Ocorreu um erro ao processar a imagem. Tente novamente." }
+            text: { body: "⚠️ Ocorreu um erro ao processar a imagem do Pix. Tente novamente." }
           });
         }
-
         continue;
       }
-
-
       // --- Cancelar cadastro ---
       if (session && /^cancelar$/i.test(myText)) {
         await supabase.from('user_sessions').delete().eq('telefone', senderNumber);
@@ -436,7 +413,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "📸 Envie agora a imagem da LOGO em formato PNG." }
+          text: { body: "📸 Envie agora um arquivo zip com a imagem da LOGO em formato PNG." }
         });
         await supabase.from('user_sessions').upsert({
           telefone: senderNumber,
