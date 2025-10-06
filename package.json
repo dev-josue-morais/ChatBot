@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
+    "adm-zip": "^0.5.16",
     "axios": "^1.12.2",
     "chrono-node": "^2.8.4",
     "dotenv": "^17.2.1",
