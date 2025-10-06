@@ -2,7 +2,7 @@
 const axios = require('axios');
 const { MP_ACCESS_TOKEN } = require('./config');
 const { v4: uuidv4 } = require('uuid');
-yarn
+
 async function createPixPayment(amount, description) {
   try {
     const response = await axios.post(
