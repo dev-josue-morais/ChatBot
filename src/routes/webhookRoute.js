@@ -623,7 +623,7 @@ router.post('/', async (req, res, next) => {
       }
       // --- Comando "renovar" ---
       if (/^renovar$/i.test(myText) && userData) {
-        const payment = await createPixPayment(15, `Renovação Premium - ${senderNumber}`);
+        const payment = await createPixPayment(1, `Renovação Premium - ${senderNumber}`);
 
         if (!payment) {
           await sendWhatsAppRaw({
