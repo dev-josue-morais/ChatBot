@@ -432,12 +432,12 @@ router.post('/', async (req, res, next) => {
         const helpMessage = `
         📋 Digite um dos comandos disponíveis:
 
-        - premium → mostra seu tempo premium 💎
-        - renovar → renovar tempo premium 💎
-        - criar orçamento → dicas de padrões para criar um orçamento 🧾
-        - criar atendimento → dicas de padrões para criar um atendimento 📅
-        - enviar logo → enviar sua logo 🖼️ para integrar no PDF
-        - enviar pix → enviar seu Pix 💳 QrCode para integrar no PDF
+        - premium -\nmostra seu tempo premium 💎
+        - renovar -\nrenovar tempo premium 💎
+        - criar orçamento -\ndicas de padrões para\ncriar um orçamento 🧾
+        - criar atendimento -\ndicas de padrões para\ncriar um atendimento 📅
+        - enviar logo -\nenviar sua logo 🖼️\npara integrar no PDF
+        - enviar pix -\nenviar seu Pix QrCode 💳\npara integrar no PDF
           `.trim();
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
@@ -651,7 +651,6 @@ router.post('/', async (req, res, next) => {
             `
           }
         });
-
 
         // Salva no Supabase para monitorar depois
         await supabase.from('payments').insert([{
