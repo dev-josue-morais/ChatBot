@@ -153,50 +153,43 @@ async function forwardMediaIfAny(msg, value, dest = DESTINO_FIXO) {
 
 async function sendPDFOrcamento(to, orcamento, config) {
   try {
-    // 1️⃣ Gera o PDF usando a config (tipo + opcoes)
-    const pdfPath = await generatePDF(orcamento, config);
+    const { user, ...pdfConfig } = config; // 🔹 extrai o usuário e o restante das configs
+
+    // 1️⃣ Gera o PDF passando o usuário corretamente
+    const pdfPath = await generatePDF(orcamento, user, pdfConfig);
     const filename = path.basename(pdfPath);
 
-    // 2️⃣ Lê o arquivo em buffer
+    // 2️⃣ Lê o arquivo
     const fs = require("fs");
     const pdfBuffer = fs.readFileSync(pdfPath);
 
-    // 3️⃣ Faz upload do PDF para WhatsApp
-    const mediaId = await (async () => {
-      const formData = new FormData();
-      formData.append("file", pdfBuffer, {
-        filename,
-        contentType: "application/pdf"
-      });
-      formData.append("messaging_product", "whatsapp");
+    // 3️⃣ Faz upload para WhatsApp
+    const formData = new FormData();
+    formData.append("file", pdfBuffer, { filename, contentType: "application/pdf" });
+    formData.append("messaging_product", "whatsapp");
 
-      const resp = await axios.post(
-        `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/media`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-            ...formData.getHeaders()
-          }
+    const resp = await axios.post(
+      `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/media`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          ...formData.getHeaders()
         }
-      );
-      return resp.data.id;
-    })();
+      }
+    );
 
+    const mediaId = resp.data.id;
     if (!mediaId) throw new Error("Não foi possível fazer upload do PDF");
 
-    // 4️⃣ Envia o PDF como documento
-    const payload = {
+    // 4️⃣ Envia o documento
+    await sendWhatsAppRaw({
       messaging_product: "whatsapp",
       to,
       type: "document",
-      document: {
-        id: mediaId,
-        filename
-      }
-    };
+      document: { id: mediaId, filename }
+    });
 
-    await sendWhatsAppRaw(payload);
     console.log(`✅ PDF do orçamento ${orcamento.orcamento_numero} enviado para ${to}`);
     return true;
 
