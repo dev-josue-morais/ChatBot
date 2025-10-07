@@ -414,7 +414,7 @@ if (Date.now() - msgTimestamp > 120000) continue;
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "📸 Envie agora um arquivo zip com a imagem quadrada da LOGO em formato PNG." }
+          text: { body: "📸 Agora Envie um arquivo zip com a imagem quadrada da LOGO em formato PNG." }
         });
         await supabase.from('user_sessions').upsert({
           telefone: senderNumber,
@@ -429,7 +429,7 @@ if (Date.now() - msgTimestamp > 120000) continue;
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "💳 Envie agora a imagem quadrada do QR Code Pix em formato JPEG." }
+          text: { body: "💳 Agora Envie a imagem quadrada do QR Code Pix em formato JPEG." }
         });
         await supabase.from('user_sessions').upsert({
           telefone: senderNumber,
@@ -442,15 +442,15 @@ if (Date.now() - msgTimestamp > 120000) continue;
       // --- Comando de ajuda: "opcoes" ou "opções" ---
       if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
         const helpMessage = `
-        📋 Digite um dos comandos disponíveis:
+📋 Digite um dos comandos disponíveis:
 
-        - premium - mostra seu tempo premium 💎
-        - renovar - renovar tempo premium 💎
-        - criar orçamento - dicas de padrões para criar um orçamento 🧾
-        - criar atendimento - dicas de padrões para criar um atendimento 📅
-        - enviar logo - enviar sua logo 🖼️ para integrar no PDF
-        - enviar pix - enviar seu Pix QrCode 💳 para integrar no PDF
-          `.trim();
+- premium - mostra seu tempo premium 💎
+- renovar - renovar tempo premium 💎
+- criar orçamento - dicas de padrões para criar um orçamento 🧾
+- criar atendimento - dicas de padrões para criar um atendimento 📅
+- enviar logo - enviar sua logo 🖼️ para integrar no PDF
+- enviar pix - enviar seu Pix QrCode 💳 para integrar no PDF
+`.trim();
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
@@ -463,38 +463,38 @@ if (Date.now() - msgTimestamp > 120000) continue;
       // --- Comandos principais ---
       if (/^criar or[cç]amento/i.test(myText)) {
         const helpMessage = `
-        1️⃣ **Criar orçamento**
-        criar orçamento para <nome> com número <telefone>
-        Serviços:
-        quantidade serviço valor
-        Materiais:
-        quantidade material unidade valor
-        Descontos:
-        desconto serviço: 4%
-        desconto material: R$5
-        Observações:
-        observação 1
-        observação 2
+1️⃣ **Criar orçamento**
+criar orçamento para <nome> com número <telefone>
+Serviços:
+quantidade serviço valor
+Materiais:
+quantidade material unidade valor
+Descontos:
+desconto serviço: 4%
+desconto material: R$5
+Observações:
+observação 1
+observação 2
 
-        2️⃣ **Editar orçamento**
-        editar orçamento <ID>
-        alterar ou adicionar serviços, materiais, descontos ou observações
+2️⃣ **Editar orçamento**
+editar orçamento <ID>
+alterar ou adicionar serviços, materiais, descontos ou observações
 
-        3️⃣ **Listar orçamentos**
-        listar orçamentos para <telefone> | <nome> | <ID>
+3️⃣ **Listar orçamentos**
+listar orçamentos para <telefone> | <nome> | <ID>
 
-        4️⃣ **Gerar PDF do orçamento**
-        criar pdf do orçamento <ID> tipo "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido de Materiais" | "Proposta Comercial"
-        Opções:
-        ocultar valor dos serviços
-        ocultar materiais
-        remover garantia
-        mostrar assinatura do cliente
-        mostrar assinatura da empresa
+4️⃣ **Gerar PDF do orçamento**
+criar pdf do orçamento <ID> tipo "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido de Materiais" | "Proposta Comercial"
+Opções:
+ocultar valor dos serviços
+ocultar materiais
+remover garantia
+mostrar assinatura do cliente
+mostrar assinatura da empresa
 
-        5️⃣ **Deletar orçamento**
-        deletar orçamento <ID>
-          `;
+5️⃣ **Deletar orçamento**
+deletar orçamento <ID>
+`;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
@@ -506,20 +506,20 @@ if (Date.now() - msgTimestamp > 120000) continue;
 
       if (/^criar atendiment[oó]/i.test(myText)) {
         const helpMessage = `
-        📋 **Criar agenda/atendimento**
+📋 **Criar agenda/atendimento**
 
-        1️⃣ **Criar agenda/atendimento**
-        criar atendimento para <nome> em <data> às <hora>
+1️⃣ **Criar agenda/atendimento**
+criar atendimento para <nome> em <data> às <hora>
 
-        2️⃣ **Editar agenda**
-        editar agenda <ID>
+2️⃣ **Editar agenda**
+editar agenda <ID>
 
-        3️⃣ **Deletar agenda**
-        deletar agenda <ID>
+3️⃣ **Deletar agenda**
+deletar agenda <ID>
 
-        4️⃣ **listar agenda**
-        Lista meus atendimentos do dia <data>
-         `;
+4️⃣ **listar agenda**
+Lista meus atendimentos do dia <data>
+`;
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
