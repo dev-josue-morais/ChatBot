@@ -183,22 +183,24 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       }
 
       // 2️⃣ Prompt para edição
-      prompt = `
-      Você é um assistente de automação pessoal e comercial. O usuário está no fuso GMT-3 (Brasil).
-      A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-      Você recebe e **edita** o JSON existente conforme as instruções do usuario.
-      Responda **apenas com JSON válido**, sem texto extra.
+prompt = `
+Você é um assistente de automação pessoal e comercial.
+O usuário está no fuso GMT-3 (Brasil). A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
+Você recebe e **edita** o JSON existente conforme as instruções do usuário.
+Responda **apenas com JSON válido**, sem texto extra.
 
-      evento atual:
-      ${JSON.stringify(currentData, null, 2)}
+Instruções importantes:
+- converta a data pro formato **UTC ISO 8601** no campo "date" (ex: "2025-10-07T13:00:00Z").
+- Não altere campos que não foram mencionados.
 
-      Mensagem do usuário:
-      "${userMessage}"
+evento atual:
+${JSON.stringify(currentData, null, 2)}
 
-      Retorne o mesmo "evento de agenda" em JSON, **mantendo toda a estrutura original**, 
-      mas ajustando conforme o que o usuário pediu.
-      Não altere campos que não foram mencionados.
-    `;
+Mensagem do usuário:
+"${userMessage}"
+
+Retorne o mesmo "evento de agenda" em JSON, mantendo toda a estrutura original, mas ajustando conforme o que o usuário pediu.
+`;
       break;
     }
     default:
