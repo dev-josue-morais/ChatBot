@@ -1,16 +1,23 @@
 // utils/mercadopago.js
-const mercadopago = require('mercadopago'); // usar require mesmo
+const mercadopago = require('mercadopago'); // require é OK
 const { MP_ACCESS_TOKEN } = require('./config');
 
-// Cria um cliente Mercado Pago
-const mp = new mercadopago.MercadoPago(MP_ACCESS_TOKEN, {
-  locale: 'pt-BR'
-});
+// Define o token globalmente
+mercadopago.configurations.setAccessToken(MP_ACCESS_TOKEN);
 
+// Cria preferência de pagamento (Checkout Pro)
 async function createCheckoutPreference(amount, description, phone) {
-  const preference = {
-    items: [{ title: description, quantity: 1, unit_price: amount }],
-    payer: { phone: { number: phone } },
+  const preferenceData = {
+    items: [
+      {
+        title: description,
+        quantity: 1,
+        unit_price: amount
+      }
+    ],
+    payer: {
+      phone: { number: phone }
+    },
     back_urls: {
       success: "https://seusite.com/sucesso",
       failure: "https://seusite.com/falha",
@@ -20,7 +27,8 @@ async function createCheckoutPreference(amount, description, phone) {
     notification_url: "https://chatbot-6viu.onrender.com/mp-web"
   };
 
-  return await mp.preferences.create(preference);
+  const preference = await mercadopago.preferences.create(preferenceData);
+  return preference.body; // aqui vem o link do CheckoutPro em preference.body.init_point
 }
 
 module.exports = { createCheckoutPreference };
