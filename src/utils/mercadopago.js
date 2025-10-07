@@ -2,10 +2,10 @@
 const MercadoPago = require('mercadopago');
 const { MP_ACCESS_TOKEN } = require('./config');
 
-const mp = new MercadoPago({
-  access_token: MP_ACCESS_TOKEN,
-  locale: 'pt-BR'
-});
+// const mp = new MercadoPago({
+//   access_token: MP_ACCESS_TOKEN,
+//   locale: 'pt-BR'
+// });
 
 async function createCheckoutPreference(amount, description, phone) {
   const preferenceData = {
