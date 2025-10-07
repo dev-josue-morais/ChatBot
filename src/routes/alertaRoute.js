@@ -4,11 +4,12 @@ const { getNowBRT, formatLocal } = require('../utils/utils');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
-const { DESTINO_FIXO } = require('../utils/config');
 
 router.get('/', async (req, res, next) => {
   try {
     const nowBRT = getNowBRT();
+
+    // Busca todos os eventos ainda não notificados e futuros
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
@@ -25,30 +26,45 @@ router.get('/', async (req, res, next) => {
       return res.send('Nenhum evento encontrado');
     }
 
-    for (let event of events) {
-      const nowBRT = getNowBRT();
-      const eventDateBRT = DateTime.fromISO(event.date, { zone: 'utc' }).setZone('America/Sao_Paulo');
-      const diffMinutes = eventDateBRT.diff(nowBRT, 'minutes').minutes;
+    let notifiedCount = 0;
 
+    for (let event of events) {
+      const now = getNowBRT();
+      const eventDateBRT = DateTime.fromISO(event.date, { zone: 'utc' }).setZone('America/Sao_Paulo');
+      const diffMinutes = eventDateBRT.diff(now, 'minutes').minutes;
+
+      // Envia se estiver dentro da janela de lembrete
       if (diffMinutes <= (event.reminder_minutes || 30) && diffMinutes >= 0) {
+        const userPhone = event.user_telefone;
+
+        if (!userPhone) {
+          console.warn(`Evento ${event.id} sem telefone de usuário vinculado.`);
+          continue;
+        }
+
+        // Envia mensagem ao dono do evento
         await sendWhatsAppMessage(
-          DESTINO_FIXO,
-          `⏰ Lembrete: "${event.title}" às ${formatLocal(event.date)}`
+          userPhone,
+          `⏰ Lembrete: "ID ${event.event_numero} ${event.title}" às ${formatLocal(event.date)}`
         );
 
+        // Marca como notificado
         await supabase
           .from('events')
           .update({ notified: true })
           .eq('id', event.id);
 
-        console.log(`Evento "${event.title}" notificado com sucesso.`);
+        console.log(`✅ Evento ID ${event.event_numero} "${event.title}" notificado para ${userPhone}`);
+        notifiedCount++;
       }
     }
 
-    res.send(`✅ Eventos processados: ${events.length}`);
+    res.send(`✅ Eventos processados: ${notifiedCount}`);
   } catch (err) {
+    console.error('Erro no lembrete de eventos:', err);
     next(err);
   }
 });
 
 module.exports = router;
+return `✅ Evento  criado: "${data[0].title}" em ${formatLocal(data[0].date)}`;
