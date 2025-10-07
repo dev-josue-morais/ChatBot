@@ -2,10 +2,6 @@
 const mercadopago = require('mercadopago');
 const { MP_ACCESS_TOKEN } = require('./config');
 
-// Configura o access token
-mercadopago.configurations.setAccessToken(MP_ACCESS_TOKEN);
-
-// Cria preferência de pagamento (CheckoutPro)
 async function createCheckoutPreference(amount, description, phone) {
   const preferenceData = {
     items: [
@@ -23,11 +19,10 @@ async function createCheckoutPreference(amount, description, phone) {
       failure: "https://seusite.com/falha",
       pending: "https://seusite.com/pendente"
     },
-    auto_return: "approved",
-    notification_url: "https://chatbot-6viu.onrender.com/mp-web"
+    auto_return: "approved"
   };
 
-  const preference = await mercadopago.preferences.create(preferenceData);
+  const preference = await mercadopago.preferences.create(preferenceData, { access_token: MP_ACCESS_TOKEN });
   return preference.response.init_point; // Link do CheckoutPro
 }
 
