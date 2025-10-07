@@ -26,7 +26,7 @@ async function createCheckoutPreference(amount, description, phone) {
   };
 
   const preference = await mercadopago.preferences.create(preferenceData);
-  return preference.body; // init_point → link do CheckoutPro
+  return preference.body;
 }
 
-module.exports = { createCheckoutPreference };
+module.exports = createCheckoutPreference;

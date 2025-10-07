@@ -8,7 +8,7 @@ const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO, WHATSAPP_TOKEN } = require('../utils/config');
 const AdmZip = require("adm-zip");
 const sharp = require("sharp");
-const { createCheckoutPayment } = require('../utils/mercadopago');
+const createCheckoutPreference = require('../utils/mercadopago');
 
 const questions = [
   { key: "user_name", text: "📛 Qual é o seu nome completo?" },
@@ -623,7 +623,7 @@ router.post('/', async (req, res, next) => {
       }
       // --- Comando "renovar" ---
       if (/^renovar$/i.test(myText) && userData) {
-        const checkoutUrl = await createCheckoutPayment(0.10, `Renovação Premium - ${senderNumber}`);
+        const checkoutUrl = await createCheckoutPreference(0.10, `Renovação Premium - ${senderNumber}`);
 
         if (!checkoutUrl) {
           await sendWhatsAppRaw({
