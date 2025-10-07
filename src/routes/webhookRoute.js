@@ -677,7 +677,7 @@ if (Date.now() - msgTimestamp > 120000) continue;
 // Ignora mensagens sem conteúdo relevante ou com menos de 2 palavras
 if (
   (!myText && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) ||
-  (myText && myText.split(/\s+/).length < 2)
+  (myText && myText.split(/\s+/).length < 3)
 ) {
   continue;
 }
