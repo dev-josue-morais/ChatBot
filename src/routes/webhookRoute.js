@@ -674,8 +674,13 @@ if (Date.now() - msgTimestamp > 120000) continue;
       //   });
       // }
 
-// Ignora mensagens sem conteúdo relevante
-  if (!msg.text && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) continue;
+// Ignora mensagens sem conteúdo relevante ou com menos de 2 palavras
+if (
+  (!myText && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) ||
+  (myText && myText.split(/\s+/).length < 2)
+) {
+  continue;
+}
 
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText, senderNumber);
