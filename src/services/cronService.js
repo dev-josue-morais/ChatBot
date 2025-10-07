@@ -26,7 +26,17 @@ function scheduleDailySummary() {
         return;
       }
 
-      for (const user of users) {
+      // Filtra apenas usuários com número válido
+      const validUsers = users.filter(u => 
+        u.user_telefone && /^\d{10,13}$/.test(u.user_telefone)
+      );
+
+      if (validUsers.length === 0) {
+        console.log('Nenhum usuário com telefone válido encontrado.');
+        return;
+      }
+
+      for (const user of validUsers) {
         const phone = user.user_telefone;
 
         // Busca eventos do usuário para o dia
@@ -46,12 +56,18 @@ function scheduleDailySummary() {
           console.log(`Sem eventos hoje para ${phone}.`);
           continue;
         }
+
         const list = events
           .map(e => `- ID ${e.event_numero} ${e.title} às ${formatLocal(e.date)}`)
           .join('\n');
 
-        await sendWhatsAppMessage(phone, `📅 Seus eventos de hoje:\n${list}`);
-        console.log(`✅ Resumo diário enviado para ${phone}`);
+        // Envio protegido com try/catch individual
+        try {
+          await sendWhatsAppMessage(phone, `📅 Seus eventos de hoje:\n${list}`);
+          console.log(`✅ Resumo diário enviado para ${phone}`);
+        } catch (sendError) {
+          console.error(`❌ Erro ao enviar mensagem para ${phone}:`, sendError);
+        }
       }
 
     } catch (err) {
