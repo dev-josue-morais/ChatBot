@@ -2,33 +2,43 @@
 const axios = require('axios');
 const { MP_ACCESS_TOKEN } = require('./config');
 const { v4: uuidv4 } = require('uuid');
+import mercadopago from "mercadopago";
 
-async function createPixPayment(amount, description) {
+// Configure suas credenciais de PRODUÇÃO
+mercadopago.configure({
+  access_token: MP_ACCESS_TOKEN
+});
+
+async function createCheckoutPayment(value, description) {
   try {
-    const response = await axios.post(
-      'https://api.mercadopago.com/v1/payments',
-      {
-        transaction_amount: amount,
-        description,
-        payment_method_id: 'pix',
-        payer: { email: 'pagador@exemplo.com' },
-        notification_url: "https://chatbot-6viu.onrender.com/mp-web"
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': uuidv4()
+    const preference = await mercadopago.preferences.create({
+      items: [
+        {
+          title: description,
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: value
         }
-      }
-    );
+      ],
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "ticket" } // opcional: remove boleto se quiser só Pix e cartão
+        ],
+      },
+      back_urls: {
+        success: "https://seusite.com/sucesso",
+        failure: "https://seusite.com/falha",
+        pending: "https://seusite.com/pendente"
+      },
+      auto_return: "approved",
+      notification_url: "https://chatbot-6viu.onrender.com/mp-web"
+    });
 
-    const { id, point_of_interaction } = response.data;
-    return { id, qr_code: point_of_interaction.transaction_data.qr_code };
-  } catch (err) {
-    console.error('Erro ao criar pagamento Pix:', err.response?.data || err.message);
+    return preference.body.init_point; // Link do Checkout Pro
+  } catch (error) {
+    console.error("Erro ao criar pagamento CheckoutPro:", error);
     return null;
   }
 }
 
-module.exports = { createPixPayment };
+module.exports = { createCheckoutPayment };

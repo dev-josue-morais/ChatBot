@@ -18,6 +18,7 @@
     "form-data": "^4.0.4",
     "html-pdf-node": "^1.0.8",
     "luxon": "^3.7.2",
+    "mercadopago": "^2.9.0",
     "node-cron": "^4.2.1",
     "openai": "^5.19.1",
     "pdf-lib": "^1.17.1",

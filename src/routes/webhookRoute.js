@@ -8,7 +8,7 @@ const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO, WHATSAPP_TOKEN } = require('../utils/config');
 const AdmZip = require("adm-zip");
 const sharp = require("sharp");
-const { createPixPayment } = require('../utils/mercadopago');
+const { createCheckoutPayment } = require('../utils/mercadopago');
 
 const questions = [
   { key: "user_name", text: "📛 Qual é o seu nome completo?" },
@@ -623,18 +623,20 @@ router.post('/', async (req, res, next) => {
       }
       // --- Comando "renovar" ---
       if (/^renovar$/i.test(myText) && userData) {
-        const payment = await createPixPayment(0.10, `Renovação Premium - ${senderNumber}`);
+        const checkoutUrl = await createCheckoutPayment(0.10, `Renovação Premium - ${senderNumber}`);
 
-        if (!payment) {
+        if (!checkoutUrl) {
           await sendWhatsAppRaw({
             messaging_product: "whatsapp",
             to: senderNumber,
             type: "text",
-            text: { body: "⚠️ Não foi possível gerar o Pix no momento. Tente novamente em instantes." }
+            text: {
+              body: "⚠️ Não foi possível gerar o link de pagamento no momento. Tente novamente em instantes."
+            }
           });
           continue;
         }
-        console.log(payment.qr_code)
+
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: senderNumber,
@@ -643,24 +645,14 @@ router.post('/', async (req, res, next) => {
             body: `
             💎 *Renovação Premium (R$15,00)*
 
-            Envie o pagamento via Pix usando o código:
+            Clique no link abaixo para efetuar o pagamento de forma segura pelo *Mercado Pago* 👇
 
-            🔢 *Código Copia e Cola:*
-            ${payment.qr_code} 
+            🔗 ${checkoutUrl}
 
             Após o pagamento, o sistema confirmará automaticamente. ✅
-            `
+             `
           }
         });
-
-        // Salva no Supabase para monitorar depois
-        await supabase.from('payments').insert([{
-          user_telefone: senderNumber,
-          mp_payment_id: payment.id,
-          status: 'pending'
-        }]);
-
-        continue;
       }
 
       // --- Processa comandos normais ---
