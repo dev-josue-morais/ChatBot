@@ -190,7 +190,7 @@ Você recebe e **edita** o JSON existente conforme as instruções do usuário.
 Responda **apenas com JSON válido**, sem texto extra.
 
 Instruções importantes:
-- converta a data pro formato **UTC ISO 8601** no campo "date" (ex: "2025-10-07T13:00:00Z").
+- converta "date" pro formato **UTC ISO 8601**
 - Não altere campos que não foram mencionados.
 
 evento atual:
