@@ -44,11 +44,10 @@ async function processCommand(userMessage, userPhone) {
 
     if (modulo === 'agenda' && action === 'delete' && id) {
       const result = await handleAgendaCommand({
-        modulo,
-        action,
-        id,
-        userPhone
-      });
+      const result = await handleAgendaCommand(
+       { modulo, action, id },
+       userPhone
+       );
       return result;
     } else {
       const gptData = await handleGPTCommand(userMessage, modulo, action, id);
