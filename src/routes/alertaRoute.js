@@ -67,4 +67,3 @@ router.get('/', async (req, res, next) => {
 });
 
 module.exports = router;
-return `✅ Evento  criado: "${data[0].title}" em ${formatLocal(data[0].date)}`;
