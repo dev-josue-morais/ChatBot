@@ -47,7 +47,7 @@ async function processCommand(userMessage, userPhone) {
         modulo,
         action,
         id,
-        userPhone: senderNumber
+        userPhone
       });
       return result;
     } else {
