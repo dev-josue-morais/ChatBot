@@ -622,6 +622,16 @@ router.post('/', async (req, res, next) => {
         continue;
       }
       // --- Comando "renovar" ---
+      // if (/^renovar$/i.test(myText) && userData) {
+      //   await sendWhatsAppRaw({
+      //     messaging_product: "whatsapp",
+      //     to: senderNumber,
+      //     type: "text",
+      //     text: { body: "Comando nao integrado ainda\nPor favor envie um pix de R$15,00 para 64992869608\nE o comprovante para o numero (064) 99286-9608" }
+      //   });
+      //   continue;
+      // }
+      // --- Comando "renovar" ---
       if (/^renovar$/i.test(myText) && userData) {
         const checkoutUrl = await createCheckoutPreference(0.10, `Renovação Premium - ${senderNumber}`);
 
@@ -644,11 +654,8 @@ router.post('/', async (req, res, next) => {
           text: {
             body: `
             💎 *Renovação Premium (R$15,00)*
-
             Clique no link abaixo para efetuar o pagamento de forma segura pelo *Mercado Pago* 👇
-
             🔗 ${checkoutUrl}
-
             Após o pagamento, o sistema confirmará automaticamente. ✅
              `
           }
