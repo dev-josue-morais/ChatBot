@@ -43,7 +43,6 @@ async function processCommand(userMessage, userPhone) {
     const { modulo, action, id } = classification;
 
     if (modulo === 'agenda' && action === 'delete' && id) {
-      const result = await handleAgendaCommand({
       const result = await handleAgendaCommand(
        { modulo, action, id },
        userPhone
