@@ -3,7 +3,9 @@ const { MP_ACCESS_TOKEN } = require('./config');
 const mercadopago = require('mercadopago');
 
 // Configure suas credenciais de PRODUÇÃO
-mercadopago.configurations.setAccessToken(MP_ACCESS_TOKEN);
+mercadopago.configure({
+  access_token: MP_ACCESS_TOKEN
+});
 
 async function createCheckoutPayment(value, description) {
   try {
