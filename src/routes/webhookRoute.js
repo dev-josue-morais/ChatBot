@@ -113,13 +113,25 @@ router.post('/', async (req, res, next) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
+const processedIds = new Set();
+
     for (let msg of messages) {
       const contact = value.contacts?.[0];
       if (!contact) continue;
-
-      const senderName = contact.profile?.name || 'Usuário';
+ if (processedIds.has(msg.id)) continue;
+  processedIds.add(msg.id);
+const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
       if (!senderNumber) continue;
+
+const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, ''); // número do bot
+
+// Ignora mensagens enviadas pelo próprio bot
+if (senderNumber === botNumber) continue;
+
+// Ignora mensagens muito antigas (mais de 60s)
+const msgTimestamp = Number(msg.timestamp) * 1000;
+if (Date.now() - msgTimestamp > 60000) continue;
 
       const myText = extractTextFromMsg(msg)?.trim();
       await supabase.rpc('cleanup_old_sessions');
@@ -661,6 +673,9 @@ router.post('/', async (req, res, next) => {
       //     }
       //   });
       // }
+
+// Ignora mensagens sem conteúdo relevante
+  if (!msg.text && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) continue;
 
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText, senderNumber);
