@@ -1,7 +1,5 @@
 // utils/mercadopago.js
-const axios = require('axios');
 const { MP_ACCESS_TOKEN } = require('./config');
-const { v4: uuidv4 } = require('uuid');
 import mercadopago from "mercadopago";
 
 // Configure suas credenciais de PRODUÇÃO
