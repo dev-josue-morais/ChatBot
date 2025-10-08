@@ -14,7 +14,7 @@ function scheduleDailySummary() {
       // Busca todos os usuários com telefone cadastrado
       const { data: users, error: userError } = await supabase
         .from('users')
-        .select('user_telefone');
+        .select('telefone');
 
       if (userError) {
         console.error('Erro ao buscar usuários:', userError);
