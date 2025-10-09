@@ -59,8 +59,7 @@ async function handleOrcamentoCommand(command, userPhone) {
             case 'edit': {
                 if (!command.orcamento_numero)
                     return '⚠️ É necessário informar o ID do orçamento para editar.';
-  // 👇 Log completo do JSON vindo do GPT
-  console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
+  // console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
 
                 const validFields = {
                     nome_cliente: command.nome_cliente,
