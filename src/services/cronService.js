@@ -11,7 +11,7 @@ function scheduleDailySummary() {
 //             │ │ │ │ ┌ dia da semana (0-6) [0 = domingo]
 //             0 * * * *
 
-  cron.schedule('0 * * * *', async () => {
+  cron.schedule('0,10,20,30,40,50 * * * *', async () => {
     try {
       console.log('⏰ Rodando cron job de resumo diário...');
 
@@ -33,7 +33,7 @@ function scheduleDailySummary() {
         .select('*')
         .gte('date', start)
         .lte('date', end)
-        .eq('notified', false); // mantive o filtro; se preferir buscar todos, remova esta linha
+        .eq('notified', false);
 
       if (eventError) {
         console.error('Erro ao buscar eventos:', eventError);
