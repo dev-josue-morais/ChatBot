@@ -4,20 +4,16 @@ const supabase = require('./supabase');
 const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
-// estrutura:  ┌──────── minuto (0-59)
-//             │ ┌────── hora (0-23)
-//             │ │ ┌──── dia do mês (1-31)
-//             │ │ │ ┌── mês (1-12)
-//             │ │ │ │ ┌ dia da semana (0-6) [0 = domingo]
-//             0 * * * *
-
+  // Estrutura do cron: minuto hora diaDoMes mês diaDaSemana
   cron.schedule('0,10,20,30,40,50 * * * *', async () => {
     try {
       console.log('⏰ Rodando cron job de resumo diário...');
 
-      const start = getNowBRT().startOf('day').toUTC().toISO();
-      const end = getNowBRT().endOf('day').toUTC().toISO();
+      // ✅ Horário local de Brasília
+      const start = getNowBRT().startOf('day').toISO(); // ISO sem Z
+      const end = getNowBRT().endOf('day').toISO();
 
+      // Buscar usuários
       const { data: users, error: userError } = await supabase
         .from('users')
         .select('telefone');
@@ -28,6 +24,7 @@ function scheduleDailySummary() {
       }
       if (!users || users.length === 0) return;
 
+      // Buscar eventos do dia, horário local
       const { data: events, error: eventError } = await supabase
         .from('events')
         .select('*')
