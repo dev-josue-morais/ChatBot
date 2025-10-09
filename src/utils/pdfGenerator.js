@@ -98,7 +98,7 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
     `;
 }
 
-function renderObservacoes(orcamento, opcoes) {
+function renderObservacoes(orcamento, opcoes, tipo) {
     if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.descricao_atividades) && orcamento.descricao_atividades.length)))
         return '';
 
@@ -107,6 +107,11 @@ function renderObservacoes(orcamento, opcoes) {
         "Todo o material é de responsabilidade do cliente.",
         "Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês."
     ].filter(Boolean);
+
+    // ✅ Se o tipo for "Orçamento", adiciona a observação extra
+    if (tipo === "Orçamento") {
+        defaultObs.push("Validade do orçamento 7 dias.");
+    }
 
     const gptObs = Array.isArray(orcamento.descricao_atividades)
         ? orcamento.descricao_atividades.filter(Boolean)
@@ -196,8 +201,8 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
         ${renderServicos(orcamento.servicos, opcoes)}
         ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
-        ${renderObservacoes(orcamento, opcoes)}
-        
+        ${renderObservacoes(orcamento, opcoes, tipo)}
+
         <!-- PIX -->
         <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px;">
           ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
