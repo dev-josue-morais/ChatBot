@@ -68,6 +68,10 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       Retorne o mesmo orçamento em JSON, **mantendo toda a estrutura original nao crie colunas**, 
       mas ajustando conforme o que o usuário pediu (adicionar/remover itens, alterar quantidades, etc.).
       a coluna "descricao_atividades: []", corresponde a "observações".
+alguns campos que podem estar vazios será salvo nesse formato 
+        "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null, // de 0 a 10 observações para o cliente. 
+        "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+        "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }]
       Não altere campos que não foram mencionados.
       `;
 
@@ -88,10 +92,6 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       }
 
       importante um dos campos e obrigatorio id,nome_cliente ou telefone_cliente.
-alguns campos que podem estar vazios será salvo nesse formato 
-        "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null, // de 0 a 10 observações para o cliente. 
-        "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-        "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }]
       Texto: """${userMessage}"""
       `;
       break;
