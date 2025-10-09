@@ -4,7 +4,7 @@ const supabase = require('./supabase');
 const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
-  cron.schedule('0 7 * * *', async () => {
+  cron.schedule('0 * * * *', async () => {
     try {
       console.log('⏰ Rodando cron job diário das 7h...');
 
@@ -26,24 +26,14 @@ function scheduleDailySummary() {
         return;
       }
 
-      // Filtra apenas usuários com número válido
-      const validUsers = users.filter(u => 
-        u.user_telefone && /^\d{10,13}$/.test(u.user_telefone)
-      );
-
-      if (validUsers.length === 0) {
-        console.log('Nenhum usuário com telefone válido encontrado.');
-        return;
-      }
-
-      for (const user of validUsers) {
-        const phone = user.user_telefone;
+for (const user of users) {
+  const phone = user.telefone;
 
         // Busca eventos do usuário para o dia
         const { data: events, error: eventError } = await supabase
           .from('events')
           .select('*')
-          .eq('user_telefone', phone)
+          .eq('telefone', phone)
           .gte('date', start)
           .lte('date', end);
 
