@@ -225,7 +225,13 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
         </html>
         `;
 
-        const pdfPath = `/tmp/orcamento_${orcamento.orcamento_numero}.pdf`;
+const tipoSlug = (documentoTipo || "Orçamento")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\s+/g, "_")
+  .replace(/[^a-zA-Z0-9_-]/g, "");
+
+const pdfPath = `/tmp/${tipoSlug}_${orcamento.orcamento_numero || "sem_numero"}.pdf`;
         await pdf.generatePdf({ content: htmlContent }, { path: pdfPath });
         return pdfPath;
 
