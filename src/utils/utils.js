@@ -5,15 +5,13 @@ const { DateTime } = require("luxon");
 function getNowBRT() {
   return DateTime.now().setZone("America/Sao_Paulo");
 }
+
+// Formata uma data para dd/MM/yy (GMT-3)
 const formatarData = (dataString) => {
   if (!dataString) return '';
 
-  const data = new Date(dataString);
-  const dia = String(data.getDate()).padStart(2, '0');
-  const mes = String(data.getMonth() + 1).padStart(2, '0');
-  const ano = String(data.getFullYear()).slice(-2);
-
-  return `${dia}/${mes}/${ano}`;
+  const data = DateTime.fromISO(dataString, { zone: "America/Sao_Paulo" });
+  return data.toFormat("dd/MM/yy");
 }
 
 // Formata número de telefone brasileiro
@@ -30,10 +28,10 @@ function formatPhone(num) {
   return `(0${ddd}) ${formattedRest}`;
 }
 
-// Formata datas do UTC para fuso horário de Brasília
-function formatLocal(utcDate) {
-  return DateTime.fromISO(utcDate, { zone: "utc" })
-    .setZone("America/Sao_Paulo")
+// Formata datas mantendo GMT-3 (sem conversão UTC)
+function formatLocal(brDateString) {
+  if (!brDateString) return '';
+  return DateTime.fromISO(brDateString, { zone: "America/Sao_Paulo" })
     .toFormat("dd/MM/yyyy HH:mm");
 }
 
