@@ -7,13 +7,13 @@ const { DateTime } = require('luxon');
 
 router.get('/', async (req, res, next) => {
   try {
-    const nowBRT = getNowBRT();
+    const nowBRT = getNowBRT(); // horário atual GMT-3
 
-    // Busca todos os eventos ainda não notificados e futuros
+    // Busca todos os eventos ainda não notificados e futuros (hora local)
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .gte('date', nowBRT.toUTC().toISO())
+      .gte('date', nowBRT.toISO()) // removido .toUTC()
       .eq('notified', false);
 
     if (error) {
@@ -29,8 +29,8 @@ router.get('/', async (req, res, next) => {
     let notifiedCount = 0;
 
     for (let event of events) {
-      const now = getNowBRT();
-      const eventDateBRT = DateTime.fromISO(event.date, { zone: 'utc' }).setZone('America/Sao_Paulo');
+      const now = getNowBRT(); // hora local
+      const eventDateBRT = DateTime.fromISO(event.date, { zone: 'America/Sao_Paulo' }); // mantém GMT-3
       const diffMinutes = eventDateBRT.diff(now, 'minutes').minutes;
 
       // Envia se estiver dentro da janela de lembrete
