@@ -88,6 +88,10 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       }
 
       importante um dos campos e obrigatorio id,nome_cliente ou telefone_cliente.
+alguns campos que podem estar vazios será salvo nesse formato 
+        "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null, // de 0 a 10 observações para o cliente. 
+        "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+        "servicos": [{ "titulo": "string", "quantidade": número, "valor": número }]
       Texto: """${userMessage}"""
       `;
       break;
