@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { getNowBRT, formatLocal } = require('../utils/utils');
-const supabase = require('./supabase');
+const supabase = require('../services/supabase');
 const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
