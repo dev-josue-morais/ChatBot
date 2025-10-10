@@ -69,7 +69,10 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       - Campos vazios podem ser null.
       - Não crie novas colunas.
       - "descricao_atividades" corresponde a "observacoes".
-
+      - esses campos podem estar vazios use esse formato 
+      "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null,
+      "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
+      "servicos": [{"titulo": "string", "quantidade": número, "valor": número}],
       Retorne o orçamento atualizado.
       `;
       break;
@@ -127,7 +130,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
         "id": número,
         "tipo": "Orçamento" (default) | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial",
         "opcoes": {
-          "listaServicos": true,          // se tipo = "Pedido" usar false
+          "listaServicos": true, // se tipo = "Pedido" usar false
           "listaMateriais": true,
           "ocultarValorServicos": false,
           "garantia": true,
@@ -154,7 +157,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       {
         "modulo": "agenda",
         "action": "create",
-        "title": "Nome do cliente ou local",
+        "title": "string" // use Nome do cliente ou local,
         "datetime": "Data/hora ISO 8601 no GMT-3",
         "reminder_minutes": número (default 30)
       }
@@ -177,9 +180,9 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       {
         "modulo": "agenda",
         "action": "list",
-        "title": "Nome do cliente/local ou null",
-        "start_date": "Data/hora início ISO 8601 no GMT-3 (obrigatória)",
-        "end_date": "Data/hora fim ISO 8601 no GMT-3 (obrigatória)"
+        "title": "string" Nome do cliente/local ou null,
+        "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
+        "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
       }
 
       Texto: """${userMessage}"""
@@ -211,7 +214,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       Instruções:
       - Mantenha a estrutura original do evento.
       - Atualize apenas os campos pedidos pelo usuário.
-      - Não converta para UTC, mantenha em GMT-3.
+      - data em ISO 8601 GMT-3.
 
       Evento atual:
       ${JSON.stringify(currentData, null, 2)}
