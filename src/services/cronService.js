@@ -5,7 +5,7 @@ const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
   // Executa a cada 10 minutos
-  cron.schedule('0,10,20,30,40,50 * * * *', async () => {
+  cron.schedule('0,5,10,15,20,25,30,35,40,45,50,55 * * * *', async () => {
     try {
       console.log('\n⏰ Rodando cron job de resumo diário...');
       const now = getNowBRT();
