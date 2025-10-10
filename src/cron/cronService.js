@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { getNowBRT, formatLocal } = require('../utils/utils');
 const supabase = require('../services/supabase');
-const { sendWhatsAppMessage } = require('./whatsappService');
+const { sendWhatsAppMessage } = require('../services/whatsappService');
 
 function scheduleDailySummary() {
   cron.schedule('0 7 * * *', async () => {
