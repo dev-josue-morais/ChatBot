@@ -10,8 +10,8 @@ function scheduleDailySummary() {
       const now = getNowBRT();
       console.log(`🕒 Horário atual (BRT): ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`);
 
-      const start = now.startOf('day').toISO();
-      const end = now.endOf('day').toISO();
+      const start = now.startOf('day').toUTC().toISO();
+      const end = now.endOf('day').toUTC().toISO();
 
       const { data: users, error: userError } = await supabase
         .from('users')
