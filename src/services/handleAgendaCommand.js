@@ -44,15 +44,17 @@ async function handleAgendaCommand(command, userPhone) {
     switch (command.action) {
       // 🔹 Criar evento
       case 'create': {
-        const { data, error } = await supabase
-          .from('events')
-          .insert([{
-            title: command.title,
-            date: command.datetime,
-            reminder_minutes: command.reminder_minutes || 30,
-            user_telefone: userPhone
-          }])
-          .select('event_numero, title, date');
+  const { data, error } = await supabase
+    .from('events')
+    .insert([{
+      title: command.title,
+      date: DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
+        .toUTC()
+        .toISO(),
+      reminder_minutes: command.reminder_minutes || 30,
+      user_telefone: userPhone
+    }])
+    .select('event_numero, title, date');
 
         if (error) {
           console.error('Erro ao criar evento:', error);
@@ -91,14 +93,14 @@ async function handleAgendaCommand(command, userPhone) {
       case 'edit': {
         if (!command.id) return '⚠️ É necessário informar o ID do evento para editar.';
 
-        const updates = {
-          title: command.title,
-          date: DateTime.fromISO(command.date, { zone: 'America/Sao_Paulo' })
-            .toISO({ includeOffset: false }),
-          reminder_minutes: command.reminder_minutes ?? 30,
-          notified: command.notified ?? false
-        };
-
+const updates = {
+  title: command.title,
+  date: DateTime.fromISO(command.date, { zone: 'America/Sao_Paulo' })
+    .toUTC()
+    .toISO(),
+  reminder_minutes: command.reminder_minutes ?? 30,
+  notified: command.notified ?? false
+};
         const { data, error } = await supabase
           .from('events')
           .update(updates)
