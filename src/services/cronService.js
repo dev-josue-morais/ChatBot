@@ -7,16 +7,12 @@ function scheduleDailySummary() {
   // Executa a cada 10 minutos
   cron.schedule('0,5,10,15,20,25,30,35,40,45,50,55 * * * *', async () => {
     try {
-      console.log('\n⏰ Rodando cron job de resumo diário...');
       const now = getNowBRT();
       console.log(`🕒 Horário atual (BRT): ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`);
 
-      // Intervalo do dia (local)
       const start = now.startOf('day').toISO();
       const end = now.endOf('day').toISO();
-      console.log(`📅 Buscando eventos entre:\n   → Início: ${start}\n   → Fim: ${end}`);
 
-      // Buscar usuários
       const { data: users, error: userError } = await supabase
         .from('users')
         .select('telefone');
