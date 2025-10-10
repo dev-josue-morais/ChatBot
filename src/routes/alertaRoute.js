@@ -13,7 +13,7 @@ router.get('/', async (req, res, next) => {
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .gte('date', nowBRT.toISO()) // removido .toUTC()
+      .gte('date', nowBRT.toUTC().toISO())
       .eq('notified', false);
 
     if (error) {
