@@ -4,14 +4,17 @@ const supabase = require('./supabase');
 const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
-  // Estrutura do cron: minuto hora diaDoMes mês diaDaSemana
+  // Executa a cada 10 minutos
   cron.schedule('0,10,20,30,40,50 * * * *', async () => {
     try {
-      console.log('⏰ Rodando cron job de resumo diário...');
+      console.log('\n⏰ Rodando cron job de resumo diário...');
+      const now = getNowBRT();
+      console.log(`🕒 Horário atual (BRT): ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`);
 
-      // ✅ Horário local de Brasília
-      const start = getNowBRT().startOf('day').toISO(); // ISO sem Z
-      const end = getNowBRT().endOf('day').toISO();
+      // Intervalo do dia (local)
+      const start = now.startOf('day').toISO();
+      const end = now.endOf('day').toISO();
+      console.log(`📅 Buscando eventos entre:\n   → Início: ${start}\n   → Fim: ${end}`);
 
       // Buscar usuários
       const { data: users, error: userError } = await supabase
@@ -19,12 +22,14 @@ function scheduleDailySummary() {
         .select('telefone');
 
       if (userError) {
-        console.error('Erro ao buscar usuários:', userError);
+        console.error('❌ Erro ao buscar usuários:', userError);
         return;
       }
+
+      console.log(`👥 Usuários encontrados: ${users?.length || 0}`);
       if (!users || users.length === 0) return;
 
-      // Buscar eventos do dia, horário local
+      // Buscar eventos do dia (em horário local)
       const { data: events, error: eventError } = await supabase
         .from('events')
         .select('*')
@@ -33,15 +38,26 @@ function scheduleDailySummary() {
         .eq('notified', false);
 
       if (eventError) {
-        console.error('Erro ao buscar eventos:', eventError);
+        console.error('❌ Erro ao buscar eventos:', eventError);
         return;
       }
-      if (!events || events.length === 0) return;
+
+      console.log(`📆 Eventos retornados: ${events?.length || 0}`);
+      if (!events || events.length === 0) {
+        console.log('⚠️ Nenhum evento encontrado para hoje.');
+        return;
+      }
+
+      // Exibir eventos brutos
+      console.log('🧾 Eventos recebidos do Supabase:');
+      console.dir(events, { depth: null });
 
       let enviados = 0;
       for (const user of users) {
         const phone = user.telefone;
         const userEvents = events.filter(e => e.user_telefone === phone);
+
+        console.log(`\n📱 Usuário ${phone} — eventos encontrados: ${userEvents.length}`);
 
         if (!userEvents.length) continue;
 
@@ -60,7 +76,7 @@ function scheduleDailySummary() {
 
       console.log(`📨 Resumo diário concluído — mensagens enviadas: ${enviados}`);
     } catch (err) {
-      console.error('Erro no cron job diário:', err);
+      console.error('💥 Erro no cron job diário:', err);
     }
   }, { timezone: 'America/Sao_Paulo' });
 }
