@@ -11,4 +11,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Chamar rota de alerta
-        run: curl -s https://chatbot-6viu.onrender.com/cron/alerta
+        run: curl -s https://chatbot-6viu.onrender.com/live
