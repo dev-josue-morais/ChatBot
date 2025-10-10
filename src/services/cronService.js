@@ -4,11 +4,9 @@ const supabase = require('./supabase');
 const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
-  // Executa a cada 10 minutos
   cron.schedule('0,5,10,15,20,25,30,35,40,45,50,55 * * * *', async () => {
     try {
       const now = getNowBRT();
-      console.log(`🕒 Horário atual (BRT): ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`);
 
       const start = now.startOf('day').toUTC().toISO();
       const end = now.endOf('day').toUTC().toISO();
@@ -22,10 +20,8 @@ function scheduleDailySummary() {
         return;
       }
 
-      console.log(`👥 Usuários encontrados: ${users?.length || 0}`);
       if (!users || users.length === 0) return;
 
-      // Buscar eventos do dia (em horário local)
       const { data: events, error: eventError } = await supabase
         .from('events')
         .select('*')
@@ -38,9 +34,7 @@ function scheduleDailySummary() {
         return;
       }
 
-      console.log(`📆 Eventos retornados: ${events?.length || 0}`);
       if (!events || events.length === 0) {
-        console.log('⚠️ Nenhum evento encontrado para hoje.');
         return;
       }
 
@@ -53,8 +47,6 @@ function scheduleDailySummary() {
         const phone = user.telefone;
         const userEvents = events.filter(e => e.user_telefone === phone);
 
-        console.log(`\n📱 Usuário ${phone} — eventos encontrados: ${userEvents.length}`);
-
         if (!userEvents.length) continue;
 
         const list = userEvents
@@ -64,13 +56,11 @@ function scheduleDailySummary() {
         try {
           await sendWhatsAppMessage(phone, `📅 Seus eventos de hoje:\n${list}`);
           enviados++;
-          console.log(`✅ Resumo diário enviado para ${phone}`);
         } catch (sendError) {
           console.error(`❌ Erro ao enviar para ${phone}:`, sendError);
         }
       }
 
-      console.log(`📨 Resumo diário concluído — mensagens enviadas: ${enviados}`);
     } catch (err) {
       console.error('💥 Erro no cron job diário:', err);
     }
