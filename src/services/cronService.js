@@ -38,10 +38,6 @@ function scheduleDailySummary() {
         return;
       }
 
-      // Exibir eventos brutos
-      console.log('🧾 Eventos recebidos do Supabase:');
-      console.dir(events, { depth: null });
-
       let enviados = 0;
       for (const user of users) {
         const phone = user.telefone;
