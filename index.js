@@ -3,6 +3,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 const express = require('express');
 const { scheduleDailySummary } = require('./src/services/cronService');
+const { scheduleEventAlerts } = require('./src/cron/eventAlert');
 
 const app = express();
 app.use(express.json());
@@ -19,6 +20,8 @@ app.use((err, req, res, next) => {
 
 // --- CRON JOB RESUMO DIÁRIO 7h ---
 scheduleDailySummary();
+// cron alertas
+scheduleEventAlerts();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
