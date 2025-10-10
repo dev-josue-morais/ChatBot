@@ -2,7 +2,7 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 const express = require('express');
-const { scheduleDailySummary } = require('./src/services/cronService');
+const { scheduleDailySummary } = require('./src/cron/cronService');
 const { scheduleEventAlerts } = require('./src/cron/eventAlert');
 
 const app = express();
