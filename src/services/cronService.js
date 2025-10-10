@@ -4,7 +4,7 @@ const supabase = require('./supabase');
 const { sendWhatsAppMessage } = require('./whatsappService');
 
 function scheduleDailySummary() {
-  cron.schedule('0,5,10,15,20,25,30,35,40,45,50,55 * * * *', async () => {
+  cron.schedule('0 7 * * *', async () => {
     try {
       const now = getNowBRT();
 
@@ -46,7 +46,7 @@ function scheduleDailySummary() {
         if (!userEvents.length) continue;
 
         const list = userEvents
-          .map(e => `- ID ${e.event_numero} ${e.title} às ${formatLocal(e.date)}`)
+          .map(e => `- ID ${e.event_numero} ${e.title} em ${formatLocal(e.date)}`)
           .join('\n');
 
         try {
