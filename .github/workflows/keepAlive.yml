@@ -1,4 +1,4 @@
-name: Cron Alerta Eventos
+name: keepAlive
 
 on:
   schedule:
