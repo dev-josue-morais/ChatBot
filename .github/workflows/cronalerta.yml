@@ -2,13 +2,11 @@ name: Cron Alerta Eventos
 
 on:
   schedule:
-#    - cron: "*/1 * * * *"  # a cada minuto, GMT → 3h atrás em BRT
-     - cron: "*/20 9-23 * * *"
-  workflow_dispatch: # permite rodar manualmente também
-
+    - cron: "55 7 * * *"
+  workflow_dispatch:
 jobs:
   call-api:
     runs-on: ubuntu-latest
     steps:
-      - name: Chamar rota de alerta
+      - name: Acordar o Render
         run: curl -s https://chatbot-6viu.onrender.com/live
