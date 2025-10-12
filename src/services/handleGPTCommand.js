@@ -203,20 +203,22 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
 
       if (fetchError || !currentData)
         return { error: `⚠️ Não encontrei o evento ID ${id}.` };
-console.log('📤 date enviado ao GPT:');
-console.log(currentData.date);
+const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
+    .setZone('America/Sao_Paulo')
+    .toISO();
+
+  console.log('📤 date enviado ao GPT (GMT-3):', dateBRT);
+
       prompt = `
       Você é um assistente que edita eventos de agenda.
-A data e hora atual em UTC é ${getNowBRT().toUTC().toFormat("yyyy-MM-dd HH:mm:ss")}.
+A data e hora atual é ${getNowBRT().toUTC().toFormat("yyyy-MM-dd HH:mm:ss")}.
 
 Retorne apenas JSON válido, sem texto fora do JSON.
 
-Instruções:
-- O campo "date" do evento que você recebe e devolve será em UTC no formato ISO 8601.
 - Atualize apenas os campos pedidos pelo usuário, mantendo a estrutura original do evento.
 
 Evento atual:
-${JSON.stringify(currentData, null, 2)}
+${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
 
 Mensagem do usuário:
 "${userMessage}"
