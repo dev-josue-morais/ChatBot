@@ -204,7 +204,8 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
 
       if (fetchError || !currentData)
         return { error: `⚠️ Não encontrei o evento ID ${id}.` };
-
+console.log('📤 date enviado ao GPT:');
+console.log(currentData.date);
       prompt = `
       Você é um assistente que edita eventos de agenda.
       O usuário está no fuso GMT-3 (Brasil).
@@ -230,20 +231,25 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }]
-    });
+const completion = await openai.chat.completions.create({
+  model: 'gpt-4o-mini',
+  messages: [{ role: 'user', content: prompt }]
+});
 
-    let content = completion.choices[0].message.content.trim();
-    content = content.replace(/```json\s*|```/g, "").trim();
+let content = completion.choices[0].message.content.trim();
+content = content.replace(/```json\s*|```/g, "").trim();
 
-    try {
-      return JSON.parse(content);
-    } catch (parseErr) {
-      console.error("❌ Erro ao parsear JSON do GPT:", content);
-      return { erro: "JSON inválido retornado pelo GPT", raw: content };
-    }
+try {
+  const command = JSON.parse(content);
+
+  // 🔹 Log apenas do campo date
+  console.log('🕒 Campo date retornado pelo GPT:', command.date);
+
+  return command;
+} catch (parseErr) {
+  console.error("❌ Erro ao parsear JSON do GPT:", content);
+  return { erro: "JSON inválido retornado pelo GPT", raw: content };
+}
 
   } catch (err) {
     console.error('Erro ao processar GPT:', err);
