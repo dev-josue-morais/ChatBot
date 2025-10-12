@@ -218,7 +218,8 @@ Responda **apenas com JSON válido**, sem texto extra.
 
 Regras obrigatórias:
 1. **Você recebe edita e retorna Todas as datas em GMT-3** e no formato ISO 8601 com offset "-03:00".
-2. **Mantenha a estrutura original do evento** e atualize apenas os campos solicitados pelo usuário.  
+2. exemplo "para daqui a 15 min, daqui 1h" deve ser somado a hora atual e não ao "date".
+3. **Mantenha a estrutura original do evento** e atualize apenas os campos solicitados pelo usuário.  
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
