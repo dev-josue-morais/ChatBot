@@ -213,7 +213,7 @@ const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
       prompt = `
 Você é um assistente que edita eventos de uma agenda.
 O usuário está no fuso horário GMT-3 (Brasil).
-A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
+
 Responda apenas com **JSON válido**, sem texto extra.
 
 Regras obrigatórias:
