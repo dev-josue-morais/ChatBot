@@ -212,8 +212,7 @@ A data e hora atual em UTC é ${getNowBRT().toUTC().toFormat("yyyy-MM-dd HH:mm:s
 Retorne apenas JSON válido, sem texto fora do JSON.
 
 Instruções:
-- O campo "date" do evento que você recebe está em UTC.
-- Sempre retorne o campo "date" convertido para GMT-3 (UTC-3) no formato ISO 8601.
+- O campo "date" do evento que você recebe e devolve será em UTC no formato ISO 8601.
 - Atualize apenas os campos pedidos pelo usuário, mantendo a estrutura original do evento.
 
 Evento atual:
