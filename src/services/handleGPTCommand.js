@@ -216,12 +216,13 @@ O usuário está no fuso horário GMT-3 (Brasil).
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 Responda apenas com **JSON válido**, sem texto extra.
 
-Regras obrigatórias (siga na ordem):
-1️⃣ Sempre trabalhe com **datas e horas em GMT-3**, formato ISO 8601 com offset "-03:00".
-2️⃣ Quando o usuário disser expressões relativas como "daqui a 15 minutos", "daqui 1 hora", "para amanhã", etc:
-   - Use **a hora atual (${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}) como referência**, e **nunca** o campo "date" existente.
-   - Some o tempo solicitado a essa hora atual e gere o novo valor de "date".
-3️⃣ Quando o usuário disser uma hora exata (ex: "marcar 13h"), use essa hora em GMT-3 diretamente.
+Regras obrigatórias:
+1️⃣ Todas as datas devem estar em GMT-3 no formato ISO 8601 com offset "-03:00".
+2️⃣ Quando o usuário disser algo como "daqui a X minutos", "daqui X horas", "mais tarde", "para amanhã", ou expressões semelhantes:
+   - **Sempre use a hora atual (${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}) como ponto de referência.**
+   - **Nunca use o campo "date" existente para somar tempo.**
+   - Exemplo: se o usuário disser "daqui a 10 minutos", o novo campo "date" deve ser a hora atual + 10 minutos.
+3️⃣ Quando o usuário disser uma hora exata ("às 14h", "para 8:30"), substitua apenas a hora no formato GMT-3.
 4️⃣ Mantenha a estrutura original do evento e atualize apenas os campos solicitados.
 
 Evento atual:
