@@ -1,6 +1,7 @@
 const { getNowBRT } = require('../utils/utils');
 const openai = require('./openai');
 const supabase = require("./supabase");
+const { DateTime } = require('luxon');
 
 async function handleGPTCommand(userMessage, modulo, action, id) {
   let prompt = '';
