@@ -211,22 +211,25 @@ const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
   console.log('📤 date enviado ao GPT (GMT-3):', dateBRT);
 
       prompt = `
-      Você é um assistente de agenda.  
-O usuário está no fuso GMT-3 (Brasil).
+Você é um assistente que edita eventos de uma agenda.
+O usuário está no fuso horário GMT-3 (Brasil).
 A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-Responda **apenas com JSON válido**, sem texto extra.
+Responda apenas com **JSON válido**, sem texto extra.
 
-Regras obrigatórias:
-1. **Você recebe edita e retorna Todas as datas em GMT-3** e no formato ISO 8601 com offset "-03:00".
-2. exemplo "para daqui a 15 min, daqui 1h" deve ser somado a hora atual e não ao "date".
-3. **Mantenha a estrutura original do evento** e atualize apenas os campos solicitados pelo usuário.  
+Regras obrigatórias (siga na ordem):
+1️⃣ Sempre trabalhe com **datas e horas em GMT-3**, formato ISO 8601 com offset "-03:00".
+2️⃣ Quando o usuário disser expressões relativas como "daqui a 15 minutos", "daqui 1 hora", "para amanhã", etc:
+   - Use **a hora atual (${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}) como referência**, e **nunca** o campo "date" existente.
+   - Some o tempo solicitado a essa hora atual e gere o novo valor de "date".
+3️⃣ Quando o usuário disser uma hora exata (ex: "marcar 13h"), use essa hora em GMT-3 diretamente.
+4️⃣ Mantenha a estrutura original do evento e atualize apenas os campos solicitados.
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
 
 Mensagem do usuário:
 "${userMessage}"
-      `;
+`;
       break;
     }
 
