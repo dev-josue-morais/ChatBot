@@ -30,7 +30,6 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
 
       Regras:
       - Não inclua expressões matemáticas, apenas números.
-      - Datas não são necessárias neste módulo.
       - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
 
       Texto: """${userMessage}"""
