@@ -95,9 +95,7 @@ async function handleAgendaCommand(command, userPhone) {
 
 const updates = {
   title: command.title,
-  date: DateTime.fromISO(command.date, { zone: 'America/Sao_Paulo' })
-    .toUTC()
-    .toISO(),
+  date: command.date,
   reminder_minutes: command.reminder_minutes ?? 30,
   notified: command.notified ?? false
 };
