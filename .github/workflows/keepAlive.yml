@@ -1,9 +1,10 @@
-name: keepAlive
+name: keepAlive-10min
 
 on:
   schedule:
-    - cron: "55 7 * * *"
+    - cron: "10,30,50 0-1,8-23 * * *"
   workflow_dispatch:
+
 jobs:
   call-api:
     runs-on: ubuntu-latest
