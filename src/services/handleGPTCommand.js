@@ -208,20 +208,20 @@ console.log('📤 date enviado ao GPT:');
 console.log(currentData.date);
       prompt = `
       Você é um assistente que edita eventos de agenda.
-      O usuário está no fuso GMT-3 (Brasil).
-      A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-      Retorne apenas **JSON válido**, sem texto fora do JSON.
+A data e hora atual em UTC é ${getNowBRT().toUTC().toFormat("yyyy-MM-dd HH:mm:ss")}.
 
-      Instruções:
-      - Mantenha a estrutura original do evento.
-      - Atualize apenas os campos pedidos pelo usuário.
-      - data em ISO 8601 GMT-3.
+Retorne apenas JSON válido, sem texto fora do JSON.
 
-      Evento atual:
-      ${JSON.stringify(currentData, null, 2)}
+Instruções:
+- O campo "date" do evento que você recebe está em UTC.
+- Sempre retorne o campo "date" convertido para GMT-3 (UTC-3) no formato ISO 8601.
+- Atualize apenas os campos pedidos pelo usuário, mantendo a estrutura original do evento.
 
-      Mensagem do usuário:
-      "${userMessage}"
+Evento atual:
+${JSON.stringify(currentData, null, 2)}
+
+Mensagem do usuário:
+"${userMessage}"
       `;
       break;
     }
