@@ -18,7 +18,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const { data, error } = await supabase.from('orcamentos').insert([{
                     nome_cliente: command.nome_cliente,
                     telefone_cliente: command.telefone_cliente,
-                    descricao_atividades: observacoes,
+                    observacoes,
                     materiais: command.materiais || [],
                     servicos: command.servicos || [],
                     desconto_materiais: command.desconto_materiais || 0,
@@ -65,7 +65,7 @@ async function handleOrcamentoCommand(command, userPhone) {
                     nome_cliente: command.nome_cliente,
                     telefone_cliente: command.telefone_cliente,
                     etapa: command.etapa,
-                    descricao_atividades: command.descricao_atividades,
+                    observacoes: command.observacoes,
                     materiais: command.materiais,
                     servicos: command.servicos,
                     desconto_materiais: command.desconto_materiais,
