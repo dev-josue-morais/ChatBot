@@ -25,8 +25,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
         "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null,
         "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
         "servicos": [{"titulo": "string", "quantidade": número, "valor": número}],
-        "desconto_materiais": número ou string ("10%" ou 10) ou null,
-        "desconto_servicos": número ou string ("10%" ou 10) ou null
+        "desconto_materiais", "desconto_servicos": string ("10%" ou "10") ou null
       }
 
       Regras:
@@ -54,7 +53,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
         return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
 
       prompt = `
-      Você é um assistente comercial que ajusta JSONs existentes de orçamentos.
+      Você é um assistente comercial que edita JSONs existentes de orçamentos.
       Responda **somente com JSON válido**, sem texto fora do JSON.
 
       Orçamento atual:
@@ -68,11 +67,11 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos).
       - Campos vazios podem ser null.
       - Não crie novas colunas.
-      - "descricao_atividades" corresponde a "observacoes".
       - esses campos podem estar vazios use esse formato 
       "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null,
-      "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-      "servicos": [{"titulo": "string", "quantidade": número, "valor": número}],
+      "materiais": [{"nome": "string", "qtd": "número", "unidade": "string", "valor": "número"}],
+      "servicos": [{"titulo": "string", "quantidade": "número", "valor": "número"}],
+      "desconto_materiais", "desconto_servicos": "string" ("10%" ou "10") ou null
       Retorne o orçamento atualizado.
       `;
       break;
