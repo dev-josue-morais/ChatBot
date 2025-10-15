@@ -19,8 +19,8 @@ function formatOrcamento(o) {
     descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
   const observacoes =
-  Array.isArray(o.descricao_atividades) && o.descricao_atividades.length > 0
-    ? o.descricao_atividades.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
+  Array.isArray(o.observacoes) && o.observacoes.length > 0
+    ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
     : "   -";
 
   return `
