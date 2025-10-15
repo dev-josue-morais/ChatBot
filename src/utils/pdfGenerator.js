@@ -99,7 +99,7 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
 }
 
 function renderObservacoes(orcamento, opcoes, tipo) {
-    if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.descricao_atividades) && orcamento.descricao_atividades.length)))
+    if (!(opcoes.observacoes || opcoes.garantia || (Array.isArray(orcamento.observacoes) && orcamento.observacoes.length)))
         return '';
 
     const defaultObs = [
@@ -113,8 +113,8 @@ function renderObservacoes(orcamento, opcoes, tipo) {
         defaultObs.push("Validade do orçamento 7 dias.");
     }
 
-    const gptObs = Array.isArray(orcamento.descricao_atividades)
-        ? orcamento.descricao_atividades.filter(Boolean)
+    const gptObs = Array.isArray(orcamento.observacoes)
+        ? orcamento.observacoes.filter(Boolean)
         : [];
 
     const allObs = [...defaultObs, ...gptObs];
