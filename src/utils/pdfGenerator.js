@@ -204,7 +204,7 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
         ${renderObservacoes(orcamento, opcoes, tipo)}
 
         <!-- PIX -->
-        <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px;">
+        <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px; page-break-inside:avoid;">
           ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
           <div style="text-align:left;">
             <h1 style="margin:0;">Pague com Pix</h1>
