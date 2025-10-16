@@ -250,7 +250,7 @@ try {
   const command = JSON.parse(content);
 
   // 🔹 Log apenas do campo date
-  console.log('🕒 Campo date retornado pelo GPT:', command.date);
+  // console.log('🕒 Campo date retornado pelo GPT:', command.date);
 
   return command;
 } catch (parseErr) {
