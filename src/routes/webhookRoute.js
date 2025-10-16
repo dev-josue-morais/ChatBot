@@ -9,6 +9,8 @@ const { WEBHOOK_VERIFY_TOKEN, DESTINO_FIXO, WHATSAPP_TOKEN } = require('../utils
 const AdmZip = require("adm-zip");
 const sharp = require("sharp");
 const createCheckoutPreference = require('../utils/mercadopago');
+const processedIds = new Set();
+setInterval(() => processedIds.clear(), 2 * 60 * 1000);
 
 const questions = [
   { key: "user_name", text: "📛 Qual é o seu nome completo?" },
@@ -113,42 +115,23 @@ router.post('/', async (req, res, next) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
 
-const processedIds = new Set();
-
     for (let msg of messages) {
-for (let msg of messages) {
-  try {
-    // 🔹 Log completo da mensagem
-    console.log("---- Nova mensagem recebida ----");
-    console.log("Mensagem ID:", msg.id);
-    console.log("Tipo:", msg.type);
-    console.log("Timestamp:", msg.timestamp, "-", new Date(Number(msg.timestamp) * 1000).toISOString());
-    console.log("Conteúdo extraído:", extractTextFromMsg(msg));
-    console.log("JSON completo da mensagem:", JSON.stringify(msg, null, 2));
-    console.log("Contato:", JSON.stringify(value.contacts?.[0], null, 2));
-    console.log("--------------------------------\n");
-  } catch (err) {
-    console.error("Erro ao logar mensagem:", err);
-  }
-
-  // resto do processamento...
-}
       const contact = value.contacts?.[0];
       if (!contact) continue;
- if (processedIds.has(msg.id)) continue;
-  processedIds.add(msg.id);
-const senderName = contact.profile?.name || 'Usuário';
+      if (processedIds.has(msg.id)) continue;
+      processedIds.add(msg.id);
+      const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
       if (!senderNumber) continue;
 
-const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, ''); // número do bot
+      const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, ''); // número do bot
 
-// Ignora mensagens enviadas pelo próprio bot
-if (senderNumber === botNumber) continue;
+      // Ignora mensagens enviadas pelo próprio bot
+      if (senderNumber === botNumber) continue;
 
-// Ignora mensagens muito antigas (mais de 60s)
-const msgTimestamp = Number(msg.timestamp) * 1000;
-if (Date.now() - msgTimestamp > 120000) continue;
+      // Ignora mensagens muito antigas (mais de 60s)
+      const msgTimestamp = Number(msg.timestamp) * 1000;
+      if (Date.now() - msgTimestamp > 90000) continue;
 
       const myText = extractTextFromMsg(msg)?.trim();
       await supabase.rpc('cleanup_old_sessions');
@@ -691,13 +674,13 @@ Lista meus atendimentos do dia <data>
       //   });
       // }
 
-// Ignora mensagens sem conteúdo relevante ou com menos de 2 palavras
-if (
-  (!myText && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) ||
-  (myText && myText.split(/\s+/).length < 3)
-) {
-  continue;
-}
+      // Ignora mensagens sem conteúdo relevante ou com menos de 2 palavras
+      if (
+        (!myText && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) ||
+        (myText && myText.split(/\s+/).length < 3)
+      ) {
+        continue;
+      }
 
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText, senderNumber);
