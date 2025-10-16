@@ -116,6 +116,23 @@ router.post('/', async (req, res, next) => {
 const processedIds = new Set();
 
     for (let msg of messages) {
+for (let msg of messages) {
+  try {
+    // 🔹 Log completo da mensagem
+    console.log("---- Nova mensagem recebida ----");
+    console.log("Mensagem ID:", msg.id);
+    console.log("Tipo:", msg.type);
+    console.log("Timestamp:", msg.timestamp, "-", new Date(Number(msg.timestamp) * 1000).toISOString());
+    console.log("Conteúdo extraído:", extractTextFromMsg(msg));
+    console.log("JSON completo da mensagem:", JSON.stringify(msg, null, 2));
+    console.log("Contato:", JSON.stringify(value.contacts?.[0], null, 2));
+    console.log("--------------------------------\n");
+  } catch (err) {
+    console.error("Erro ao logar mensagem:", err);
+  }
+
+  // resto do processamento...
+}
       const contact = value.contacts?.[0];
       if (!contact) continue;
  if (processedIds.has(msg.id)) continue;
