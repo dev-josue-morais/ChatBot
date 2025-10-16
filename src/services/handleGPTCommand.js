@@ -22,11 +22,11 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
         "action": "create",
         "nome_cliente": "string",
         "telefone_cliente": "string",
-        "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null,
-        "materiais": [{"nome": "string", "qtd": número, "unidade": "string", "valor": número}],
-        "servicos": [{"titulo": "string", "quantidade": número, "valor": número}],
+        "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
+         "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
+        "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
         "desconto_materiais", "desconto_servicos": string ("10%" ou "10") ou null
-      }
+       }
 
       Regras:
       - Não inclua expressões matemáticas, apenas números.
@@ -67,11 +67,11 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
       - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos).
       - Campos vazios podem ser null.
       - Não crie novas colunas.
-      - esses campos podem estar vazios use esse formato 
-      "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou null,
-      "materiais": [{"nome": "string", "qtd": "número", "unidade": "string", "valor": "número"}],
-      "servicos": [{"titulo": "string", "quantidade": "número", "valor": "número"}],
-      "desconto_materiais", "desconto_servicos": "string" ("10%" ou "10") ou null
+      **use esse formato**
+      "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
+       "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
+       "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+       "desconto_materiais", "desconto_servicos": "string" ("10%" ou "10") ou null
       Retorne o orçamento atualizado.
       `;
       break;
