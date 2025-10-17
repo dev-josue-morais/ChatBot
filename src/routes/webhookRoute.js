@@ -5,13 +5,14 @@ const { processCommand } = require('../services/processCommand');
 const { sendWhatsAppRaw, extractTextFromMsg } = require('../services/whatsappService');
 const supabase = require('../services/supabase');
 const { WEBHOOK_VERIFY_TOKEN } = require('../utils/config');
-const createCheckoutPreference = require('../utils/mercadopago');
+const { continueUserRegistration } = require('../services/userRegistration');
+const handleUploads = require('../services/uploads');
+const handleUnregisteredUser = require('../services/handleUnregisteredUser');
+const { handleCommands, handleUserRegistrationCommand } = require("../services/handleCommands");
+// const createCheckoutPreference = require('../utils/mercadopago');
+
 const processedIds = new Set();
 setInterval(() => processedIds.clear(), 2 * 60 * 1000);
-const { continueUserRegistration } = require('../services/userRegistration');
-const { handleUploads } = require('../services/uploads');
-const { handleUnregisteredUser } = require('../services/handleUnregisteredUser');
-const { handleCommands, handleUserRegistrationCommand } = require("../services/handleCommands");
 
 // ✅ GET webhook (verificação do Meta)
 router.get('/', (req, res) => {

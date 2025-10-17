@@ -116,4 +116,4 @@ async function handleUploads(msg, session, senderNumber) {
   }
 }
 
-module.exports = { handleUploads };
+module.exports = handleUploads;
