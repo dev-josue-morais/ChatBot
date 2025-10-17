@@ -8,7 +8,7 @@ const { WHATSAPP_TOKEN } = require("../utils/config");
 /**
  * Trata uploads de logo e imagem Pix enviados pelo usuário
  */
-export async function handleUploads(msg, session, senderNumber) {
+async function handleUploads(msg, session, senderNumber) {
   try {
     // --- Upload de logo via ZIP ---
     if (msg.type === "document" && session?.answers?.type === "logo_img" && msg.document.mime_type === "application/zip") {
@@ -115,3 +115,5 @@ export async function handleUploads(msg, session, senderNumber) {
     return true;
   }
 }
+
+module.exports = { handleUploads };
