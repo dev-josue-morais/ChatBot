@@ -1,5 +1,5 @@
 const { forwardMediaIfAny, sendWhatsAppRaw, extractTextFromMsg } = require('./whatsappService');
-const { supabase } = require('./supabase');
+const supabase = require('./supabase');
 const { DateTime } = require('luxon');
 const DESTINO_FIXO = require('../utils/config');
 
