@@ -1,3 +1,5 @@
+const dotenv = require('dotenv');
+dotenv.config();
 module.exports = {
   DESTINO_FIXO: process.env.DESTINO_FIXO,
   PORT: process.env.PORT || 3000,
