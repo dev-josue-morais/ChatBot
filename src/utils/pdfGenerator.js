@@ -109,9 +109,10 @@ function renderObservacoes(orcamento, opcoes, tipo) {
     ].filter(Boolean);
 
     // ✅ Se o tipo for "Orçamento", adiciona a observação extra
-    if (tipo === "Orçamento") {
-        defaultObs.push("Validade do orçamento 7 dias.");
-    }
+   if (tipo === "Orçamento") {
+    defaultObs.push("Validade do orçamento 7 dias.");
+    defaultObs.push("Qualquer mudança nos serviços ou materiais pode alterar o valor final do orçamento, para mais ou para menos.");
+}
 
     const gptObs = Array.isArray(orcamento.observacoes)
         ? orcamento.observacoes.filter(Boolean)
