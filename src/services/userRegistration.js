@@ -14,7 +14,8 @@ const questions = [
   { key: "cep", text: "📫 Qual é o CEP da empresa?" },
   { key: "pix_chave", text: "💳 Qual é a sua chave Pix (celular, CNPJ, CPF ou e-mail)?" },
   { key: "pix_nome", text: "👤 Qual é o nome que consta na chave Pix?" },
-  { key: "pix_banco", text: "🏦 Qual é o banco ou instituição da chave Pix?" }
+  { key: "pix_banco", text: "🏦 Qual é o banco ou instituição da chave Pix?" },
+  { key: "assinatura", text: "✍️ Insira a sua assinatura em Texto 
 ];
 
 /**
