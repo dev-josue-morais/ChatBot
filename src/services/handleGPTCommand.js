@@ -116,32 +116,38 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
     }
 
     // ============================================================
-    // 📄 ORÇAMENTO - PDF
-    // ============================================================
-    case 'orcamento_pdf': {
-      prompt = `
-      Você é um assistente que gera PDFs de orçamentos.
-      Retorne apenas **JSON válido** no formato:
+// 📄 ORÇAMENTO - PDF
+// ============================================================
+case 'orcamento_pdf': {
+  prompt = `
+  Você é um assistente que gera PDFs de orçamentos.
+  Retorne apenas **JSON válido** no formato:
 
-      {
-        "modulo": "orcamento",
-        "action": "pdf",
-        "id": número,
-        "tipo": "Orçamento" (default) | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial",
-        "opcoes": {
-          "listaServicos": true, // se tipo = "Pedido" usar false
-          "listaMateriais": true,
-          "ocultarValorServicos": false,
-          "garantia": true,
-          "assinaturaCliente": false,
-          "assinaturaEmpresa": false
-        }
-      }
+  {
+    "modulo": "orcamento",
+    "action": "pdf",
+    "id": número,
+    "tipo": "Orçamento" (default) | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
+    "opcoes": {
+      "listaServicos": true, // se tipo = "Pedido" usar false
+      "listaMateriais": true,
+      "ocultarValorServicos": false,
+      "garantia": true,
+      "assinaturaCliente": false,
+      "assinaturaEmpresa": false
+    },
+    "valorRecibo": número // obrigatório apenas se tipo = "Recibo"
+  }
 
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
+  Regras:
+  - Sempre retornar JSON válido.
+  - Se o tipo for "Recibo", incluir o campo "valorRecibo" com o valor informado no texto.
+  - Caso o valor não seja informado claramente, definir "valorRecibo" como null.
+
+  Texto: """${userMessage}"""
+  `;
+  break;
+}
 
     // ============================================================
     // 📆 AGENDA - CREATE
