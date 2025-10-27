@@ -248,42 +248,7 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
         ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
         ${renderObservacoes(orcamento, opcoes, tipo)}
-
-        <!-- 🔹 RECIBO ou PIX -->
-        <!-- ============================= -->
-        ${documentoTipo === "Recibo"
-            ? `
-            <div style="border:2px solid #000; padding:20px; margin-top:20px; text-align:center; page-break-inside:avoid;">
-                <h2 style="margin-bottom:10px;">RECIBO</h2>
-                <p style="font-size:16px; line-height:1.5;">
-                    Recebemos de <strong>${orcamento.nome_cliente}</strong> a importância de 
-                    <strong>${valorRecibo ? formatCurrency(valorRecibo) : "__________"}</strong>
-                    (${valorRecibo ? "valor total do recibo" : "valor não informado"}),
-                    referente aos serviços descritos acima.
-                </p>
-<p style="margin-top:20px;">${user.cidade || ""}, ${dataAtual.toFormat("dd/MM/yyyy")}</p>
-                <div style="margin-top:50px; border-top:2px solid #000; width:60%; margin-left:auto; margin-right:auto; padding-top:5px;">
-                    <strong>${user.empresa_nome || "Assinatura do Responsável"}</strong>
-                </div>
-            </div>`
-            : `
-            <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px; page-break-inside:avoid;">
-                ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
-                <div style="text-align:left;">
-                    <h1 style="margin:0;">Pague com Pix</h1>
-                    <h2 style="margin:5px 0;"><strong>Chave Pix:</strong> ${user.pix_chave || "-"}</h2>
-                    <h2 style="margin:5px 0;"><strong>Nome:</strong> ${user.pix_nome || "-"}</h2>
-                    <h2 style="margin:5px 0;"><strong>Instituição:</strong> ${user.pix_banco || "-"}</h2>
-                </div>
-            </div>
-
-        <!-- Assinaturas -->
-        ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
-            <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>${user.empresa_nome || "Sua Empresa"}</strong></div>` : ""}
-                ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
-            </div>` : ""}
-`}
+        ${blocoPagamento}
         </body>
         </html>
         `;
