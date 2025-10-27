@@ -6,17 +6,14 @@ const axios = require("axios");
 const { DateTime } = require("luxon");
 const dataAtual = DateTime.now().setZone("America/Sao_Paulo");
 
-// Calcula valor final do recibo
 let valorReciboFinal;
 if (documentoTipo === "Recibo") {
     if (valorRecibo && valorRecibo > 0) {
         valorReciboFinal = valorRecibo;
     } else {
-        // Calcula total dos serviços aplicando desconto
         valorReciboFinal = descontoServicos.totalFinal;
     }
 }
-
 const blocoPagamento = documentoTipo === "Recibo"
     ? `
     <div style="border:2px solid #000; padding:20px; margin-top:20px; text-align:center; page-break-inside:avoid;">
