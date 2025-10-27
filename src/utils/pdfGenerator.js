@@ -235,8 +235,7 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
                     <h2 style="margin:5px 0;"><strong>Nome:</strong> ${user.pix_nome || "-"}</h2>
                     <h2 style="margin:5px 0;"><strong>Instituição:</strong> ${user.pix_banco || "-"}</h2>
                 </div>
-            </div>`
-        }
+            </div>
 
         <!-- Assinaturas -->
         ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
@@ -244,7 +243,7 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
                 ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>${user.empresa_nome || "Sua Empresa"}</strong></div>` : ""}
                 ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
             </div>` : ""}
-
+`}
         </body>
         </html>
         `;
