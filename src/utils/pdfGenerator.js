@@ -15,11 +15,11 @@ function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes
                 Recebemos de <strong>${orcamento.nome_cliente}</strong> a importância de 
                 <strong>${formatCurrency(valorReciboFinal)}</strong>
                 (${valorReciboFinal ? "valor total do recibo" : "valor referente aos serviços"}),
-                referente aos serviços descritos acima.
+                referente aos serviços e materiais descritos acima.
             </p>
             <p style="margin-top:20px;">${user.cidade || ""}, ${dataAtual.toFormat("dd/MM/yyyy")}</p>
             <div style="margin-top:50px; border-top:2px solid #000; width:60%; margin-left:auto; margin-right:auto; padding-top:5px; text-align:center;">
-                <strong>${user.assinatura || user.empresa_nome || "Assinatura do Responsável"}</strong>
+                <strong>${user.assinatura || user.user_name || "_________________________"}</strong>
             </div>
         </div>`;
     } else {
