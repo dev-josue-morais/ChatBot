@@ -128,66 +128,80 @@ async function handleOrcamentoCommand(command, userPhone) {
                 return `✅ ${orcamentos.length} orçamento(s) enviados.`;
             }
 
+// ------------------- PDF -------------------
+case "pdf": {
+    try {
+        if (!command.id)
+            return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
 
-            // ------------------- PDF -------------------
-            case "pdf": {
-                try {
-                    if (!command.id) return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
+        const { data: orcamentos, error: errOrc } = await supabase
+            .from("orcamentos")
+            .select("*")
+            .eq("orcamento_numero", command.id)
+            .eq("user_telefone", userPhone)
+            .limit(1);
 
-                    const { data: orcamentos, error: errOrc } = await supabase
-                        .from("orcamentos")
-                        .select("*")
-                        .eq("orcamento_numero", command.id)
-                        .eq("user_telefone", userPhone)
-                        .limit(1);
+        if (errOrc) {
+            console.error("Erro ao buscar orçamento:", errOrc);
+            return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
+        }
 
-                    if (errOrc) {
-                        console.error("Erro ao buscar orçamento:", errOrc);
-                        return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
-                    }
+        if (!orcamentos?.length)
+            return `⚠️ Orçamento ${command.id} não encontrado.`;
 
-                    if (!orcamentos?.length) return `⚠️ Orçamento ${command.id} não encontrado.`;
-                    const o = orcamentos[0];
+        const o = orcamentos[0];
 
-                    const { data: users, error: errUser } = await supabase
-                        .from("users")
-                        .select("*")
-                        .eq("telefone", userPhone)
-                        .limit(1);
+        const { data: users, error: errUser } = await supabase
+            .from("users")
+            .select("*")
+            .eq("telefone", userPhone)
+            .limit(1);
 
-                    if (errUser || !users?.length) {
-                        console.error("Erro ao buscar usuário:", errUser);
-                        return "⚠️ Usuário não encontrado para gerar o PDF.";
-                    }
+        if (errUser || !users?.length) {
+            console.error("Erro ao buscar usuário:", errUser);
+            return "⚠️ Usuário não encontrado para gerar o PDF.";
+        }
 
-                    const user = users[0];
+        const user = users[0];
 
-                    const pdfConfig = {
-                        tipo: command.tipo || "Orçamento",
-                        opcoes: command.opcoes || {
-                            listaServicos: true,
-                            listaMateriais: true,
-                            ocultarValorServicos: false,
-                            garantia: true,
-                            assinaturaEmpresa: false,
-                            assinaturaUser: false,
-                        }
-                    };
+        // ================================
+        // 📄 Configuração do PDF
+        // ================================
+        const pdfConfig = {
+            tipo: command.tipo || "Orçamento",
+            opcoes: command.opcoes || {
+                listaServicos: true,
+                listaMateriais: true,
+                ocultarValorServicos: false,
+                garantia: true,
+                assinaturaEmpresa: false,
+                assinaturaUser: false,
+            },
+        };
 
-                    // ✅ Agora apenas chamamos a função completa
-                    const enviado = await sendPDFOrcamento(userPhone, o, { ...pdfConfig, user });
+        // 💵 Se for RECIBO, incluir o valor
+        if (pdfConfig.tipo === "Recibo") {
+            const valor = parseFloat(command.valorRecibo);
+            pdfConfig.valorRecibo = !isNaN(valor) && valor > 0 ? valor : null;
 
-                    if (enviado) {
-                        return `✅ PDF do orçamento ${command.id} enviado com sucesso!`;
-                    } else {
-                        return `⚠️ PDF do orçamento ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
-                    }
+            if (!pdfConfig.valorRecibo)
+                console.warn(`⚠️ Valor do recibo não informado ou inválido para o orçamento ${command.id}.`);
+        }
 
-                } catch (err) {
-                    console.error("Erro ao gerar/enviar PDF:", err);
-                    return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
-                }
-            }
+        // ✅ Envia para função geradora de PDF
+        const enviado = await sendPDFOrcamento(userPhone, o, { ...pdfConfig, user });
+
+        if (enviado) {
+            return;
+        } else {
+            return `⚠️ PDF do ${pdfConfig.tipo.toLowerCase()} ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
+        }
+
+    } catch (err) {
+        console.error("Erro ao gerar/enviar PDF:", err);
+        return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
+    }
+}
 
             default:
                 return '⚠️ Ação desconhecida.';
