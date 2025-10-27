@@ -132,7 +132,7 @@ function renderObservacoes(orcamento, opcoes, tipo) {
 
 async function generatePDF(orcamento, user, config = {}) {
     try {
-        const { tipo = "Orçamento", opcoes: rawOpcoes = {} } = config;
+        const { tipo = "Orçamento", opcoes: rawOpcoes = {}, valorRecibo = null } = config;
         const opcoes = {
             listaServicos: true,
             listaMateriais: true,
@@ -204,16 +204,34 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
         ${renderObservacoes(orcamento, opcoes, tipo)}
 
-        <!-- PIX -->
-        <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px; page-break-inside:avoid;">
-          ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
-          <div style="text-align:left;">
-            <h1 style="margin:0;">Pague com Pix</h1>
-            <h2 style="margin:5px 0;"><strong>Chave Pix:</strong> ${user.pix_chave || "-"}</h2>
-            <h2 style="margin:5px 0;"><strong>Nome:</strong> ${user.pix_nome || "-"}</h2>
-            <h2 style="margin:5px 0;"><strong>Instituição:</strong> ${user.pix_banco || "-"}</h2>
-          </div>
-        </div>
+        <!-- 🔹 RECIBO ou PIX -->
+        <!-- ============================= -->
+        ${documentoTipo === "Recibo"
+            ? `
+            <div style="border:2px solid #000; padding:20px; margin-top:20px; text-align:center; page-break-inside:avoid;">
+                <h2 style="margin-bottom:10px;">RECIBO</h2>
+                <p style="font-size:16px; line-height:1.5;">
+                    Recebemos de <strong>${orcamento.nome_cliente}</strong> a importância de 
+                    <strong>${valorRecibo ? formatCurrency(valorRecibo) : "__________"}</strong>
+                    (${valorRecibo ? "valor total do recibo" : "valor não informado"}),
+                    referente aos serviços descritos acima.
+                </p>
+                <p style="margin-top:20px;">${user.cidade || ""}, ${formatarData(new Date())}</p>
+                <div style="margin-top:50px; border-top:2px solid #000; width:60%; margin-left:auto; margin-right:auto; padding-top:5px;">
+                    <strong>${user.empresa_nome || "Assinatura do Responsável"}</strong>
+                </div>
+            </div>`
+            : `
+            <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px; page-break-inside:avoid;">
+                ${pixBase64 ? `<div style="text-align:center;"><img src="data:image/jpeg;base64,${pixBase64}" alt="QR Code Pix" style="width:150px; height:150px;"></div>` : ""}
+                <div style="text-align:left;">
+                    <h1 style="margin:0;">Pague com Pix</h1>
+                    <h2 style="margin:5px 0;"><strong>Chave Pix:</strong> ${user.pix_chave || "-"}</h2>
+                    <h2 style="margin:5px 0;"><strong>Nome:</strong> ${user.pix_nome || "-"}</h2>
+                    <h2 style="margin:5px 0;"><strong>Instituição:</strong> ${user.pix_banco || "-"}</h2>
+                </div>
+            </div>`
+        }
 
         <!-- Assinaturas -->
         ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
