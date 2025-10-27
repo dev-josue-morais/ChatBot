@@ -155,8 +155,8 @@ async function sendPDFOrcamento(to, orcamento, config) {
   try {
     const { user, ...pdfConfig } = config; // 🔹 extrai o usuário e o restante das configs
 
-    // 1️⃣ Gera o PDF passando o usuário corretamente
-    const pdfPath = await generatePDF(orcamento, user, pdfConfig);
+    // 1️⃣ Gera o PDF
+    const pdfPath = await generatePDF(orcamento, user, { ...pdfConfig });
     const filename = path.basename(pdfPath);
 
     // 2️⃣ Lê o arquivo
@@ -190,7 +190,7 @@ async function sendPDFOrcamento(to, orcamento, config) {
       document: { id: mediaId, filename }
     });
 
-    console.log(`✅ PDF do orçamento ${orcamento.orcamento_numero} enviado para ${to}`);
+   // console.log(`✅ PDF do orçamento ${orcamento.orcamento_numero} enviado para ${to}`);
     return true;
 
   } catch (err) {
