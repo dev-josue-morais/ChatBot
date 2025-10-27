@@ -3,6 +3,11 @@ const formatCurrency = require('./formatCurrency');
 const { formatarData } = require('./utils');
 const aplicarDesconto = require('./aplicarDesconto');
 const axios = require("axios");
+const { DateTime } = require("luxon");
+
+const { DateTime } = require("luxon");
+
+const dataAtual = DateTime.now().setZone("America/Sao_Paulo");
 
 async function getBase64FromUrl(url) {
     try {
@@ -216,7 +221,7 @@ const pixBase64 = await getBase64FromUrl(user.pix_img_url);
                     (${valorRecibo ? "valor total do recibo" : "valor não informado"}),
                     referente aos serviços descritos acima.
                 </p>
-                <p style="margin-top:20px;">${user.cidade || ""}, ${formatarData(new Date())}</p>
+<p style="margin-top:20px;">${user.cidade || ""}, ${dataAtual.toFormat("dd/MM/yyyy")}</p>
                 <div style="margin-top:50px; border-top:2px solid #000; width:60%; margin-left:auto; margin-right:auto; padding-top:5px;">
                     <strong>${user.empresa_nome || "Assinatura do Responsável"}</strong>
                 </div>
