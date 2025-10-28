@@ -10,7 +10,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
 
     // ============================================================
     // 🧾 ORÇAMENTO - CREATE
-    // ============================================================
+    //  ============================================================
     case 'orcamento_create': {
       prompt = `
       Você é um assistente comercial. O usuário está criando um novo orçamento.
