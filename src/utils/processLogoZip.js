@@ -20,46 +20,57 @@ async function processLogoZip(senderNumber, mediaId, tipo = "logo") {
     });
     const buffer = Buffer.from(await mediaResp.arrayBuffer());
     const zip = new AdmZip(buffer);
-    const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith(".png"));
-    if (!entry) throw new Error("Nenhum PNG encontrado no ZIP.");
+    const pngEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith(".png"));
+    if (!pngEntry) throw new Error("Nenhum PNG encontrado no ZIP.");
 
-    const imageBuffer = entry.getData();
-    const resizedImage = await sharp(imageBuffer)
-      .resize(350, 350, { fit: "cover" })
-      .png()
-      .toBuffer();
+    const imgBuffer = pngEntry.getData();
 
-    // Define nome e campo no Supabase de acordo com tipo
+    // Ajuste do tamanho conforme tipo
+    let resizedBuffer;
+    if (tipo === "assinatura") {
+      // largura 600, altura proporcional
+      resizedBuffer = await sharp(imgBuffer)
+        .resize({ width: 600, height: 200, fit: "contain", background: "#ffffff" }) // mantém a proporção e fundo branco
+        .png()
+        .toBuffer();
+    } else {
+      // logo padrão quadrado
+      resizedBuffer = await sharp(imgBuffer)
+        .resize(350, 350, { fit: "cover" })
+        .png()
+        .toBuffer();
+    }
+
     const fileName = `${senderNumber}_${tipo}_${Date.now()}.png`;
     const { error: uploadError } = await supabase.storage
       .from("user_files")
-      .upload(fileName, resizedImage, {
-        contentType: "image/png",
-        upsert: true
-      });
+      .upload(fileName, resizedBuffer, { contentType: "image/png", upsert: true });
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = supabase.storage.from("user_files").getPublicUrl(fileName);
+    const { data: urlData } = await supabase.storage.from("user_files").getPublicUrl(fileName);
     const publicUrl = urlData.publicUrl;
 
     // Atualiza o campo correto no Supabase
-    const campo = tipo === "assinatura" ? "assinatura" : "logo_url";
-    await supabase.from("users").update({ [campo]: publicUrl }).eq("telefone", senderNumber);
+    if (tipo === "assinatura") {
+      await supabase.from("users").update({ assinatura: publicUrl }).eq("telefone", senderNumber);
+    } else {
+      await supabase.from("users").update({ logo_url: publicUrl }).eq("telefone", senderNumber);
+    }
 
     await sendWhatsAppRaw({
       messaging_product: "whatsapp",
       to: senderNumber,
       type: "text",
-      text: { body: `✅ ${tipo === "assinatura" ? "Assinatura" : "Logo"} atualizada com sucesso!` }
+      text: { body: tipo === "assinatura" ? "✅ Assinatura atualizada com sucesso!" : "✅ Logo atualizada com sucesso!" }
     });
 
   } catch (err) {
-    console.error(`Erro ao processar ZIP de ${tipo}:`, err);
+    console.error("Erro ao processar ZIP:", err);
     await sendWhatsAppRaw({
       messaging_product: "whatsapp",
       to: senderNumber,
       type: "text",
-      text: { body: `⚠️ Ocorreu um erro ao processar seu arquivo ZIP de ${tipo}. Tente novamente.` }
+      text: { body: "⚠️ Ocorreu um erro ao processar seu arquivo ZIP. Tente novamente." }
     });
   }
 }
