@@ -120,31 +120,33 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
 // ============================================================
 case 'orcamento_pdf': {
   prompt = `
-  Você é um assistente que gera PDFs de orçamentos.
-  Retorne apenas **JSON válido** no formato:
+  Você é um assistente que gera PDFs de orçamentos. Retorne **apenas JSON válido** no formato abaixo, sem explicações:
 
-  {
-    "modulo": "orcamento",
-    "action": "pdf",
-    "id": número,
-    "tipo": "Orçamento" (default) | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
-    "opcoes": {
-      "listaServicos": true, // se tipo = "Pedido" usar false
-      "listaMateriais": true,
-      "ocultarValorServicos": false,
-      "garantia": true,
-      "assinaturaCliente": false,
-      "assinaturaEmpresa": false
-    },
-    "valorRecibo": número // obrigatório apenas se tipo = "Recibo"
-  }
+{
+  "modulo": "orcamento",
+  "action": "pdf",
+  "id": número,
+  "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
+  "opcoes": {
+    "listaServicos": boolean,
+    "listaMateriais": boolean,
+    "ocultarValorServicos": boolean,
+    "garantia": boolean,
+    "assinaturaCliente": boolean,
+    "assinaturaEmpresa": boolean
+  },
+  "valorRecibo": número|null
+}
 
-  Regras:
-  - Sempre retornar JSON válido.
-  - Se o tipo for "Recibo", incluir o campo "valorRecibo" com o valor informado no texto.
-  - Caso o valor não seja informado claramente, definir "valorRecibo" como null.
+⚠️ Regras:
 
-  Texto: """${userMessage}"""
+1. Sempre retorne JSON válido.
+2. Se tipo = "Recibo", inclua valorRecibo; se não informado, use null. Outros tipos: valorRecibo = null.
+3. Não altere as flags sem instrução explícita do texto:
+   - “ocultar materiais ou serviços” → lista correspondente: false
+   - Se não houver instrução, manter true.
+
+Texto do usuário: """${userMessage}"""
   `;
   break;
 }
