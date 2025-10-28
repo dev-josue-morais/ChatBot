@@ -1,20 +1,15 @@
 const fetch = require('node-fetch');
-const sharp = require('sharp');
 const supabase = require('./supabase');
 const { sendWhatsAppRaw } = require('./whatsappService');
 const { processLogoZip } = require('../utils/processLogoZip');
 const { WHATSAPP_TOKEN } = require("../utils/config");
 
-// Ajuste de memória e threads do Sharp
-sharp.cache({ memory: 200 * 1024 * 1024 }); // 200 MB
-sharp.concurrency(4);
-
 /**
- * Trata uploads de logo e imagem Pix enviados pelo usuário
+ * Trata uploads de logo, assinatura e imagem Pix enviados pelo usuário
  */
 async function handleUploads(msg, session, senderNumber) {
   try {
-    // --- Upload de imagem da Assinatura ---
+    // --- Upload de imagem da Assinatura (agora via ZIP) ---
     if (msg.type === "image" && session?.answers?.type === "assinatura_img") {
       const mediaId = msg.image?.id;
       if (!mediaId) {
@@ -22,6 +17,7 @@ async function handleUploads(msg, session, senderNumber) {
         return true;
       }
 
+      // 1️⃣ Obtem a URL da mídia do WhatsApp
       const mediaInfoResp = await fetch(`https://graph.facebook.com/v16.0/${mediaId}`, {
         headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
       });
@@ -32,26 +28,21 @@ async function handleUploads(msg, session, senderNumber) {
         return true;
       }
 
+      // 2️⃣ Baixa a imagem
       const mediaResp = await fetch(mediaUrl, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } });
       const originalBuffer = Buffer.from(await mediaResp.arrayBuffer());
 
-      // Redimensiona e mantém fundo branco
-      const processedBuffer = await sharp(originalBuffer)
-        .resize({ width: 600, height: 200, fit: "contain", background: "#ffffff" })
-        .png()
-        .toBuffer();
+      // 3️⃣ Cria ZIP e processa igual ao logo
+      const tempFileName = `${senderNumber}_assinatura_${Date.now()}.zip`;
+      await processLogoZip(senderNumber, originalBuffer, tempFileName);
 
-      const fileName = `${senderNumber}_assinatura_${Date.now()}.png`;
-      const { error: uploadError } = await supabase.storage.from("user_files").upload(fileName, processedBuffer, { contentType: "image/png", upsert: true });
-      if (uploadError) throw uploadError;
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: senderNumber,
+        type: "text",
+        text: { body: "✅ Assinatura recebida e processada com sucesso!\nAgora ela será usada automaticamente nos seus PDFs. 🖋️" }
+      });
 
-      const { data: urlData, error: urlError } = await supabase.storage.from("user_files").getPublicUrl(fileName);
-      if (urlError || !urlData?.publicUrl) throw urlError;
-
-      await supabase.from("users").update({ assinatura: urlData.publicUrl }).eq("telefone", senderNumber);
-      await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
-
-      await sendWhatsAppRaw({ messaging_product: "whatsapp", to: senderNumber, type: "text", text: { body: "✅ Assinatura recebida e processada com sucesso!\nAgora ela será usada automaticamente nos seus PDFs. 🖋️" } });
       return true;
     }
 
@@ -85,7 +76,8 @@ async function handleUploads(msg, session, senderNumber) {
       const mediaResp = await fetch(mediaUrl, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } });
       const originalBuffer = Buffer.from(await mediaResp.arrayBuffer());
 
-      // Redimensiona com limite de memória e qualidade
+      // Redimensiona e envia para Supabase
+      const sharp = require('sharp');
       const resizedBuffer = await sharp(originalBuffer, { limitInputPixels: false })
         .resize({ width: 350, height: 350, fit: "cover" })
         .jpeg({ quality: 80 })
