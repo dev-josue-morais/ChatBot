@@ -6,7 +6,7 @@ const axios = require("axios");
 const { DateTime } = require("luxon");
 const dataAtual = DateTime.now().setZone("America/Sao_Paulo");
 
-function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes, user, orcamento) {
+function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, assinaturaBase64, opcoes, user, orcamento) {
     if (documentoTipo === "Recibo") {
         return `
         <div style="border:2px solid #000; padding:20px; margin-top:20px; text-align:center; page-break-inside:avoid;">
@@ -23,8 +23,8 @@ function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes
 
 <div style="margin-top:30px; text-align:center;">
   ${
-    user.assinatura
-      ? `<img src="${user.assinatura}" alt="Assinatura" style="max-height:80px; max-width:250px; object-fit:contain; margin-bottom:10px;" />`
+    assinaturaBase64
+      ? `<img src="data:image/png;base64,${assinaturaBase64}" alt="Assinatura" style="max-height:80px; max-width:250px; object-fit:contain; margin-bottom:10px;" />`
       : ""
   }
   <div style="border-top:2px solid #000; width:60%; margin:0 auto; padding-top:5px;">
@@ -208,6 +208,7 @@ async function generatePDF(orcamento, user, config = {}) {
 
 const logoBase64 = await getBase64FromUrl(user.logo_url);
 const pixBase64 = await getBase64FromUrl(user.pix_img_url);
+const assinaturaBase64 = await getBase64FromUrl(user.assinatura);
 
 let valorReciboFinal;
 if (documentoTipo === "Recibo") {
@@ -216,7 +217,7 @@ if (documentoTipo === "Recibo") {
         : totalFinal;
 }
 
-const blocoPagamento = renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes, user, orcamento);
+const blocoPagamento = renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, assinaturaBase64, opcoes, user, orcamento);
 
         const htmlContent = `
         <html>
