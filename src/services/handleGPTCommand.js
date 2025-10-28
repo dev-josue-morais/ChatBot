@@ -143,7 +143,9 @@ case 'orcamento_pdf': {
 1. Sempre retorne JSON válido.
 2. Se tipo = "Recibo", inclua valorRecibo; se não informado, use null. Outros tipos: valorRecibo = null.
 3. Não altere as flags sem instrução explícita do texto:
-   - “ocultar materiais ou serviços” → lista correspondente: false (nunca os dois)
+   - “ocultar materiais” → listaMateriais: false
+   - “ocultar serviços” → listaServicos: false
+   - nunca ocultar materiais e serviços no mesmo pdf
    - Se não houver instrução, manter true.
 
 Texto do usuário: """${userMessage}"""
