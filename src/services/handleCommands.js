@@ -117,6 +117,25 @@ const handleCommands = async (myText, senderNumber, userData, now) => {
     return true;
   }
 
+if (/^enviar assinatura$/i.test(myText) && userData) {
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: senderNumber,
+      type: "text",
+      text: {
+        body: "🖋️ Agora envie a imagem da sua ASSINATURA em papel branco (formato JPEG ou PNG).\n\n👉 Dica: tire uma foto nítida, com boa iluminação e sem sombras, para que o PDF fique bonito.",
+      },
+    });
+
+    await supabase.from("user_sessions").upsert({
+      telefone: senderNumber,
+      step: -3,
+      answers: { type: "assinatura_img" },
+    });
+
+    return true;
+  }
+
   // --- Comando de ajuda ---
   if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
     const helpMessage = `
@@ -128,6 +147,7 @@ const handleCommands = async (myText, senderNumber, userData, now) => {
 - criar atendimento - dicas de padrões para criar um atendimento 📅
 - enviar logo - enviar sua logo 🖼️ para integrar no PDF
 - enviar pix - enviar seu Pix QrCode 💳 para integrar no PDF
+- enviar assinatura - enviar sua assinatura 🖋️ para integrar no PDF
 `.trim();
 
     await sendWhatsAppRaw({
