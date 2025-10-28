@@ -6,7 +6,7 @@ const supabase = require("../services/supabase");
 const { sendWhatsAppRaw } = require("../services/whatsappService");
 const { WHATSAPP_TOKEN } = require("./config");
 
-async function processLogoZip(senderNumber, mediaId) {
+async function processLogoZip(senderNumber, mediaId, tipo = "logo") {
   try {
     const mediaInfoResp = await fetch(`https://graph.facebook.com/v16.0/${mediaId}`, {
       headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
@@ -20,19 +20,20 @@ async function processLogoZip(senderNumber, mediaId) {
     });
     const buffer = Buffer.from(await mediaResp.arrayBuffer());
     const zip = new AdmZip(buffer);
-    const logoEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith(".png"));
-    if (!logoEntry) throw new Error("Nenhum PNG encontrado no ZIP.");
+    const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith(".png"));
+    if (!entry) throw new Error("Nenhum PNG encontrado no ZIP.");
 
-    const logoBuffer = logoEntry.getData();
-    const resizedLogo = await sharp(logoBuffer)
+    const imageBuffer = entry.getData();
+    const resizedImage = await sharp(imageBuffer)
       .resize(350, 350, { fit: "cover" })
       .png()
       .toBuffer();
 
-    const fileName = `${senderNumber}_logo_${Date.now()}.png`;
+    // Define nome e campo no Supabase de acordo com tipo
+    const fileName = `${senderNumber}_${tipo}_${Date.now()}.png`;
     const { error: uploadError } = await supabase.storage
       .from("user_files")
-      .upload(fileName, resizedLogo, {
+      .upload(fileName, resizedImage, {
         contentType: "image/png",
         upsert: true
       });
@@ -40,22 +41,25 @@ async function processLogoZip(senderNumber, mediaId) {
 
     const { data: urlData } = supabase.storage.from("user_files").getPublicUrl(fileName);
     const publicUrl = urlData.publicUrl;
-    await supabase.from("users").update({ logo_url: publicUrl }).eq("telefone", senderNumber);
+
+    // Atualiza o campo correto no Supabase
+    const campo = tipo === "assinatura" ? "assinatura" : "logo_url";
+    await supabase.from("users").update({ [campo]: publicUrl }).eq("telefone", senderNumber);
 
     await sendWhatsAppRaw({
       messaging_product: "whatsapp",
       to: senderNumber,
       type: "text",
-      text: { body: `✅ Logo atualizada com sucesso!` }
+      text: { body: `✅ ${tipo === "assinatura" ? "Assinatura" : "Logo"} atualizada com sucesso!` }
     });
 
   } catch (err) {
-    console.error("Erro ao processar ZIP da logo:", err);
+    console.error(`Erro ao processar ZIP de ${tipo}:`, err);
     await sendWhatsAppRaw({
       messaging_product: "whatsapp",
       to: senderNumber,
       type: "text",
-      text: { body: "⚠️ Ocorreu um erro ao processar seu arquivo ZIP. Tente novamente." }
+      text: { body: `⚠️ Ocorreu um erro ao processar seu arquivo ZIP de ${tipo}. Tente novamente.` }
     });
   }
 }
