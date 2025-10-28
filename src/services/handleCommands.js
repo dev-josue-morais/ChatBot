@@ -123,7 +123,7 @@ if (/^enviar assinatura$/i.test(myText) && userData) {
       to: senderNumber,
       type: "text",
       text: {
-        body: "🖋️ Agora envie a imagem da sua ASSINATURA em papel branco (formato JPEG ou PNG).\n\n👉 Dica: tire uma foto nítida, com boa iluminação e sem sombras, para que o PDF fique bonito.",
+        body: "🖋️ Agora envie a imagem da sua ASSINATURA em papel branco (formato PNG dentro de um arquivo.zip).",
       },
     });
 
