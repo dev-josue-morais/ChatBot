@@ -35,8 +35,36 @@ function formatLocal(brDateString) {
     .toFormat("dd/MM/yyyy HH:mm");
 }
 
+function formatPhoneNumber(phone) {
+    if (!phone) return "";
+
+    // Remove tudo que não for número
+    let digits = phone.replace(/\D/g, "");
+
+    // Remove o prefixo +55 ou 55
+    if (digits.startsWith("55")) {
+        digits = digits.substring(2);
+    }
+
+    // Se o número tiver mais de 11 dígitos, remove o extra
+    if (digits.length > 11) {
+        digits = digits.slice(-11);
+    }
+
+    // Monta o formato (XX) 9 XXXX-XXXX ou (XX) XXXX-XXXX
+    if (digits.length === 11) {
+        return `(${digits.slice(0, 2)}) ${digits[2]} ${digits.slice(3, 7)}-${digits.slice(7)}`;
+    } else if (digits.length === 10) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+
+    // Se não tiver formato válido, retorna apenas os dígitos
+    return digits;
+}
+
 module.exports = {
-  getNowBRT,
+  getNowBRT
+  formatPhoneNumber,
   formatPhone,
   formatLocal,
   formatarData
