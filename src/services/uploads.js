@@ -28,14 +28,6 @@ async function handleUploads(msg, session, senderNumber) {
       // Limpa sessão do usuário
       await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
 
-      // Confirmação
-      await sendWhatsAppRaw({
-        messaging_product: "whatsapp",
-        to: senderNumber,
-        type: "text",
-        text: { body: "✅ Assinatura recebida e processada com sucesso!\nAgora ela será usada automaticamente nos seus PDFs. 🖋️" }
-      });
-
       return true;
     }
 
