@@ -19,7 +19,7 @@ function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes
             </p>
             <p style="margin-top:20px;">${user.cidade || ""}, ${dataAtual.toFormat("dd/MM/yyyy")}</p>
             <div style="margin-top:50px; border-top:2px solid #000; width:60%; margin-left:auto; margin-right:auto; padding-top:5px; text-align:center;">
-                <strong>${user.assinatura || user.user_name || "_________________________"}</strong>
+                <strong>${user.assinatura || user.user_name || "Assinatura da Empresa"}</strong>
             </div>
         </div>`;
     } else {
@@ -204,7 +204,7 @@ let valorReciboFinal;
 if (documentoTipo === "Recibo") {
     valorReciboFinal = (valorRecibo && valorRecibo > 0)
         ? valorRecibo
-        : descontoServicos.totalFinal;
+        : totalFinal;
 }
 
 const blocoPagamento = renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes, user, orcamento);
