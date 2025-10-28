@@ -99,7 +99,7 @@ async function handleUploads(msg, session, senderNumber) {
       const publicUrl = urlData.publicUrl;
 
       // 6️⃣ Atualiza o usuário
-      await supabase.from("users").update({ assinatura_url: publicUrl }).eq("telefone", senderNumber);
+      await supabase.from("users").update({ assinatura: publicUrl }).eq("telefone", senderNumber);
 
       // 7️⃣ Limpa sessão
       await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
