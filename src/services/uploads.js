@@ -10,40 +10,43 @@ const { WHATSAPP_TOKEN } = require("../utils/config");
 async function handleUploads(msg, session, senderNumber) {
   try {
     // --- Upload de assinatura via ZIP ---
-if (msg.type === "document" && session?.answers?.type === "assinatura_img" && msg.document.mime_type === "application/zip") {
-  const mediaId = msg.document?.id;
-  if (!mediaId) {
-    await sendWhatsAppRaw({
-      messaging_product: "whatsapp",
-      to: senderNumber,
-      type: "text",
-      text: { body: "⚠️ Não consegui obter o arquivo da assinatura. Tente novamente." }
-    });
-    return true;
-  }
+    if (msg.type === "document" && session?.answers?.type === "assinatura_img" && msg.document.mime_type === "application/zip") {
+      const mediaId = msg.document?.id;
+      if (!mediaId) {
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: "⚠️ Não consegui obter o arquivo da assinatura. Tente novamente." }
+        });
+        return true;
+      }
 
-  // Processa o ZIP igual ao logo
-  await processLogoZip(senderNumber, mediaId);
+      // Processa o ZIP com tipo "assinatura"
+      await processLogoZip(senderNumber, mediaId, "assinatura");
 
-  // Limpa sessão do usuário
-  await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
+      // Limpa sessão do usuário
+      await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
 
-  // Confirmação
-  await sendWhatsAppRaw({
-    messaging_product: "whatsapp",
-    to: senderNumber,
-    type: "text",
-    text: { body: "✅ Assinatura recebida e processada com sucesso!\nAgora ela será usada automaticamente nos seus PDFs. 🖋️" }
-  });
+      // Confirmação
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: senderNumber,
+        type: "text",
+        text: { body: "✅ Assinatura recebida e processada com sucesso!\nAgora ela será usada automaticamente nos seus PDFs. 🖋️" }
+      });
 
-  return true;
-}
+      return true;
+    }
 
     // --- Upload de logo via ZIP ---
     if (msg.type === "document" && session?.answers?.type === "logo_img" && msg.document.mime_type === "application/zip") {
       const mediaId = msg.document.id;
       if (!mediaId) throw new Error("ID do documento não encontrado.");
-      await processLogoZip(senderNumber, mediaId);
+      
+      // Processa o ZIP com tipo "logo" (padrão)
+      await processLogoZip(senderNumber, mediaId, "logo");
+
       await supabase.from("user_sessions").delete().eq("telefone", senderNumber);
       return true;
     }
