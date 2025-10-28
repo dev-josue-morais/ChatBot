@@ -10,7 +10,7 @@ const { WHATSAPP_TOKEN } = require("../utils/config");
 async function handleUploads(msg, session, senderNumber) {
   try {
     // --- Upload de imagem da Assinatura (agora via ZIP) ---
-    if (msg.type === "document" && session?.answers?.type === "assinatura_img"" && msg.document.mime_type === "application/zip") {
+    if (msg.type === "document" && session?.answers?.type === "assinatura_img" && msg.document.mime_type === "application/zip") {
       const mediaId = msg.image?.id;
       if (!mediaId) {
         await sendWhatsAppRaw({ messaging_product: "whatsapp", to: senderNumber, type: "text", text: { body: "⚠️ Não consegui obter a imagem da assinatura. Tente novamente." } });
