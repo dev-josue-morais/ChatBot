@@ -21,12 +21,16 @@ async function handleUploads(msg, session, senderNumber) {
       const mediaInfoResp = await fetch(`https://graph.facebook.com/v16.0/${mediaId}`, {
         headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }
       });
-      const mediaInfo = await mediaInfoResp.json();
-      const mediaUrl = mediaInfo.url;
-      if (!mediaUrl) {
-        await sendWhatsAppRaw({ messaging_product: "whatsapp", to: senderNumber, type: "text", text: { body: "⚠️ Não consegui obter a URL da imagem. Tente novamente." } });
-        return true;
-      }
+      const mediaId = msg.document?.id;
+if (!mediaId) {
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: { body: "⚠️ Não consegui obter o arquivo da assinatura. Tente novamente." }
+  });
+  return true;
+}
 
       // 2️⃣ Baixa a imagem
       const mediaResp = await fetch(mediaUrl, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } });
