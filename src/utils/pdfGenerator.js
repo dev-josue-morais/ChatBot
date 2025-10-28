@@ -17,11 +17,20 @@ function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, opcoes
                 (${valorReciboFinal ? "valor total do recibo" : "valor referente aos serviços"}),
                 referente aos serviços e materiais descritos acima.
             </p>
-            <p style="margin-top:20px;">${user.cidade || ""}, ${dataAtual.toFormat("dd/MM/yyyy")}</p>
-            <div style="margin-top:50px; border-top:2px solid #000; width:60%; margin-left:auto; margin-right:auto; padding-top:5px; text-align:center;">
-                <strong>${user.assinatura || user.user_name || "Assinatura da Empresa"}</strong>
-            </div>
-        </div>`;
+            <p style="margin-top:20px;">
+  ${user.cidade || ""}, ${dataAtual.toFormat("dd/MM/yyyy")}
+</p>
+
+<div style="margin-top:30px; text-align:center;">
+  ${
+    user.assinatura
+      ? `<img src="${user.assinatura}" alt="Assinatura" style="max-height:80px; max-width:250px; object-fit:contain; margin-bottom:10px;" />`
+      : ""
+  }
+  <div style="border-top:2px solid #000; width:60%; margin:0 auto; padding-top:5px;">
+    <strong>${user.empresa_nome || user.user_name || "Assinatura da Empresa"}</strong>
+  </div>
+</div>`;
     } else {
         return `
         <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:row; margin-top:20px; gap:20px; page-break-inside:avoid;">
