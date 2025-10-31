@@ -92,7 +92,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 return `${formatOrcamento(data[0])}`;
             }
-
             // ------------------- LIST -------------------
             case 'list': {
     let query = supabase
@@ -140,79 +139,78 @@ async function handleOrcamentoCommand(command, userPhone) {
 
 // ------------------- PDF -------------------
 case "pdf": {
-    try {
-        if (!command.id)
-            return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
+  try {
+    if (!command.id)
+      return "⚠️ É necessário informar o ID do orçamento para gerar o PDF.";
 
-        const { data: orcamentos, error: errOrc } = await supabase
-            .from("orcamentos")
-            .select("*")
-            .eq("orcamento_numero", command.id)
-            .eq("user_telefone", userPhone)
-            .limit(1);
+    const { data: orcamentos } = await supabase
+      .from("orcamentos")
+      .select("*")
+      .eq("orcamento_numero", command.id)
+      .eq("user_telefone", userPhone)
+      .limit(1);
 
-        if (errOrc) {
-            console.error("Erro ao buscar orçamento:", errOrc);
-            return `⚠️ Não consegui gerar o PDF do orçamento ${command.id}.`;
-        }
+    if (!orcamentos?.length)
+      return `⚠️ Orçamento ${command.id} não encontrado.`;
 
-        if (!orcamentos?.length)
-            return `⚠️ Orçamento ${command.id} não encontrado.`;
+    const o = orcamentos[0];
 
-        const o = orcamentos[0];
+    const { data: users } = await supabase
+      .from("users")
+      .select("*")
+      .eq("telefone", userPhone)
+      .limit(1);
 
-        const { data: users, error: errUser } = await supabase
-            .from("users")
-            .select("*")
-            .eq("telefone", userPhone)
-            .limit(1);
+    if (!users?.length)
+      return "⚠️ Usuário não encontrado para gerar o PDF.";
 
-        if (errUser || !users?.length) {
-            console.error("Erro ao buscar usuário:", errUser);
-            return "⚠️ Usuário não encontrado para gerar o PDF.";
-        }
+    const user = users[0];
 
-        const user = users[0];
+    // ================================
+    // 📄 Configuração do PDF
+    // ================================
+    const pdfConfig = {
+      tipo: command.tipo || "Orçamento",
+      opcoes: command.opcoes || {
+        listaServicos: true,
+        listaMateriais: true,
+        ocultarValorServicos: false,
+        garantia: true,
+        assinaturaEmpresa: false,
+        assinaturaUser: false,
+      },
+    };
 
-        // ================================
-        // 📄 Configuração do PDF
-        // ================================
-        const pdfConfig = {
-            tipo: command.tipo || "Orçamento",
-            opcoes: command.opcoes || {
-                listaServicos: true,
-                listaMateriais: true,
-                ocultarValorServicos: false,
-                garantia: true,
-                assinaturaEmpresa: false,
-                assinaturaUser: false,
-            },
-        };
-
-        // 💵 Se for RECIBO, incluir o valor
-        if (pdfConfig.tipo === "Recibo") {
-            const valor = parseFloat(command.valorRecibo);
-            pdfConfig.valorRecibo = !isNaN(valor) && valor > 0 ? valor : null;
-
-            if (!pdfConfig.valorRecibo)
-                console.warn(`⚠️ Valor do recibo não informado ou inválido para o orçamento ${command.id}.`);
-        }
-
-        // ✅ Envia para função geradora de PDF
-        const enviado = await sendPDFOrcamento(userPhone, o, { ...pdfConfig, user });
-
-        if (enviado) {
-            return;
-        } else {
-            return `⚠️ PDF do ${pdfConfig.tipo.toLowerCase()} ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
-        }
-
-    } catch (err) {
-        console.error("Erro ao gerar/enviar PDF:", err);
-        return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
+    if (pdfConfig.tipo === "Recibo") {
+      const valor = parseFloat(command.valorRecibo);
+      pdfConfig.valorRecibo = !isNaN(valor) && valor > 0 ? valor : null;
+    } else {
+      pdfConfig.valorRecibo = null;
     }
-}
 
+    if (
+      ["Recibo", "Nota de Serviço"].includes(pdfConfig.tipo) &&
+      o.etapa?.toLowerCase() !== "finalizado"
+    ) {
+      await supabase
+        .from("orcamentos")
+        .update({ etapa: "finalizado" })
+        .eq("orcamento_numero", command.id)
+        .eq("user_telefone", userPhone);
+    }
+
+    const enviado = await sendPDFOrcamento(userPhone, o, { ...pdfConfig, user });
+
+    if (enviado) {
+      return;
+    } else {
+      return `⚠️ PDF do ${pdfConfig.tipo.toLowerCase()} ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
+    }
+  } catch (err) {
+    console.error("Erro ao gerar/enviar PDF:", err);
+    return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
+  }
+}
             default:
                 return '⚠️ Ação desconhecida.';
         }
