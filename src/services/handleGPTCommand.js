@@ -103,7 +103,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
 
   Regras:
   - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
-  - etapa deve sempre ter um valor.
+  - etapa deve sempre ter um valor se não for pedido use defalt.
   - Responda **somente com o JSON**, sem texto fora dele.
 
   Texto: """${userMessage}"""
