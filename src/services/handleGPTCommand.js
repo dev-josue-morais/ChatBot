@@ -253,6 +253,82 @@ Mensagem do usuário:
 `;
       break;
     }
+case 'despesas_create': {
+  prompt = `
+Você é um assistente financeiro que registra despesas do usuário.
+Sempre responda **apenas com JSON válido**, sem texto fora do JSON.
+
+Formato esperado:
+{
+  "modulo": "despesas",
+  "action": "create",
+  "tipo": "conducao" | "materiais" | "outras",
+  "valor": número,
+  "descricao": "string" // obrigatório: ex: "gasolina", "óleo", "mecânico"
+}
+
+- Retorne **apenas JSON válido**, sem texto extra.
+
+Texto do usuário: """${userMessage}"""
+`;
+  break;
+}
+case 'despesas_edit': {
+  if (!id) return { error: "⚠️ É necessário informar o ID da despesa para editar." };
+
+  const { data: currentData, error: fetchError } = await supabase
+    .from('despesas')
+    .select('*')
+    .eq('despesa_numero', id)
+    .single();
+
+  if (fetchError || !currentData)
+    return { error: `⚠️ Não encontrei a despesa ID ${id}.` };
+
+  prompt = `
+Você é um assistente financeiro que edita despesas existentes.
+Responda **apenas com JSON válido**, sem texto fora do JSON.
+
+Despesa atual:
+${JSON.stringify(currentData, null, 2)}
+
+Instruções do usuário:
+"${userMessage}"
+
+Regras:
+- Atualize apenas os campos mencionados pelo usuário (tipo, valor, descricao).
+- Mantenha todos os outros campos iguais ao atual.
+- O campo "descricao" é obrigatório e deve sempre conter o nome da despesa.
+- O campo "tipo" deve ser exatamente um dos valores: "conducao", "materiais" ou "outras".
+
+Retorne a despesa atualizada em JSON.
+`;
+  break;
+}
+case 'despesas_list': {
+  prompt = `
+Você é um assistente financeiro que lista despesas existentes.
+O usuário está no fuso horário GMT-3 (Brasil).
+A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
+Responda **apenas com JSON válido**, sem texto fora do JSON.
+
+Formato esperado:
+{
+  "modulo": "despesas",
+  "action": "list",
+  "tipo": "conducao" | "materiais" | "outras" | "todos",
+  "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
+  "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
+}
+
+Regras:
+- Pelo menos um filtro (tipo ou datas) deve ser aplicado; se o usuário não informar datas, use o mes atual como default.
+- Retorne **somente JSON**, sem explicações.
+
+Texto do usuário: """${userMessage}"""
+`;
+break;
+}
 
     default:
       return { erro: 'Prompt não definido', modulo, action };
