@@ -152,12 +152,12 @@ if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
 
 🧾 **Orçamentos**
 - criar orçamento — dicas para criar orçamentos
-- listar orçamentos — listar orçamentos existentes
+- listar orçamentos <telefone> ou <nome> ou <todos> — listar orçamentos existentes
 - criar pdf do orçamento <ID> — gerar PDF com opções
 
 📅 **Atendimentos**
 - criar atendimento — dicas para agendar atendimentos
-- listar agenda — listar seus atendimentos do dia
+- listar agenda <dia que deseja pode ser hoje ou amanha> — listar seus atendimentos do dia
 
 🖼️ **Personalização**
 - enviar logo — enviar sua logo para PDF
