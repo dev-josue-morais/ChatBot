@@ -2,7 +2,7 @@ const supabase = require("./supabase");
 const formatOrcamento = require("../utils/formatOrcamento");
 const { sendWhatsAppMessage } = require("./whatsappService");
 const { sendPDFOrcamento } = require("./whatsappService");
-const { formatPhoneNumber } = require("../utils/formatPhoneNumber");
+const { formatPhoneNumber } = require("../utils/utils");
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
