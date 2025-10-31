@@ -12,94 +12,103 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
     // 🧾 ORÇAMENTO - CREATE
     //  ============================================================
     case 'orcamento_create': {
-      prompt = `
-      Você é um assistente comercial. O usuário está criando um novo orçamento.
-      Sempre responda **apenas com JSON válido**, sem texto fora do JSON.
+  prompt = `
+  Você é um assistente comercial. O usuário está criando um novo orçamento.
+  Sempre responda **apenas com JSON válido**, sem texto fora do JSON.
 
-      Exemplo:
-      {
-        "modulo": "orcamento",
-        "action": "create",
-        "nome_cliente": "string",
-        "telefone_cliente": "string",
-        "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-         "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
-        "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
-        "desconto_materiais", "desconto_servicos": string ("10%" ou "10") ou null
-       }
+  Exemplo:
+  {
+    "modulo": "orcamento",
+    "action": "create",
+    "nome_cliente": "string",
+    "telefone_cliente": "string",
+    "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
+    "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
+    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
+    "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+    "desconto_materiais": "10%" ou "10" ou null,
+    "desconto_servicos": "10%" ou "10" ou null
+  }
 
-      Regras:
-      - Não inclua expressões matemáticas, apenas números.
-      - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
+  Regras:
+  - O campo "etapa" deve ser sempre ser enviado.
+  - Não inclua expressões matemáticas, apenas números.
+  - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
 
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
-
+  Texto: """${userMessage}"""
+  `;
+  break;
+}
     // ============================================================
     // ✏️ ORÇAMENTO - EDIT
     // ============================================================
     case 'orcamento_edit': {
-      if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
+  if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
 
-      const { data: currentData, error: fetchError } = await supabase
-        .from('orcamentos')
-        .select('*')
-        .eq('orcamento_numero', id)
-        .single();
+  const { data: currentData, error: fetchError } = await supabase
+    .from('orcamentos')
+    .select('*')
+    .eq('orcamento_numero', id)
+    .single();
 
-      if (fetchError || !currentData)
-        return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
+  if (fetchError || !currentData)
+    return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
 
-      prompt = `
-      Você é um assistente comercial que edita JSONs existentes de orçamentos.
-      Responda **somente com JSON válido**, sem texto fora do JSON.
+  prompt = `
+  Você é um assistente comercial que edita JSONs existentes de orçamentos.
+  Responda **somente com JSON válido**, sem texto fora do JSON.
 
-      Orçamento atual:
-      ${JSON.stringify(currentData, null, 2)}
+  Orçamento atual:
+  ${JSON.stringify(currentData, null, 2)}
 
-      Instruções do usuário:
-      "${userMessage}"
+  Instruções do usuário:
+  "${userMessage}"
 
-      Regras:
-      - Mantenha toda a estrutura original.
-      - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos).
-      - Campos vazios podem ser null.
-      - Não crie novas colunas.
-      **use esse formato**
+  Regras:
+  - Mantenha toda a estrutura original.
+  - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos, etapa, observações, etc).
+  - Campos vazios podem ser null.
+  - Não crie novas colunas.
+  - O campo "etapa" (quando alterado) deve ser **uma dessas opções exatamente**:
+    "negociacao", "andamento", "aprovado", "perdido", "finalizado".
+  - Se o usuário não mencionar a etapa, mantenha o valor atual.
+  - Use sempre este formato de estrutura:
       "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-       "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
-       "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
-       "desconto_materiais", "desconto_servicos": "string" ("10%" ou "10") ou null
-      Retorne o orçamento atualizado.
-      `;
-      break;
-    }
+      "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
+      "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+      "desconto_materiais": "10%" ou "10" ou null,
+      "desconto_servicos": "10%" ou "10" ou null
+
+  Retorne o orçamento atualizado.
+  `;
+  break;
+}
 
     // ============================================================
     // 📋 ORÇAMENTO - LIST
     // ============================================================
     case 'orcamento_list': {
-      prompt = `
-      Você é um assistente que ajuda a listar orçamentos existentes.
-      Responda apenas com JSON válido no formato:
+  prompt = `
+  Você é um assistente que ajuda a listar orçamentos existentes.
+  Responda **apenas com JSON válido** no formato:
 
-      {
-        "modulo": "orcamento",
-        "action": "list",
-        "id": número ou null,
-        "nome_cliente": string ou null,
-        "telefone_cliente": string ou null
-      }
+  {
+    "modulo": "orcamento",
+    "action": "list",
+    "id": número ou null,
+    "nome_cliente": string ou null,
+    "telefone_cliente": string ou null,
+    "etapa": "negociacao" (defalt) ou "andamento" ou "aprovado" ou "perdido" ou "finalizado"
+  }
 
-      Pelo menos um dos campos (id, nome_cliente ou telefone_cliente) é obrigatório.
+  Regras:
+  - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
+  - Responda **somente com o JSON**, sem texto fora dele.
 
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
-
+  Texto: """${userMessage}"""
+  `;
+  break;
+}
     // ============================================================
     // 🗑️ ORÇAMENTO - DELETE
     // ============================================================
