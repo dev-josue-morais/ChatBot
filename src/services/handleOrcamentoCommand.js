@@ -92,6 +92,7 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 return `${formatOrcamento(data[0])}`;
             }
+
             // ------------------- LIST -------------------
             case 'list': {
     let query = supabase
@@ -99,22 +100,24 @@ async function handleOrcamentoCommand(command, userPhone) {
         .select('*')
         .eq('user_telefone', userPhone);
 
-    // Filtros opcionais (todos independentes)
     if (command.id) {
         query = query.eq('orcamento_numero', command.id);
     }
-    if (command.etapa) {
-        query = query.eq('etapa', command.etapa.trim().toLowerCase());
+
+    const etapa = (command.etapa || 'negociacao').trim().toLowerCase();
+    if (etapa !== 'todos') {
+        query = query.eq('etapa', etapa);
     }
+
     if (command.telefone_cliente) {
         query = query.eq('telefone_cliente', command.telefone_cliente);
     }
+
     if (command.nome_cliente) {
         const nome = command.nome_cliente.trim();
         query = query.ilike('nome_cliente', `%${nome}%`);
     }
 
-    // Ordenar resultados (mais recentes primeiro)
     query = query.order('criado_em', { ascending: false });
 
     const { data: orcamentos, error } = await query;
@@ -128,7 +131,6 @@ async function handleOrcamentoCommand(command, userPhone) {
         return "📄 Nenhum orçamento encontrado.";
     }
 
-    // Envia cada orçamento separadamente
     for (const o of orcamentos) {
         await sendWhatsAppMessage(userPhone, formatOrcamento(o));
     }
