@@ -98,7 +98,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
     "id": número ou null,
     "nome_cliente": string ou null,
     "telefone_cliente": string ou null,
-    "etapa": "negociacao" (defalt) ou "andamento" ou "aprovado" ou "perdido" ou "finalizado"
+    "etapa": "negociacao" ou "andamento" ou "aprovado" ou "perdido" ou "finalizado ou null"
   }
 
   Regras:
