@@ -92,7 +92,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 return `${formatOrcamento(data[0])}`;
             }
-
             // ------------------- LIST -------------------
             case 'list': {
     let query = supabase
