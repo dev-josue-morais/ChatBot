@@ -22,6 +22,16 @@ const handleUserRegistrationCommand = async (myText, senderNumber, userData) => 
     await startUserRegistration(senderNumber);
     return true;
   }
+
+  return false;
+};
+
+/**
+ * Trata comandos enviados por usuários já cadastrados.
+ * Inclui upload, ajuda, orçamentos, atendimentos, premium e renovação.
+ */
+const handleCommands = async (myText, senderNumber, userData, now) => {
+// -- edita informação do usuário 
 const editarUsuarioMatch = myText.match(/^editar usu[aá]rio$/i);
 if (editarUsuarioMatch) {
   if (!userData) {
@@ -37,15 +47,6 @@ if (editarUsuarioMatch) {
   await startUserEdit(senderNumber, userData);
   return true;
 }
-
-  return false;
-};
-
-/**
- * Trata comandos enviados por usuários já cadastrados.
- * Inclui upload, ajuda, orçamentos, atendimentos, premium e renovação.
- */
-const handleCommands = async (myText, senderNumber, userData, now) => {
 
   // --- Adição de dias premium (número fixo) ---
   if (senderNumber === DESTINO_FIXO) {
