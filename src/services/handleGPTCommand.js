@@ -98,11 +98,12 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
     "id": número ou null,
     "nome_cliente": string ou null,
     "telefone_cliente": string ou null,
-    "etapa": "negociacao" ou "andamento" ou "aprovado" ou "perdido" ou "finalizado ou null"
+    "etapa": "negociacao" (defalt) || "andamento" || "aprovado" || "perdido" || "finalizado" || "todos"
   }
 
   Regras:
   - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
+  - etapa deve sempre ter um valor.
   - Responda **somente com o JSON**, sem texto fora dele.
 
   Texto: """${userMessage}"""
