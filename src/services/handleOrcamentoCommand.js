@@ -17,15 +17,16 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const observacoes = Array.isArray(command.observacoes) ? command.observacoes.filter(Boolean) : [];
 
                 const { data, error } = await supabase.from('orcamentos').insert([{
-                    nome_cliente: command.nome_cliente,
-                    telefone_cliente: command.telefone_cliente,
-                    observacoes,
-                    materiais: command.materiais || [],
-                    servicos: command.servicos || [],
-                    desconto_materiais: command.desconto_materiais || 0,
-                    user_telefone: userPhone,
-                    desconto_servicos: command.desconto_servicos || 0
-                }]).select();
+    nome_cliente: command.nome_cliente,
+    telefone_cliente: command.telefone_cliente,
+    etapa: command.etapa || "negociacao",
+    observacoes,
+    materiais: command.materiais || [],
+    servicos: command.servicos || [],
+    desconto_materiais: command.desconto_materiais || 0,
+    desconto_servicos: command.desconto_servicos || 0,
+    user_telefone: userPhone
+}]).select();
 
                 if (error) {
                     console.error("Erro ao criar orçamento:", error);
@@ -63,15 +64,15 @@ async function handleOrcamentoCommand(command, userPhone) {
   // console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
 
                 const validFields = {
-                    nome_cliente: command.nome_cliente,
-                    telefone_cliente: command.telefone_cliente,
-                    etapa: command.etapa,
-                    observacoes: command.observacoes,
-                    materiais: command.materiais,
-                    servicos: command.servicos,
-                    desconto_materiais: command.desconto_materiais,
-                    desconto_servicos: command.desconto_servicos
-                };
+    nome_cliente: command.nome_cliente,
+    telefone_cliente: command.telefone_cliente,
+    etapa: command.etapa || undefined,
+    observacoes: command.observacoes,
+    materiais: command.materiais,
+    servicos: command.servicos,
+    desconto_materiais: command.desconto_materiais,
+    desconto_servicos: command.desconto_servicos
+};
 
                 const { data, error } = await supabase
                     .from('orcamentos')
@@ -101,7 +102,9 @@ async function handleOrcamentoCommand(command, userPhone) {
                 // Filtros opcionais
                 if (command.id) {
                     query = query.eq('orcamento_numero', command.id);
-                } else if (command.telefone_cliente) {
+                } eles if (command.etapa) {
+    query = query.eq('etapa', command.etapa.trim().toLowerCase());
+} else if (command.telefone_cliente) {
                     query = query.eq('telefone_cliente', command.telefone_cliente);
                 } else if (command.nome_cliente) {
                     const nome = command.nome_cliente.trim();
