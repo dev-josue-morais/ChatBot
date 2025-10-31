@@ -63,7 +63,7 @@ function formatPhoneNumber(phone) {
 }
 
 module.exports = {
-  getNowBRT
+  getNowBRT,
   formatPhoneNumber,
   formatPhone,
   formatLocal,
