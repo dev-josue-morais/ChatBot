@@ -2,8 +2,8 @@ name: Renovar Token WhatsApp
 
 on:
   schedule:
-    - cron: '0 0 */10 * *' # rodar a cada 10 dias
-  workflow_dispatch: # permite rodar manualmente
+    - cron: '0 2 */10 * *'
+  workflow_dispatch:
 
 jobs:
   renew-token:
