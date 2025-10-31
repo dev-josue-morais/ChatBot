@@ -1,8 +1,8 @@
-name: keepAlive-10min
+name: keepAlive
 
 on:
   schedule:
-    - cron: "10,30,50 0-1,8-23 * * *"
+    - cron: "10-59/20 0-1,8-23 * * *"
   workflow_dispatch:
 
 jobs:
