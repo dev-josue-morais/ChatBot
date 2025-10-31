@@ -12,7 +12,7 @@ const routes = require('./src/routes');
 
 app.use(routes);
 
-// Middleware global de erro
+// Middleware  global de erro
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err.stack || err);
   res.status(500).json({ error: 'Erro interno do servidor' });
