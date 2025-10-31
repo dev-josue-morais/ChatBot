@@ -31,11 +31,7 @@ const handleUserRegistrationCommand = async (myText, senderNumber, userData) => 
  * Inclui upload, ajuda, orçamentos, atendimentos, premium e renovação.
  */
 const handleCommands = async (myText, senderNumber, userData, now) => {
-// -- edita informação do usuário 
-const editarUsuarioMatch = myText.match(/^editar usu[aá]rio$/i);
-  await startUserEdit(senderNumber, userData);
-  return true;
-}
+// -- edita informação do usuário
 
   // --- Adição de dias premium (número fixo) ---
   if (senderNumber === DESTINO_FIXO) {
@@ -278,6 +274,11 @@ lista meus atendimentos do dia <data>
       });
     }
     return true;
+  }
+
+  if (/^editar usu[aá]rio$/i.test(myText) && userData) {
+    await startUserEdit(senderNumber, userData);
+  return true;
   }
 
   // --- Comando: renovar ---
