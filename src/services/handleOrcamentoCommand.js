@@ -6,6 +6,7 @@ const { formatPhoneNumber } = require("../utils/formatPhoneNumber");
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
+        if (command.telefone_cliente) { command.telefone_cliente = formatPhoneNumber(command.telefone_cliente);}
         switch (command.action) {
 
             // ------------------- CREATE -------------------
