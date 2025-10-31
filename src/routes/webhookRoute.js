@@ -32,10 +32,10 @@ router.post('/', async (req, res, next) => {
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
     
-    console.log('🚀 Webhook acionado:', new Date().toISOString());
+    // console.log('🚀 Webhook acionado:', new Date().toISOString());
     for (let msg of messages) {
-    console.log('📩 Mensagem recebida:', JSON.stringify(msg, null, 2));
-    console.log('📡 Corpo completo do evento:', JSON.stringify(value, null, 2));
+    // console.log('📩 Mensagem recebida:', JSON.stringify(msg, null, 2));
+    // console.log('📡 Corpo completo do evento:', JSON.stringify(value, null, 2));
       
       const contact = value.contacts?.[0];
       if (!contact) continue;
