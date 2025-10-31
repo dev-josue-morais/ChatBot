@@ -6,6 +6,7 @@ const { formatPhoneNumber } = require("../utils/formatPhoneNumber");
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
+        if (command.telefone_cliente) { command.telefone_cliente = formatPhoneNumber(command.telefone_cliente);}
         switch (command.action) {
 
             // ------------------- CREATE -------------------
@@ -16,15 +17,16 @@ async function handleOrcamentoCommand(command, userPhone) {
                 const observacoes = Array.isArray(command.observacoes) ? command.observacoes.filter(Boolean) : [];
 
                 const { data, error } = await supabase.from('orcamentos').insert([{
-                    nome_cliente: command.nome_cliente,
-                    telefone_cliente: command.telefone_cliente,
-                    observacoes,
-                    materiais: command.materiais || [],
-                    servicos: command.servicos || [],
-                    desconto_materiais: command.desconto_materiais || 0,
-                    user_telefone: userPhone,
-                    desconto_servicos: command.desconto_servicos || 0
-                }]).select();
+    nome_cliente: command.nome_cliente,
+    telefone_cliente: command.telefone_cliente,
+    etapa: command.etapa || "negociacao",
+    observacoes,
+    materiais: command.materiais || [],
+    servicos: command.servicos || [],
+    desconto_materiais: command.desconto_materiais || 0,
+    desconto_servicos: command.desconto_servicos || 0,
+    user_telefone: userPhone
+}]).select();
 
                 if (error) {
                     console.error("Erro ao criar orçamento:", error);
@@ -62,15 +64,15 @@ async function handleOrcamentoCommand(command, userPhone) {
   // console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
 
                 const validFields = {
-                    nome_cliente: command.nome_cliente,
-                    telefone_cliente: command.telefone_cliente,
-                    etapa: command.etapa,
-                    observacoes: command.observacoes,
-                    materiais: command.materiais,
-                    servicos: command.servicos,
-                    desconto_materiais: command.desconto_materiais,
-                    desconto_servicos: command.desconto_servicos
-                };
+    nome_cliente: command.nome_cliente,
+    telefone_cliente: command.telefone_cliente,
+    etapa: command.etapa || undefined,
+    observacoes: command.observacoes,
+    materiais: command.materiais,
+    servicos: command.servicos,
+    desconto_materiais: command.desconto_materiais,
+    desconto_servicos: command.desconto_servicos
+};
 
                 const { data, error } = await supabase
                     .from('orcamentos')
@@ -90,44 +92,51 @@ async function handleOrcamentoCommand(command, userPhone) {
 
                 return `${formatOrcamento(data[0])}`;
             }
+
             // ------------------- LIST -------------------
             case 'list': {
-                let query = supabase
-                    .from('orcamentos')
-                    .select('*')
-                    .eq('user_telefone', userPhone);
+    let query = supabase
+        .from('orcamentos')
+        .select('*')
+        .eq('user_telefone', userPhone);
 
-                // Filtros opcionais
-                if (command.id) {
-                    query = query.eq('orcamento_numero', command.id);
-                } else if (command.telefone_cliente) {
-                    query = query.eq('telefone_cliente', command.telefone_cliente);
-                } else if (command.nome_cliente) {
-                    const nome = command.nome_cliente.trim();
-                    query = query.ilike('nome_cliente', `%${nome}%`);
-                }
+    if (command.id) {
+        query = query.eq('orcamento_numero', command.id);
+    }
 
-                // Ordenar resultados (mais recentes primeiro)
-                query = query.order('criado_em', { ascending: false });
+    const etapa = (command.etapa || 'negociacao').trim().toLowerCase();
+    if (etapa !== 'todos') {
+        query = query.eq('etapa', etapa);
+    }
 
-                const { data: orcamentos, error } = await query;
+    if (command.telefone_cliente) {
+        query = query.eq('telefone_cliente', command.telefone_cliente);
+    }
 
-                if (error) {
-                    console.error("Erro ao listar orçamentos:", error);
-                    return "⚠️ Não foi possível listar os orçamentos.";
-                }
+    if (command.nome_cliente) {
+        const nome = command.nome_cliente.trim();
+        query = query.ilike('nome_cliente', `%${nome}%`);
+    }
 
-                if (!orcamentos || orcamentos.length === 0) {
-                    return "📄 Nenhum orçamento encontrado.";
-                }
+    query = query.order('criado_em', { ascending: false });
 
-                // Envia cada orçamento separadamente
-                for (const o of orcamentos) {
-                    await sendWhatsAppMessage(userPhone, formatOrcamento(o));
-                }
+    const { data: orcamentos, error } = await query;
 
-                return `✅ ${orcamentos.length} orçamento(s) enviados.`;
-            }
+    if (error) {
+        console.error("Erro ao listar orçamentos:", error);
+        return "⚠️ Não foi possível listar os orçamentos.";
+    }
+
+    if (!orcamentos || orcamentos.length === 0) {
+        return "📄 Nenhum orçamento encontrado.";
+    }
+
+    for (const o of orcamentos) {
+        await sendWhatsAppMessage(userPhone, formatOrcamento(o));
+    }
+
+    return `✅ ${orcamentos.length} orçamento(s) enviados.`;
+}
 
 // ------------------- PDF -------------------
 case "pdf": {
