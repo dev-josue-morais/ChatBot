@@ -1,6 +1,6 @@
 const supabase = require("./supabase");
 const { sendWhatsAppRaw } = require("./whatsappService");
-const { startUserRegistration } = require("./userRegistration");
+const { startUserRegistration, stastartUserEdit } = require("./userRegistration");
 const { DESTINO_FIXO } = require('../utils/config');
 
 /**
