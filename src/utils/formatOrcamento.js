@@ -15,18 +15,30 @@ function formatOrcamento(o) {
   const descontoServicos = aplicarDesconto(totalServicos, o.desconto_servicos);
 
   const totalOriginal = totalMateriais + totalServicos;
-  const totalFinal =
-    descontoMateriais.totalFinal + descontoServicos.totalFinal;
+  const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
   const observacoes =
-  Array.isArray(o.observacoes) && o.observacoes.length > 0
-    ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
-    : "   -";
+    Array.isArray(o.observacoes) && o.observacoes.length > 0
+      ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
+      : "   -";
+
+  // Mapeamento de emojis e nomes padronizados por etapa
+  const etapaMap = {
+    negociacao: { emoji: "🟡", nome: "Em negociação" },
+    andamento: { emoji: "🔵", nome: "Em execução" },
+    aprovado: { emoji: "✅", nome: "Aprovado" },
+    perdido: { emoji: "❌", nome: "Perdido" },
+    finalizado: { emoji: "🟢", nome: "Finalizado" }
+  };
+
+  const etapaKey = (o.etapa || "negociacao").toLowerCase();
+  const etapa = etapaMap[etapaKey] || etapaMap.negociacao;
 
   return `
 📝 Orçamento ${o.orcamento_numero}
 👤 Cliente: ${o.nome_cliente}
 📞 Telefone: ${o.telefone_cliente}
+📌 Etapa: ${etapa.emoji} ${etapa.nome}
 
 📌 Observações:
 ${observacoes}
