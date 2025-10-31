@@ -33,17 +33,6 @@ const handleUserRegistrationCommand = async (myText, senderNumber, userData) => 
 const handleCommands = async (myText, senderNumber, userData, now) => {
 // -- edita informação do usuário 
 const editarUsuarioMatch = myText.match(/^editar usu[aá]rio$/i);
-if (editarUsuarioMatch) {
-  if (!userData) {
-    await sendWhatsAppRaw({
-      messaging_product: "whatsapp",
-      to: senderNumber,
-      type: "text",
-      text: { body: "⚠️ Você ainda não possui cadastro. Digite *criar usuário* primeiro." }
-    });
-    return true;
-  }
-
   await startUserEdit(senderNumber, userData);
   return true;
 }
