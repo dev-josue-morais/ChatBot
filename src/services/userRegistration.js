@@ -46,6 +46,22 @@ async function startUserRegistration(senderNumber) {
     }
   });
 }
+async function startUserEdit(senderNumber, userData) {
+  await supabase.from("user_sessions").upsert({
+    telefone: senderNumber,
+    step: 1,
+    answers: userData // pré-carrega as respostas atuais
+  });
+
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: {
+      body: `✏️ Vamos atualizar seus dados.\n\n${questions[0].text}\n\n(Digite o novo valor ou envie o mesmo se quiser manter.)`
+    }
+  });
+}
 
 /**
  * Continua o fluxo de cadastro passo a passo
@@ -67,7 +83,49 @@ async function continueUserRegistration(session, senderNumber, myText) {
       premium: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
     };
 
-    const { error: insertError } = await supabase.from("users").insert([userJson]);
+    if (session.answers && session.answers.telefone) {
+  // 🧩 Edição de usuário existente
+  const { error: updateError } = await supabase
+    .from("users")
+    .update(userJson)
+    .eq("telefone", senderNumber);
+
+  if (updateError) {
+    console.error("Erro ao atualizar usuário:", updateError);
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: senderNumber,
+      type: "text",
+      text: { body: "⚠️ Ocorreu um erro ao atualizar seus dados. Tente novamente." }
+    });
+  } else {
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: senderNumber,
+      type: "text",
+      text: { body: "✅ Seus dados foram atualizados com sucesso!" }
+    });
+  }
+} else {
+  // 🧩 Criação normal
+  const { error: insertError } = await supabase.from("users").insert([userJson]);
+  if (insertError) {
+    console.error("Erro ao criar usuário:", insertError);
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: senderNumber,
+      type: "text",
+      text: { body: "⚠️ Ocorreu um erro ao criar seu usuário. Tente novamente." }
+    });
+  } else {
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: senderNumber,
+      type: "text",
+      text: { body: "✅ Usuário criado com sucesso!\nPremium válido por 10 dias.\nDigite ⚙️ para ver as opções disponíveis." }
+    });
+  }
+}
     if (insertError) {
       console.error("Erro ao criar usuário:", insertError);
       await sendWhatsAppRaw({
@@ -103,5 +161,6 @@ async function continueUserRegistration(session, senderNumber, myText) {
 module.exports = {
   questions,
   startUserRegistration,
-  continueUserRegistration
+  continueUserRegistration,
+  startUserEdit
 };
