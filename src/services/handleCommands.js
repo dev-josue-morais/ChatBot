@@ -22,6 +22,21 @@ const handleUserRegistrationCommand = async (myText, senderNumber, userData) => 
     await startUserRegistration(senderNumber);
     return true;
   }
+const editarUsuarioMatch = myText.match(/^editar usu[aá]rio$/i);
+if (editarUsuarioMatch) {
+  if (!userData) {
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: senderNumber,
+      type: "text",
+      text: { body: "⚠️ Você ainda não possui cadastro. Digite *criar usuário* primeiro." }
+    });
+    return true;
+  }
+
+  await startUserEdit(senderNumber, userData);
+  return true;
+}
 
   return false;
 };
@@ -136,28 +151,42 @@ if (/^enviar assinatura$/i.test(myText) && userData) {
     return true;
   }
 
-  // --- Comando de ajuda ---
-  if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
-    const helpMessage = `
-📋 Digite um dos comandos disponíveis:
+// --- Comando de ajuda ---
+if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
+  const helpMessage = `
+📋 *Comandos disponíveis:*
 
-- premium - mostra seu tempo premium 💎
-- renovar - renovar tempo premium 💎
-- criar orçamento - dicas de padrões para criar um orçamento 🧾
-- criar atendimento - dicas de padrões para criar um atendimento 📅
-- enviar logo - enviar sua logo 🖼️ para integrar no PDF
-- enviar pix - enviar seu Pix QrCode 💳 para integrar no PDF
-- enviar assinatura - enviar sua assinatura 🖋️ para integrar no PDF
+👤 **Usuário**
+- criar usuário — iniciar cadastro passo a passo
+- editar usuário — atualizar seus dados cadastrados
+
+💎 **Premium**
+- premium — mostra o tempo restante do premium
+- renovar — renovar tempo premium
+
+🧾 **Orçamentos**
+- criar orçamento — dicas para criar orçamentos
+- listar orçamentos — listar orçamentos existentes
+- criar pdf do orçamento <ID> — gerar PDF com opções
+
+📅 **Atendimentos**
+- criar atendimento — dicas para agendar atendimentos
+- listar agenda — listar seus atendimentos do dia
+
+🖼️ **Personalização**
+- enviar logo — enviar sua logo para PDF
+- enviar pix — enviar seu Pix QR Code
+- enviar assinatura — enviar sua assinatura
 `.trim();
 
-    await sendWhatsAppRaw({
-      messaging_product: "whatsapp",
-      to: senderNumber,
-      type: "text",
-      text: { body: helpMessage },
-    });
-    return true;
-  }
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: { body: helpMessage },
+  });
+  return true;
+}
 
   // --- Comando: criar orçamento ---
   if (/^criar or[cç]amento/i.test(myText)) {
