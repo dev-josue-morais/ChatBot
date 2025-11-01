@@ -99,13 +99,15 @@ async function handleOrcamentoCommand(command, userPhone) {
         .select('*')
         .eq('user_telefone', userPhone);
 
+    // Se for buscar por ID, aplica só esse filtro
     if (command.id) {
         query = query.eq('orcamento_numero', command.id);
-    }
-
-    const etapa = (command.etapa || 'negociacao').trim().toLowerCase();
-    if (etapa !== 'todos') {
-        query = query.eq('etapa', etapa);
+    } else {
+        // Só aplica o filtro de etapa se não tiver ID
+        const etapa = (command.etapa || 'negociacao').trim().toLowerCase();
+        if (etapa !== 'todos') {
+            query = query.eq('etapa', etapa);
+        }
     }
 
     if (command.telefone_cliente) {
@@ -134,7 +136,7 @@ async function handleOrcamentoCommand(command, userPhone) {
         await sendWhatsAppMessage(userPhone, formatOrcamento(o));
     }
 
-    return `✅ ${orcamentos.length} orçamento(s) enviados.`;
+    return `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
 }
 
 // ------------------- PDF -------------------
