@@ -153,7 +153,7 @@ function renderObservacoes(orcamento, opcoes, tipo) {
         opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
         "Todo o material é de responsabilidade do cliente.",
         "Acréscimo conforme a forma de pagamento: Débito 1,8%, Crédito à vista 4% e Link Mercado Pago 4,5%.",
-        "O pagamento deve ser feito logo após terminar o serviço. Em caso de atraso, será cobrada multa de 2% e juros de 1% ao mês a partir do segundo dia."
+        "O pagamento deve ser feito logo após terminar o serviço. Em caso de atraso, será cobrada multa de 2% e juros de 1% ao mês a partir do segundo dia, e quaisquer descontos concedidos serão cancelados."
     ].filter(Boolean);
 
     // ✅ Se o tipo for "Orçamento", adiciona a observação extra
