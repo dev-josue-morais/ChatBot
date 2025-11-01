@@ -158,6 +158,7 @@ function renderObservacoes(orcamento, opcoes, tipo) {
     // ✅ Se o tipo for "Orçamento", adiciona a observação extra
    if (tipo === "Orçamento") {
     defaultObs.push("Validade do orçamento 7 dias.");
+    defaultObs.push(“Acréscimo aplicado conforme forma de pagamento: Débito 2%, Crédito à vista 4,5% e Link Mercado Pago 5%.”);
     defaultObs.push("Qualquer mudança nos serviços ou materiais pode alterar o valor final do orçamento, para mais ou para menos.");
 }
 
