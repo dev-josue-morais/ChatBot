@@ -152,13 +152,13 @@ function renderObservacoes(orcamento, opcoes, tipo) {
     const defaultObs = [
         opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
         "Todo o material é de responsabilidade do cliente.",
-        "Em caso de atraso no pagamento, será aplicada multa de 2% sobre o valor total, mais juros de 1% ao mês."
+        "Acréscimo aplicado conforme forma de pagamento: Débito 2%, Crédito à vista 4,5% e Link Mercado Pago 5%.",
+        "O pagamento deve ser feito logo após terminar o serviço. Em caso de atraso, será cobrada multa de 2% e juros de 1% ao mês a partir do segundo dia."
     ].filter(Boolean);
 
     // ✅ Se o tipo for "Orçamento", adiciona a observação extra
    if (tipo === "Orçamento") {
     defaultObs.push("Validade do orçamento 7 dias.");
-    defaultObs.push(“Acréscimo aplicado conforme forma de pagamento: Débito 2%, Crédito à vista 4,5% e Link Mercado Pago 5%.”);
     defaultObs.push("Qualquer mudança nos serviços ou materiais pode alterar o valor final do orçamento, para mais ou para menos.");
 }
 
