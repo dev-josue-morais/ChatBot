@@ -152,7 +152,7 @@ function renderObservacoes(orcamento, opcoes, tipo) {
     const defaultObs = [
         opcoes.garantia ? "<strong>Garantia da mão de obra:</strong> 90 Dias" : null,
         "Todo o material é de responsabilidade do cliente.",
-        "Acréscimo conforme forma de pagamento: Débito 2%, Crédito à vista 4,5% e Link Mercado Pago 5%.",
+        "Acréscimo conforme forma de pagamento: Débito 1,8%, Crédito à vista 4% e Link Mercado Pago 4,5%.",
         "O pagamento deve ser feito logo após terminar o serviço. Em caso de atraso, será cobrada multa de 2% e juros de 1% ao mês a partir do segundo dia."
     ].filter(Boolean);
 
