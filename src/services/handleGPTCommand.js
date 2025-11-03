@@ -164,6 +164,7 @@ case 'orcamento_pdf': {
    - nunca ocultar materiais e serviços no mesmo pdf
    - Se não houver instrução, manter true.
    - se "ocultarValorServicos" true obrigatoriamente "listaServicos" true.
+4. assinaturaCliente, assinaturaEmpresa defalt (false)
 
 Texto do usuário: """${userMessage}"""
   `;
