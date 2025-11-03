@@ -43,12 +43,17 @@ function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, assina
             </div>
         </div>
         ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
-            <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>${    <strong>${user.empresa_nome}</strong></div>` : ""}
-                ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
+    <div style="display:flex; justify-content:space-between; margin-top:50px;">
+        ${opcoes.assinaturaEmpresa ? `
+            <div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;">
+                <strong>${user.empresa_nome || "Empresa"}</strong>
             </div>` : ""}
-        `;
-    }
+        ${opcoes.assinaturaCliente ? `
+            <div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;">
+                <strong>Assinatura do Cliente</strong>
+            </div>` : ""}
+    </div>` : ""}
+`;}
 }
 
 async function getBase64FromUrl(url) {
