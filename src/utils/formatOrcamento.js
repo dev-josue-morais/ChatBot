@@ -17,10 +17,17 @@ function formatOrcamento(o) {
   const totalOriginal = totalMateriais + totalServicos;
   const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
+  // Observações
   const observacoes =
     Array.isArray(o.observacoes) && o.observacoes.length > 0
       ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
-      : "   -";
+      : null;
+
+  // Descricoes
+  const descricoes =
+    Array.isArray(o.descricoes) && o.descricoes.length > 0
+      ? o.descricoes.map((d, i) => `   ${i + 1}. ${d}`).join("\n")
+      : null;
 
   // Mapeamento de emojis e nomes padronizados por etapa
   const etapaMap = {
@@ -40,8 +47,9 @@ function formatOrcamento(o) {
 📞 Telefone: ${o.telefone_cliente}
 📌 Etapa: ${etapa.emoji} ${etapa.nome}
 
-📌 Observações:
-${observacoes}
+${observacoes ? `📌 Observações:\n${observacoes}\n` : ""}
+
+${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}\n` : ""}
 
 📦 Materiais:
 ${
