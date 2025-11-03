@@ -200,7 +200,7 @@ descrição de atividades:
 
 2️⃣ **Editar orçamento**
 editar orçamento <ID>
-alterar ou adicionar serviços, materiais, descontos ou observações
+alterar ou adicionar serviços, materiais, descontos ou observações, descrição de atividades.
 
 3️⃣ **Listar orçamentos**
 listar orçamentos para <telefone> | <nome> | <ID>
