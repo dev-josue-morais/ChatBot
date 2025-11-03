@@ -48,9 +48,7 @@ function formatOrcamento(o) {
 📌 Etapa: ${etapa.emoji} ${etapa.nome}
 
 ${observacoes ? `📌 Observações:\n${observacoes}\n` : ""}
-
 ${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}\n` : ""}
-
 📦 Materiais:
 ${
   (o.materiais && o.materiais.length > 0)
