@@ -68,6 +68,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
   - Mantenha toda a estrutura original.
   - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos, etapa, observações, etc).
   - Campos vazios podem ser null.
+  - caso seja solicitado adicionar desconto modifique apenas os campos "desconto_material", "desconto_servicos" não modifique os valores dos itens.
   - Não crie novas colunas.
   - O campo "etapa" (quando alterado) deve ser **uma dessas opções exatamente**:
     "negociacao", "andamento", "aprovado", "perdido", "finalizado".
