@@ -178,17 +178,25 @@ if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
   if (/^criar or[cç]amento/i.test(myText)) {
     const helpMessage = `
 1️⃣ **Criar orçamento**
-criar orçamento para <nome> com número <telefone>
+> criar orçamento para <nome> com número <telefone>
+
 Serviços:
-quantidade serviço valor
+- <quantidade> <serviço> <valor>
+  
 Materiais:
-quantidade material unidade valor
+- <quantidade> <material> <unidade> <valor>
+
 Descontos:
-desconto serviço: 4%
-desconto material: R$5
+- desconto serviço: 10%
+- desconto material: R$5
+
 Observações:
-observação 1
-observação 2
+- texto 1
+- texto 2
+
+descrição de atividades:
+- texto 1
+- texto 2
 
 2️⃣ **Editar orçamento**
 editar orçamento <ID>
