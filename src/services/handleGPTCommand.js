@@ -21,6 +21,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
     "modulo": "orcamento",
     "action": "create",
     "nome_cliente": "string",
+    "descricoes": ["texto1", "texto2"] ou [],
     "telefone_cliente": "string",
     "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
@@ -31,6 +32,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
   }
 
   Regras:
+  - O campo "descricoes" **sempre deve ser um array**, mesmo que vazio ([]).
   - O campo "etapa" deve ser sempre ser enviado.
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
@@ -65,6 +67,8 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
   "${userMessage}"
 
   Regras:
+  - O campo "descricoes" deve ser sempre um array, mesmo que vazio ([]).
+  - Nunca quebre linhas com \\n. Cada descrição deve ser um item separado.
   - Mantenha toda a estrutura original.
   - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos, etapa, observações, etc).
   - Campos vazios podem ser null.
@@ -74,11 +78,12 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
     "negociacao", "andamento", "aprovado", "perdido", "finalizado".
   - Se o usuário não mencionar a etapa, mantenha o valor atual.
   - Use sempre este formato de estrutura:
-      "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-      "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
-      "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
-      "desconto_materiais": "10%" ou "10" ou null,
-      "desconto_servicos": "10%" ou "10" ou null
+  "descricoes": ["texto1", "texto2"] ou [],
+  "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
+  "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
+  "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+  "desconto_materiais": "10%" ou "10" ou null,
+  "desconto_servicos": "10%" ou "10" ou null
 
   Retorne o orçamento atualizado.
   `;
