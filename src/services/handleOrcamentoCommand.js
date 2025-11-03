@@ -15,12 +15,16 @@ async function handleOrcamentoCommand(command, userPhone) {
                 if (!command.telefone_cliente) return "⚠️ O campo *telefone do cliente* é obrigatório.";
 
                 const observacoes = Array.isArray(command.observacoes) ? command.observacoes.filter(Boolean) : [];
+const descricoes = Array.isArray(command.descricoes)
+                ? command.descricoes.map(d => String(d).replace(/\n/g, '').trim()).filter(Boolean)
+                : [];
 
                 const { data, error } = await supabase.from('orcamentos').insert([{
     nome_cliente: command.nome_cliente,
     telefone_cliente: command.telefone_cliente,
     etapa: command.etapa || "negociacao",
     observacoes,
+    descricoes,
     materiais: command.materiais || [],
     servicos: command.servicos || [],
     desconto_materiais: command.desconto_materiais || 0,
@@ -63,6 +67,10 @@ async function handleOrcamentoCommand(command, userPhone) {
                     return '⚠️ É necessário informar o ID do orçamento para editar.';
   // console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
 
+const descricoes = Array.isArray(command.descricoes)
+                ? command.descricoes.map(d => String(d).replace(/\n/g, '').trim()).filter(Boolean)
+                : null;
+
                 const validFields = {
     nome_cliente: command.nome_cliente,
     telefone_cliente: command.telefone_cliente,
@@ -71,7 +79,8 @@ async function handleOrcamentoCommand(command, userPhone) {
     materiais: command.materiais,
     servicos: command.servicos,
     desconto_materiais: command.desconto_materiais,
-    desconto_servicos: command.desconto_servicos
+    desconto_servicos: command.desconto_servicos,
+    descricoes
 };
 
                 const { data, error } = await supabase
