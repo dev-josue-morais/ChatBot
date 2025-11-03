@@ -32,7 +32,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
   }
 
   Regras:
-  - O campo "descricoes" **sempre deve ser um array**, mesmo que vazio ([]).
+  - Os campos "descricoes", "observacoes" **sempre deve ser um array**, mesmo que vazio ([]).
   - O campo "etapa" deve ser sempre ser enviado.
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
@@ -67,8 +67,7 @@ async function handleGPTCommand(userMessage, modulo, action, id) {
   "${userMessage}"
 
   Regras:
-  - O campo "descricoes" deve ser sempre um array, mesmo que vazio ([]).
-  - Nunca quebre linhas com \\n. Cada descrição deve ser um item separado.
+  - Os campos "descricoes", "observacoes" deve ser sempre um array, mesmo que vazio ([]) Nunca quebre linhas com \\n. deve ser um item separado.
   - Mantenha toda a estrutura original.
   - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos, etapa, observações, etc).
   - Campos vazios podem ser null.
@@ -164,6 +163,7 @@ case 'orcamento_pdf': {
    - “ocultar serviços” → listaServicos: false
    - nunca ocultar materiais e serviços no mesmo pdf
    - Se não houver instrução, manter true.
+   - se "ocultarValorServicos" true obrigatoriamente "listaServicos" true.
 
 Texto do usuário: """${userMessage}"""
   `;
