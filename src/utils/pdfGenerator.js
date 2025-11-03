@@ -61,7 +61,24 @@ async function getBase64FromUrl(url) {
         return null;
     }
 }
+function renderDescricaoAtividades(orcamento) {
+    // Se for null, undefined ou array vazio, não mostra nada
+    if (!Array.isArray(orcamento.descricao) || orcamento.descricao.length === 0) return '';
 
+    // Filtra itens vazios
+    const descricoes = orcamento.descricao.filter(Boolean);
+
+    if (descricoes.length === 0) return '';
+
+    return `
+    <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
+        <h3 style="margin-bottom:10px; font-size:18px; color:#333;">Descrição de Atividades</h3>
+        <ul style="margin:0; padding-left:20px;">
+            ${descricoes.map(desc => `<li>${desc}</li>`).join('')}
+        </ul>
+    </div>
+    `;
+}
 function renderServicos(servicos, opcoes) {
     if (!opcoes.listaServicos || !servicos?.length) return '';
     return `
@@ -257,6 +274,7 @@ const blocoPagamento = renderBlocoPagamento(documentoTipo, valorReciboFinal, pix
         </div>
     </div>
 </div>
+        ${renderDescricaoAtividades(orcamento)}
         ${renderServicos(orcamento.servicos, opcoes)}
         ${renderMateriais(orcamento.materiais, opcoes)}
         ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
