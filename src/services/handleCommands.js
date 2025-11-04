@@ -327,10 +327,11 @@ if (senderNumber === DESTINO_FIXO) {
     helpMessage += `
 
 🛠️ **Administração VIP**
+
 - add <dias> <número> — adicionar dias de premium
 - delete vip <número> — remover premium (zerar)
 - status vip <número> — verificar status do premium
-`.trim();
+`;
   }
 
   await sendWhatsAppRaw({
