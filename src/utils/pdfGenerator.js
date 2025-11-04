@@ -67,11 +67,9 @@ async function getBase64FromUrl(url) {
     }
 }
 function renderDescricaoAtividades(orcamento) {
-    // Se for null, undefined ou array vazio, não mostra nada
-    if (!Array.isArray(orcamento.descricao) || orcamento.descricao.length === 0) return '';
+    if (!Array.isArray(orcamento.descricoes) || orcamento.descricoes.length === 0) return '';
 
-    // Filtra itens vazios
-    const descricoes = orcamento.descricao.filter(Boolean);
+    const descricoes = orcamento.descricoes.filter(Boolean);
 
     if (descricoes.length === 0) return '';
 
