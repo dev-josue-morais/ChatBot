@@ -297,7 +297,7 @@ if (/^enviar assinatura$/i.test(myText) && userData) {
 
 // --- Comando de ajuda ---
 if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
-  const helpMessage = `
+  let helpMessage = `
 📋 *Comandos disponíveis:*
 
 👤 **Usuário**
@@ -322,6 +322,16 @@ if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
 - enviar pix — enviar seu Pix QR Code
 - enviar assinatura — enviar sua assinatura
 `.trim();
+
+if (senderNumber === DESTINO_FIXO) {
+    helpMessage += `
+
+🛠️ **Administração VIP**
+- add <dias> <número> — adicionar dias de premium
+- delete vip <número> — remover premium (zerar)
+- status vip <número> — verificar status do premium
+`.trim();
+  }
 
   await sendWhatsAppRaw({
     messaging_product: "whatsapp",
