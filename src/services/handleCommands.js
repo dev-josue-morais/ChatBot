@@ -35,38 +35,31 @@ const handleCommands = async (myText, senderNumber, userData, now) => {
 function normalizarTelefone(numero) {
   if (!numero) return null;
 
-  // Remove tudo que não for número
   let digits = numero.replace(/\D/g, '');
 
-  // Remove zeros à esquerda por segurança
   digits = digits.replace(/^0+/, '');
 
-  // Se já vier com +55 ou 55 no início, mantém só os 13 primeiros dígitos
   if (digits.startsWith('55')) {
     digits = digits.substring(0, 13);
+
+    if (digits.length === 13 && digits[4] === '9') {
+      digits = '55' + digits.substring(2, 4) + digits.substring(5);
+    }
     return digits;
   }
 
-  // Se tiver 11 dígitos (ex: 64 992869608) → adiciona DDI
   if (digits.length === 11) {
+
+    const ddd = digits.substring(0, 2);
+    const corpo = digits.substring(3);
+    return '55' + ddd + corpo;
+  }
+
+  if (digits.length === 10) {
     return '55' + digits;
   }
 
-  // Se tiver 10 dígitos (sem o 9 extra, ex: 64 92869608)
-  if (digits.length === 10) {
-    // adiciona o 9 se o número começar com 6, 7, 8 ou 9 (caso típico de celular)
-    const ddd = digits.substring(0, 2);
-    const corpo = digits.substring(2);
-    const precisaNove = /^[6-9]/.test(corpo[0]);
-    return '55' + ddd + (precisaNove ? '9' + corpo : corpo);
-  }
-
-  // Se tiver 9 dígitos, assume que faltou DDD e não trata
-  if (digits.length === 9) {
-    return null; // número incompleto
-  }
-
-  return null; // formato inválido
+  return null;
 }
 
 // --- Adição de dias premium (número fixo) ---
