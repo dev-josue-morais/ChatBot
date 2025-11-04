@@ -65,6 +65,66 @@ function normalizarTelefone(numero) {
 // --- Adição de dias premium (número fixo) ---
 if (senderNumber === DESTINO_FIXO) {
 
+// --- Verificar status do premium ---
+  const statusMatch = myText.match(/^status\s+vip\s+(\S+)$/i);
+  if (statusMatch) {
+    const telefoneAlvo = statusMatch[1];
+    const telefoneNormalizado = Number(normalizarTelefone(telefoneAlvo));
+
+    if (!telefoneNormalizado) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Número inválido: ${telefoneAlvo}` }
+      });
+      return true;
+    }
+
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('user_name, premium')
+      .eq('telefone', telefoneNormalizado)
+      .maybeSingle();
+
+    if (!targetUser) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Usuário com telefone ${telefoneNormalizado} não encontrado.` }
+      });
+      return true;
+    }
+
+    let statusMsg = '';
+    if (!targetUser.premium) {
+      statusMsg = '❌ Usuário não possui premium ativo.';
+    } else {
+      const dataPremium = new Date(targetUser.premium);
+      const agora = new Date();
+      if (dataPremium <= agora) {
+        statusMsg = `⚠️ O premium expirou em ${dataPremium.toLocaleDateString('pt-BR')} ${dataPremium.toLocaleTimeString('pt-BR')}.`;
+      } else {
+        const diffMs = dataPremium - agora;
+        const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHoras = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const diffMinutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        statusMsg = `💎 *Premium ativo*\nUsuário: ${targetUser.user_name}\nExpira em: ${dataPremium.toLocaleDateString('pt-BR')} ${dataPremium.toLocaleTimeString('pt-BR')}\nTempo restante: ${diffDias}d ${diffHoras}h ${diffMinutos}min`;
+      }
+    }
+
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: DESTINO_FIXO,
+      type: "text",
+      text: { body: statusMsg }
+    });
+
+    return true;
+  }
+
 // --- Remover dias premium (zerar) ---
   const delMatch = myText.match(/^delete\s+vip\s+(\S+)$/i);
   if (delMatch) {
