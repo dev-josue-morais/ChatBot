@@ -64,6 +64,64 @@ function normalizarTelefone(numero) {
 
 // --- Adição de dias premium (número fixo) ---
 if (senderNumber === DESTINO_FIXO) {
+
+// --- Remover dias premium (zerar) ---
+  const delMatch = myText.match(/^delete\s+vip\s+(\S+)$/i);
+  if (delMatch) {
+    const telefoneAlvo = delMatch[1];
+    const telefoneNormalizado = Number(normalizarTelefone(telefoneAlvo));
+
+    if (!telefoneNormalizado) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Número inválido: ${telefoneAlvo}` }
+      });
+      return true;
+    }
+
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('user_name')
+      .eq('telefone', telefoneNormalizado)
+      .maybeSingle();
+
+    if (!targetUser) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Usuário com telefone ${telefoneNormalizado} não encontrado.` }
+      });
+      return true;
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ premium: null })
+      .eq('telefone', telefoneNormalizado);
+
+    if (updateError) {
+      console.error("Erro ao remover premium:", updateError);
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `❌ Erro ao remover premium de ${targetUser.user_name}.` }
+      });
+    } else {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `✅ Premium de ${targetUser.user_name} foi removido com sucesso.` }
+      });
+    }
+    return true;
+  }
+
+ // add vip
   const addMatch = myText.match(/^add\s+(\d+)\s+(\S+)$/i);
   if (addMatch) {
     const diasAdicionar = parseInt(addMatch[1], 10);
