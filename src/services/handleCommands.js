@@ -75,7 +75,7 @@ if (senderNumber === DESTINO_FIXO) {
   if (addMatch) {
     const diasAdicionar = parseInt(addMatch[1], 10);
     const telefoneAlvo = addMatch[2];
-    const telefoneNormalizado = normalizarTelefone(telefoneAlvo);
+    const telefoneNormalizado = Number(normalizarTelefone(telefoneAlvo));
 
     if (!telefoneNormalizado) {
       await sendWhatsAppRaw({
