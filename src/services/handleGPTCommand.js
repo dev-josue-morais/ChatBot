@@ -144,27 +144,25 @@ case 'orcamento_pdf': {
   "id": número,
   "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
   "opcoes": {
-    "listaServicos": boolean,
-    "listaMateriais": boolean,
-    "ocultarValorServicos": boolean,
-    "garantia": boolean,
-    "assinaturaCliente": boolean,
-    "assinaturaEmpresa": boolean
+    "listaServicos": true,
+    "listaMateriais": true,
+    "ocultarValorServicos": false,
+    "garantia": true,
+    "assinaturaCliente": false,
+    "assinaturaEmpresa": false
   },
-  "valorRecibo": número|null
+  "valorRecibo": número | null
 }
 
 ⚠️ Regras:
 
 1. Sempre retorne JSON válido.
-2. Se tipo = "Recibo", inclua valorRecibo; se não informado, use null. Outros tipos: valorRecibo = null.
+2. Se tipo = "Recibo", inclua valorRecibo, se não informado valor use null.
 3. Não altere as flags sem instrução explícita do texto:
-   - “ocultar materiais” → listaMateriais: false
-   - “ocultar serviços” → listaServicos: false
+   - “ocultar materiais | serviços” → lista"Materiais | Servicos": false
    - nunca ocultar materiais e serviços no mesmo pdf
-   - Se não houver instrução, manter true.
+   - Se não houver instrução, use valores defalt do exemplo.
    - se "ocultarValorServicos" true obrigatoriamente "listaServicos" true.
-4. assinaturaCliente, assinaturaEmpresa defalt (false)
 
 Texto do usuário: """${userMessage}"""
   `;
