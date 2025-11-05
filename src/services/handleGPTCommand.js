@@ -162,7 +162,6 @@ case 'orcamento_pdf': {
    - “ocultar materiais | serviços” → lista"Materiais | Servicos": false
    - nunca ocultar materiais e serviços no mesmo pdf
    - Se não houver instrução, use valores defalt do exemplo.
-   - se "ocultarValorServicos" true obrigatoriamente "listaServicos" true.
 
 Texto do usuário: """${userMessage}"""
   `;
