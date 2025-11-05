@@ -8,9 +8,8 @@ const DESTINO_FIXO = require('../utils/config');
  * - Encaminha texto e mídia para o número fixo.
  * - Envia aviso automático de redirecionamento uma única vez a cada 24h.
  */
-async function handleUnregisteredUser(msg, value) {
+async function handleUnregisteredUser(msg, value, senderNumber) {
   try {
-    const senderNumber = msg.from;
     const senderName = msg?.profile?.name || "Contato desconhecido";
 
     const now = DateTime.now().setZone("America/Sao_Paulo");
