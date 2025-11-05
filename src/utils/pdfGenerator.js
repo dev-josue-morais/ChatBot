@@ -83,7 +83,7 @@ function renderDescricaoAtividades(orcamento) {
     `;
 }
 function renderServicos(servicos, opcoes) {
-    if (!opcoes.listaServicos || !servicos?.length) return '';
+    if (!(opcoes.listaServicos || opcoes.ocultarValorServicos) || !servicos?.length) return '';
     return `
     <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
