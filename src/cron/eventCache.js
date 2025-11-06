@@ -12,10 +12,11 @@ async function loadInitialEventsCache() {
     .gte('date', now.toUTC().toISO())
     .eq('notified', false);
 
-  if (error) {
-    console.error('❌ Erro ao carregar cache inicial:', error);
-    return;
-  }
+ if (error) {
+  console.error('❌ Erro ao carregar cache inicial:', error);
+  setTimeout(loadInitialEventsCache, 120_000);
+  return;
+}
 
   eventsCache = data || [];
   console.log(`✅ Cache inicial carregado com ${eventsCache.length} eventos futuros.`);
