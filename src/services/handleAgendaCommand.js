@@ -9,7 +9,7 @@ async function deleteOldEvents(userPhone) {
       .setZone('America/Sao_Paulo')
       .minus({ days: 2 })
       .startOf('day')
-      .toISO({ includeOffset: false }); // 🔸 Sem Z
+      .toISO({ includeOffset: false });
 
     const { error } = await supabase
       .from('events')
@@ -18,16 +18,19 @@ async function deleteOldEvents(userPhone) {
       .eq('user_telefone', userPhone);
 
     if (error) {
-      console.error('Erro ao deletar eventos antigos:', error);
+      console.error('❌ Erro ao deletar eventos antigos:', error);
     }
   } catch (err) {
-    console.error('Erro interno ao deletar eventos antigos:', err);
+    console.error('❌ Erro interno ao deletar eventos antigos:', err);
   }
 }
 
 async function handleAgendaCommand(command, userPhone) {
+  console.log('\n📝 [handleAgendaCommand] Comando recebido:', JSON.stringify(command, null, 2));
+  console.log('📱 Usuário:', userPhone);
+
   try {
-    // 🔹 Converte sempre para horário local (sem UTC)
+    // 🔹 Normaliza datas
     if (command.datetime) {
       command.datetime = DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
         .toISO({ includeOffset: false });
@@ -42,22 +45,25 @@ async function handleAgendaCommand(command, userPhone) {
     }
 
     switch (command.action) {
+
       // 🔹 Criar evento
       case 'create': {
-  const { data, error } = await supabase
-    .from('events')
-    .insert([{
-      title: command.title,
-      date: DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
-        .toUTC()
-        .toISO(),
-      reminder_minutes: command.reminder_minutes || 30,
-      user_telefone: userPhone
-    }])
-    .select('event_numero, title, date');
+        console.log('🚀 Criando evento...');
+        const { data, error } = await supabase
+          .from('events')
+          .insert([{
+            title: command.title,
+            date: DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
+              .toUTC()
+              .toISO(),
+            reminder_minutes: command.reminder_minutes || 30,
+            user_telefone: userPhone
+          }])
+          .select('event_numero, title, date');
 
         if (error) {
-          console.error('Erro ao criar evento:', error);
+          console.error('❌ Erro ao criar evento:', error);
+          console.error('📦 Payload enviado ao Supabase:', JSON.stringify(command, null, 2));
           return '⚠️ Erro ao criar evento.';
         }
 
@@ -70,6 +76,7 @@ async function handleAgendaCommand(command, userPhone) {
       case 'delete': {
         if (!command.id) return '⚠️ É necessário informar o ID do evento para deletar.';
 
+        console.log(`🗑 Deletando evento ID ${command.id}...`);
         const { data, error } = await supabase
           .from('events')
           .delete()
@@ -78,7 +85,7 @@ async function handleAgendaCommand(command, userPhone) {
           .select('event_numero, title');
 
         if (error) {
-          console.error('Erro ao deletar evento:', error);
+          console.error('❌ Erro ao deletar evento:', error);
           return '⚠️ Erro ao deletar evento.';
         }
 
@@ -93,12 +100,14 @@ async function handleAgendaCommand(command, userPhone) {
       case 'edit': {
         if (!command.id) return '⚠️ É necessário informar o ID do evento para editar.';
 
-const updates = {
-  title: command.title,
-  date: command.date,
-  reminder_minutes: command.reminder_minutes ?? 30,
-  notified: command.notified ?? false
-};
+        console.log(`✏️ Editando evento ID ${command.id}...`);
+        const updates = {
+          title: command.title,
+          date: command.date,
+          reminder_minutes: command.reminder_minutes ?? 30,
+          notified: command.notified ?? false
+        };
+
         const { data, error } = await supabase
           .from('events')
           .update(updates)
@@ -107,7 +116,8 @@ const updates = {
           .select('event_numero, title, date');
 
         if (error) {
-          console.error('Erro ao atualizar evento:', error);
+          console.error('❌ Erro ao atualizar evento:', error);
+          console.error('📦 Updates enviados:', JSON.stringify(updates, null, 2));
           return '⚠️ Erro ao atualizar evento.';
         }
 
@@ -122,6 +132,7 @@ const updates = {
 
       // 🔹 Listar eventos
       case 'list': {
+        console.log('📅 Listando eventos...');
         const start = command.start_date
           ? DateTime.fromISO(command.start_date, { zone: 'America/Sao_Paulo' }).toISO({ includeOffset: false })
           : DateTime.now().setZone('America/Sao_Paulo').startOf('day').toISO({ includeOffset: false });
@@ -138,7 +149,7 @@ const updates = {
           .eq('user_telefone', userPhone);
 
         if (error) {
-          console.error("Erro ao buscar eventos:", error);
+          console.error("❌ Erro ao buscar eventos:", error);
           return "⚠️ Não foi possível buscar os eventos.";
         }
 
@@ -154,10 +165,12 @@ const updates = {
       }
 
       default:
+        console.warn('⚠️ Ação de agenda não reconhecida:', command.action);
         return "⚠️ Comando de agenda não reconhecido.";
     }
   } catch (err) {
-    console.error("Erro em handleAgendaCommand:", err);
+    console.error("💥 Erro em handleAgendaCommand:", err);
+    console.error("📦 Comando problemático:", JSON.stringify(command, null, 2));
     return "⚠️ Erro interno ao processar comando de agenda.";
   }
 }
