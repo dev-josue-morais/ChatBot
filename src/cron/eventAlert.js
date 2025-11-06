@@ -47,10 +47,7 @@ function scheduleEventAlerts() {
             console.error(`❌ Erro ao enviar lembrete para ${userPhone}:`, err);
           }
         }
-      }
-
-      console.log(`📨 Lembretes enviados: ${notifiedCount}`);
-      console.log(`🧠 Eventos restantes no cache: ${getEventsCache().length}`);
+      }`);
     } catch (err) {
       console.error('💥 Erro no cron de alerta de eventos:', err);
     }
