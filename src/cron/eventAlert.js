@@ -17,11 +17,7 @@ function scheduleEventAlerts() {
       const eventsCache = getEventsCache();
       const nowBRT = getNowBRT();
 
-      if (eventsCache.length === 0) {
-        console.log('📭 Nenhum evento no cache.');
-        return;
-      }
-
+    if (eventsCache.length === 0) return; // sem log
       let notifiedCount = 0;
 
       for (const event of [...eventsCache]) {
