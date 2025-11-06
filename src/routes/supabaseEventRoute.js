@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { updateCacheFromWebhook } = require('../crons/eventCache'); 
+const { updateCacheFromWebhook } = require('../cron/eventAlert'); 
 // 👆 arquivo que contém o let e a função de atualizar cache (vamos ver abaixo)
 
 const SUPABASE_TOKEN = process.env.SUPABASE_WEBHOOK_TOKEN;
