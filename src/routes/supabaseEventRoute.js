@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { updateCacheFromWebhook } = require('../cron/eventAlert');
+const { updateCacheFromWebhook } = require('../cron/eventCache');
 const { GITHUB_SECRET } = require('../utils/config');
 
 router.post('/', (req, res) => {
