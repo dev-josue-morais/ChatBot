@@ -24,8 +24,10 @@ async function loadInitialEventsCache() {
 // 🔹 Atualizar cache quando vier trigger do Supabase
 function updateCacheFromWebhook(eventType, data) {
   if (eventType === 'INSERT') {
+  if (!eventsCache.some(e => e.id === data.id)) {
     eventsCache.push(data);
-  } else if (eventType === 'UPDATE') {
+  }
+} else if (eventType === 'UPDATE') {
     const idx = eventsCache.findIndex(e => e.id === data.id);
     if (idx !== -1) eventsCache[idx] = data;
     else eventsCache.push(data); // caso ainda não exista
