@@ -15,5 +15,6 @@ module.exports = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_KEY: process.env.SUPABASE_KEY,
   GITHUB_SECRET: process.env.GITHUB_SECRET,
-  MP_ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN
+  MP_ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN,
+  SUPABASE_TOKEN: process.env.SUPABASE_TOKEN
 };
