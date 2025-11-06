@@ -99,7 +99,7 @@ router.post('/', async (req, res, next) => {
 
       // --- Usuário sem cadastro ---
       if (!userData) {
-        await handleUnregisteredUser(msg, value, senderNumber);
+        await handleUnregisteredUser(msg, value, senderNumber, senderName);
         continue;
       }
 
