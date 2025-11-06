@@ -11,11 +11,6 @@ const { DESTINO_FIXO } = require('../utils/config');
 async function handleUnregisteredUser(msg, value, senderNumber, senderName) {
   try {
 
-    // 🔍 Log de diagnóstico
-    console.log("📞 handleUnregisteredUser acionado:");
-    console.log("   senderNumber:", senderNumber);
-    console.log("   DESTINO_FIXO:", DESTINO_FIXO);
-
     const now = DateTime.now().setZone("America/Sao_Paulo");
     const saudacao =
       now.hour >= 5 && now.hour < 12
