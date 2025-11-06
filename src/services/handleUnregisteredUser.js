@@ -10,7 +10,6 @@ const { DESTINO_FIXO } = require('../utils/config');
  */
 async function handleUnregisteredUser(msg, value, senderNumber, senderName) {
   try {
-
     const now = DateTime.now().setZone("America/Sao_Paulo");
     const saudacao =
       now.hour >= 5 && now.hour < 12
