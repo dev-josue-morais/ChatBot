@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { updateCacheFromWebhook } = require('../cron/eventAlert'); 
-const SUPABASE_TOKEN = process.env.SUPABASE_WEBHOOK_TOKEN;
+const { updateCacheFromWebhook } = require('../cron/eventAlert');
+const { SUPABASE_TOKEN } = require('../utils/config');
 
 // Endpoint que o Supabase vai chamar via trigger
 router.post('/', (req, res) => {
