@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { updateCacheFromWebhook } = require('../cron/eventAlert');
-const { SUPABASE_TOKEN } = require('../utils/config');
+const { GITHUB_SECRET } = require('../utils/config');
 
-// Endpoint que o Supabase vai chamar via trigger
 router.post('/', (req, res) => {
   const auth = req.headers.authorization;
-  if (auth !== `Bearer ${SUPABASE_TOKEN}`) {
+  if (auth !== `Bearer ${GITHUB_SECRET}`) {
     console.warn('🚫 Tentativa de acesso não autorizado ao webhook Supabase.');
     return res.status(403).json({ error: 'Forbidden' });
   }
