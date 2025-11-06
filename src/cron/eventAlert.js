@@ -12,7 +12,7 @@ const {
 function scheduleEventAlerts() {
   loadInitialEventsCache(); // carrega cache no startup
 
-  cron.schedule('*/10 * * * *', async () => {
+  cron.schedule('*/1 * * * *', async () => {
     try {
       const eventsCache = getEventsCache();
       const nowBRT = getNowBRT();
