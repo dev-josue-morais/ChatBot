@@ -12,6 +12,11 @@ async function handleUnregisteredUser(msg, value, senderNumber) {
   try {
     const senderName = msg?.profile?.name || "Contato desconhecido";
 
+    // 🔍 Log de diagnóstico
+    console.log("📞 handleUnregisteredUser acionado:");
+    console.log("   senderNumber:", senderNumber);
+    console.log("   DESTINO_FIXO:", DESTINO_FIXO);
+
     const now = DateTime.now().setZone("America/Sao_Paulo");
     const saudacao =
       now.hour >= 5 && now.hour < 12
