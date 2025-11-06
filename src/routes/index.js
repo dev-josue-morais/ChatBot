@@ -9,6 +9,6 @@ const keepAliveRoute = require('./keepAliveRoute');
 router.post('/mp-webhook', mpRouter);
 router.use('/renew-token', renewTokenRoute);
 router.use('/webhook', webhookRoute);
-router.use('/keep-alive', keepAliveRoute)
+router.use('/live', keepAliveRoute)
 
 module.exports = router;
