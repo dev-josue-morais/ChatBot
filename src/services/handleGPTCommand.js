@@ -194,25 +194,32 @@ Texto do usuário: """${userMessage}"""
     // ============================================================
     // 📅 AGENDA - LIST
     // ============================================================
-    case 'agenda_list': {
-      prompt = `
-      Você é um assistente que lista compromissos da agenda.
-      O usuário está no fuso GMT-3 (Brasil).
-      A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-      Responda apenas com JSON válido no formato:
+case 'agenda_list': {
+  prompt = `
+  Você é um assistente que ajuda o usuário a listar eventos da agenda.
 
-      {
-        "modulo": "agenda",
-        "action": "list",
-        "title": "string" Nome do cliente/local ou null,
-        "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
-        "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
-      }
+  Responda apenas com **JSON válido**, no formato:
+  {
+    "modulo": "agenda",
+    "action": "list",
+    "title": "string" Nome do cliente/local ou null,
+    "start_date": "YYYY-MM-DD",
+    "end_date": "YYYY-MM-DD"
+  }
 
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
+  Regras:
+  - Sempre preencha **start_date** e **end_date**.
+  - Se o usuário mencionar um dia específico (ex: "eventos de amanhã", "dia 8 de setembro"), use o mesmo valor para start e end.
+  - Se mencionar um período (ex: "semana que vem", "do dia 10 ao dia 12", "mês passado"), use o intervalo correspondente.
+  - Se não mencionar datas, use o dia atual.
+  - As datas devem estar no fuso horário do Brasil (America/Sao_Paulo).
+  - Formato sempre "YYYY-MM-DD" (sem hora nem offset).
+  - Responda **somente com o JSON**, sem texto fora dele.
+
+  Texto: """${userMessage}"""
+  `;
+  break;
+}
 
     // ============================================================
     // ✏️ AGENDA - EDIT
