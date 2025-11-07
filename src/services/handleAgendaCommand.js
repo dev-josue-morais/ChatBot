@@ -99,7 +99,7 @@ async function handleAgendaCommand(command, userPhone) {
           title: command.title,
           date: command.date,
           reminder_minutes: command.reminder_minutes ?? 30,
-          notified: command.notified ?? false
+          notified: typeof command.notified === 'boolean' ? command.notified : false,
         };
 
         const { data, error } = await supabase
