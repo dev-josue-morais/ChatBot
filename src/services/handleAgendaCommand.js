@@ -26,9 +26,6 @@ async function deleteOldEvents(userPhone) {
 }
 
 async function handleAgendaCommand(command, userPhone) {
-  console.log('\n📝 [handleAgendaCommand] Comando recebido:', JSON.stringify(command, null, 2));
-  console.log('📱 Usuário:', userPhone);
-
   try {
     // 🔹 Normaliza datas
     if (command.datetime) {
