@@ -1,4 +1,3 @@
-const { DateTime } = require('luxon');
 const { getNowBRT } = require('../utils/utils');
 const supabase = require('../services/supabase');
 
@@ -28,11 +27,6 @@ async function loadInitialEventsCache() {
   lastCacheDay = now.toFormat('yyyy-MM-dd');
 
   console.log(`✅ Cache carregado para o dia ${lastCacheDay} com ${eventsCache.length} eventos.`);
-  if (eventsCache.length > 0) {
-    eventsCache.forEach(e => {
-      console.log(`  • ${e.title} às ${DateTime.fromISO(e.date).setZone('America/Sao_Paulo').toFormat('HH:mm')}`);
-    });
-  }
 }
 
 // 🔹 Atualizar cache quando vier trigger do Supabase
@@ -48,8 +42,6 @@ function updateCacheFromWebhook(eventType, data) {
   } else if (eventType === 'DELETE') {
     eventsCache = eventsCache.filter(e => e.id !== data.id);
   }
-
-  console.log(`🧠 Cache atualizado pelo webhook (${eventType}). Total: ${eventsCache.length}`);
 }
 
 // 🔹 Remover evento notificado
@@ -75,8 +67,7 @@ function getEventsCache() {
 
 // 🔹 Iniciar verificação automática de troca de dia
 function startDayChangeWatcher() {
-  // checa a cada minuto se o dia virou
-  setInterval(checkForDayChange, 60_000);
+  setInterval(checkForDayChange, 60_000); // checa a cada minuto
 }
 
 module.exports = {
