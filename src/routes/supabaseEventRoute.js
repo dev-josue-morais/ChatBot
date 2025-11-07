@@ -17,7 +17,7 @@ if (!event || !data) {
 return res.status(400).json({ error: 'Invalid payload' });
 }
 
-console.log(📩 Atualização recebida do Supabase: ${event} → ${data.title || data.id});
+console.log(`📩 Atualização recebida do Supabase: ${event} → ${data.title || data.id}`);
 
 updateCacheFromWebhook(event, data);
 
