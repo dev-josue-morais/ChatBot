@@ -75,7 +75,7 @@ async function sendWhatsAppMessage(to, message) {
 // Envia payload bruto via WhatsApp
 async function sendWhatsAppRaw(payload) {
   try {
-    console.log("📤 Enviando para WhatsApp:", JSON.stringify(payload, null, 2));
+   // console.log("📤 Enviando para WhatsApp:", JSON.stringify(payload, null, 2));
     const resp = await axios.post(
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
       payload,
