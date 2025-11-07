@@ -6,12 +6,16 @@ const { sendWhatsAppMessage } = require('../services/whatsappService');
 const {
   loadInitialEventsCache,
   getEventsCache,
-  removeEventFromCache
+  removeEventFromCache,
+  startDayChangeWatcher // 👈 importa aqui
 } = require('./eventCache');
 
 function scheduleEventAlerts() {
   // 🔹 Carrega cache inicial ao iniciar
   loadInitialEventsCache();
+
+  // 🔹 Começa a monitorar a virada do dia (00h)
+  startDayChangeWatcher(); // 👈 adiciona essa linha logo aqui
 
   // 🔹 Roda a cada 1 minuto
   cron.schedule('*/1 * * * *', async () => {
@@ -55,8 +59,10 @@ function scheduleEventAlerts() {
         }
       }
 
-      console.log(`📨 Lembretes enviados: ${notifiedCount}`);
-      console.log(`🧠 Eventos restantes no cache: ${getEventsCache().length}`);
+      if (notifiedCount > 0) {
+        console.log(`📨 Lembretes enviados: ${notifiedCount}`);
+        console.log(`🧠 Eventos restantes no cache: ${getEventsCache().length}`);
+      }
     } catch (err) {
       console.error('💥 Erro no cron de alerta de eventos:', err);
     }
