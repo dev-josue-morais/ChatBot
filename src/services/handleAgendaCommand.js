@@ -45,7 +45,6 @@ async function handleAgendaCommand(command, userPhone) {
 
       // 🔹 Criar evento
       case 'create': {
-        console.log('🚀 Criando evento...');
         const { data, error } = await supabase
           .from('events')
           .insert([{
@@ -73,7 +72,6 @@ async function handleAgendaCommand(command, userPhone) {
       case 'delete': {
         if (!command.id) return '⚠️ É necessário informar o ID do evento para deletar.';
 
-        console.log(`🗑 Deletando evento ID ${command.id}...`);
         const { data, error } = await supabase
           .from('events')
           .delete()
@@ -97,7 +95,6 @@ async function handleAgendaCommand(command, userPhone) {
       case 'edit': {
         if (!command.id) return '⚠️ É necessário informar o ID do evento para editar.';
 
-        console.log(`✏️ Editando evento ID ${command.id}...`);
         const updates = {
           title: command.title,
           date: command.date,
@@ -129,7 +126,6 @@ async function handleAgendaCommand(command, userPhone) {
 
       // 🔹 Listar eventos
       case 'list': {
-        console.log('📅 Listando eventos...');
         const start = command.start_date
           ? DateTime.fromISO(command.start_date, { zone: 'America/Sao_Paulo' }).toISO({ includeOffset: false })
           : DateTime.now().setZone('America/Sao_Paulo').startOf('day').toISO({ includeOffset: false });
