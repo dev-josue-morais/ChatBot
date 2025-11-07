@@ -245,9 +245,11 @@ Regras obrigatórias:
 2️⃣ Quando o usuário disser algo como "daqui a X minutos", "daqui X horas", "mais tarde", "para amanhã", ou expressões semelhantes:
    - **Sempre use a hora atual (${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}) como ponto de referência.**
    - **Nunca use o campo "date" existente para somar tempo.**
+   - sempre inclua o campo boolean "notified" mesmo que no defalt false.
    - Exemplo: se o usuário disser "daqui a 10 minutos", o novo campo "date" deve ser a hora atual + 10 minutos.
 3️⃣ Quando o usuário disser uma hora exata ("às 14h", "para 8:30"), substitua apenas a hora no formato GMT-3.
 4️⃣ Mantenha a estrutura original do evento e atualize apenas os campos solicitados.
+
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
