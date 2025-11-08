@@ -145,7 +145,8 @@ case 'list': {
     .select('*')
     .gte('date', start)
     .lte('date', end)
-    .eq('user_telefone', userPhone);
+    .eq('user_telefone', userPhone)
+    .order('date', { ascending: true });
 
   if (error) {
     console.error("❌ Erro ao buscar eventos:", error);
