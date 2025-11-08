@@ -197,6 +197,8 @@ Texto do usuário: """${userMessage}"""
 case 'agenda_list': {
   prompt = `
   Você é um assistente que ajuda o usuário a listar eventos da agenda.
+  O usuário está no fuso GMT-3 (Brasil).
+  A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 
   Responda apenas com **JSON válido**, no formato:
   {
