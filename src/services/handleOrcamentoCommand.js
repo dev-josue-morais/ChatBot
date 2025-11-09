@@ -1,7 +1,6 @@
 const supabase = require("./supabase");
 const formatOrcamento = require("../utils/formatOrcamento");
-const { sendWhatsAppMessage } = require("./whatsappService");
-const { sendPDFOrcamento } = require("./whatsappService");
+const { sendWhatsAppRaw, sendPDFOrcamento } = require("./whatsappService");
 const { formatPhoneNumber } = require("../utils/utils");
 
 async function handleOrcamentoCommand(command, userPhone) {
@@ -142,8 +141,13 @@ const descricoes = Array.isArray(command.descricoes)
     }
 
     for (const o of orcamentos) {
-        await sendWhatsAppMessage(userPhone, formatOrcamento(o));
-    }
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: userPhone,
+    type: "text",
+    text: { body: formatOrcamento(o) },
+  });
+}
 
     return `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
 }
