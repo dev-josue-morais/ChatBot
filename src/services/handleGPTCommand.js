@@ -241,8 +241,6 @@ const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
     .setZone('America/Sao_Paulo')
     .toISO();
 
-  console.log('📤 date enviado ao GPT (GMT-3):', dateBRT);
-
       prompt = `
 Você é um assistente que edita eventos de uma agenda.
 O usuário está no fuso horário GMT-3 (Brasil).
