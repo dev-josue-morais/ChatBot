@@ -51,7 +51,7 @@ function scheduleDailySummary() {
         try {
           await sendWhatsAppRaw({
             messaging_product: "whatsapp",
-            to: phone,
+            to: String(phone),
             type: "text",
             text: { body: `📅 Seus eventos de hoje:\n${list}` }
           });
