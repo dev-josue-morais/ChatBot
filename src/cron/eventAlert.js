@@ -30,14 +30,15 @@ function scheduleEventAlerts() {
           if (!userPhone) continue;
 
           try {
-            await sendWhatsAppRaw({
-              messaging_product: "whatsapp",
-              to: userPhone,
-              type: "text",
-              text: {
-                body: `⏰ Lembrete: "ID ${event.event_numero} ${event.title}" às ${formatLocal(event.date)}`
-              }
-            });
+
+await sendWhatsAppRaw({
+  messaging_product: "whatsapp",
+  to: String(userPhone),
+  type: "text",
+  text: {
+    body: `⏰ Lembrete: "ID ${event.event_numero} ${event.title}" às ${formatLocal(event.date)}`
+  }
+});
 
             await supabase.from('events').update({ notified: true }).eq('id', event.id);
             removeEventFromCache(event.id);
