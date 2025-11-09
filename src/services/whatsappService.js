@@ -52,7 +52,7 @@ async function reuploadMedia(mediaId, mimeType, filename = "file") {
 // Envia payload bruto via WhatsApp
 async function sendWhatsAppRaw(payload) {
   try {
-    console.log("📦 Payload recebido:", JSON.stringify(payload, null, 2));
+    // console.log("📦 Payload recebido:", JSON.stringify(payload, null, 2));
 
     // 🔧 converte número para string, se necessário
     if (payload?.to && typeof payload.to === "number") {
