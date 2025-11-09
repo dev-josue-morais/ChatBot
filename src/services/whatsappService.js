@@ -52,10 +52,13 @@ async function reuploadMedia(mediaId, mimeType, filename = "file") {
 // Envia payload bruto via WhatsApp
 async function sendWhatsAppRaw(payload) {
   try {
-    // Log inicial para depuração
     console.log("📦 Payload recebido:", JSON.stringify(payload, null, 2));
 
-    // Verifica número e body antes de enviar
+    // 🔧 converte número para string, se necessário
+    if (payload?.to && typeof payload.to === "number") {
+      payload.to = String(payload.to);
+    }
+
     if (!payload?.to || typeof payload.to !== "string" || !payload.to.trim()) {
       console.log(`⚠️ Ignorado: payload sem número de destino válido. Valor recebido: "${payload?.to}"`);
       return null;
