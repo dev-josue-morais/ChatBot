@@ -195,7 +195,6 @@ async function sendPDFOrcamento(to, orcamento, config) {
 
 module.exports = {
   sendPDFOrcamento,
-  sendWhatsAppMessage,
   sendWhatsAppRaw,
   extractTextFromMsg,
   forwardMediaIfAny
