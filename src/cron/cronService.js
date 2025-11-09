@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { getNowBRT, formatLocal } = require('../utils/utils');
 const supabase = require('../services/supabase');
-const { sendWhatsAppMessage } = require('../services/whatsappService');
+const { sendWhatsAppRaw } = require('../services/whatsappService');
 
 function scheduleDailySummary() {
   cron.schedule('0 7 * * *', async () => {
@@ -34,11 +34,10 @@ function scheduleDailySummary() {
         return;
       }
 
-      if (!events || events.length === 0) {
-        return;
-      }
+      if (!events || events.length === 0) return;
 
       let enviados = 0;
+
       for (const user of users) {
         const phone = user.telefone;
         const userEvents = events.filter(e => e.user_telefone === phone);
@@ -50,13 +49,20 @@ function scheduleDailySummary() {
           .join('\n');
 
         try {
-          await sendWhatsAppMessage(phone, `📅 Seus eventos de hoje:\n${list}`);
+          await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: phone,
+            type: "text",
+            text: { body: `📅 Seus eventos de hoje:\n${list}` }
+          });
+
           enviados++;
         } catch (sendError) {
           console.error(`❌ Erro ao enviar para ${phone}:`, sendError);
         }
       }
 
+      console.log(`✅ Envio diário concluído. Total enviados: ${enviados}`);
     } catch (err) {
       console.error('💥 Erro no cron job diário:', err);
     }
