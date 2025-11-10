@@ -1,5 +1,5 @@
 // handleDespesasCommand.js
-const { supabase } = require('./supabaseClient'); // ajuste se seu export for diferente
+const supabase = require('./supabase');
 const { DateTime } = require('luxon');
 
 // ======================================================
