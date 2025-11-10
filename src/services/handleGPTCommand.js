@@ -335,7 +335,31 @@ Texto do usuário: """${userMessage}"""
 `;
 break;
 }
+case 'despesas_pdf': {
+  prompt = `
+Você é um assistente financeiro que gera relatórios em PDF de despesas.
+Responda **apenas com JSON válido**, sem texto fora do JSON.
 
+Formato esperado:
+{
+  "modulo": "despesas",
+  "action": "pdf",
+  "tipo": "conducao" | "materiais" | "outras" | "alimentacao" | "todos",
+  "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
+  "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
+}
+
+Regras:
+- O usuário está no fuso horário GMT-3 (Brasil).
+- A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
+- Se o usuário não informar datas, use o mês atual como período padrão.
+- O campo "tipo" define o filtro principal do relatório (ex: "materiais" = apenas despesas com materiais).
+- Retorne **somente JSON válido**, sem texto extra, sem explicações.
+
+Texto do usuário: """${userMessage}"""
+`;
+  break;
+}
     default:
       return { erro: 'Prompt não definido', modulo, action };
   }
