@@ -16,11 +16,12 @@ async function processCommand(userMessage, userPhone) {
     const classificationPrompt = `
       Analise a frase e retorne apenas JSON:
       {
-        "modulo": "orcamento" | "agenda",
+        "modulo": "orcamento" | "agenda" | "outro",
         "action": "create" | "edit" | "delete" | "list" | "pdf",
         "id": número de 10 dígitos ou null "nao e telefone"
       }
         obs: atendimento/evento = agenda
+        - caso a msg não faz sentido use "outro".
       Frase: "${firstWords}"
       `;
 
