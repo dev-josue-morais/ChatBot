@@ -64,9 +64,12 @@ async function sendWhatsAppRaw(payload) {
       return null;
     }
 
-    if (!payload?.text?.body || !payload.text.body.trim()) {
-      console.log(`⚠️ Ignorado: payload sem body. Número: "${payload.to}"`);
-      return null;
+    // ✅ Só valida body se for mensagem de texto
+    if (payload.type === "text") {
+      if (!payload?.text?.body || !payload.text.body.trim()) {
+        console.log(`⚠️ Ignorado: payload de texto sem body. Número: "${payload.to}"`);
+        return null;
+      }
     }
 
     const resp = await axios.post(
