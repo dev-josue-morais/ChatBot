@@ -144,7 +144,7 @@ case 'orcamento_pdf': {
   "id": número,
   "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
   "opcoes": {
-    "listaServicos": true,
+    "listaServicos": true, // se "tipo": "Pedido" use false
     "listaMateriais": true,
     "ocultarValorServicos": false,
     "garantia": true,
