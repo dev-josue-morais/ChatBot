@@ -33,53 +33,212 @@ const handleUserRegistrationCommand = async (myText, senderNumber, userData) => 
 const handleCommands = async (myText, senderNumber, userData, now) => {
 // -- edita informação do usuário
 
-  // --- Adição de dias premium (número fixo) ---
-  if (senderNumber === DESTINO_FIXO) {
-    const addMatch = myText.match(/^add (\d+)\s+(\d+)$/i);
-    if (addMatch) {
-      const diasAdicionar = parseInt(addMatch[1], 10);
-      const telefoneAlvo = addMatch[2];
+function normalizarTelefone(numero) {
+  if (!numero) return null;
 
-      const { data: targetUser } = await supabase
+  let digits = numero.replace(/\D/g, '');
+
+  digits = digits.replace(/^0+/, '');
+
+  if (digits.startsWith('55')) {
+    digits = digits.substring(0, 13);
+
+    if (digits.length === 13 && digits[4] === '9') {
+      digits = '55' + digits.substring(2, 4) + digits.substring(5);
+    }
+    return digits;
+  }
+
+  if (digits.length === 11) {
+
+    const ddd = digits.substring(0, 2);
+    const corpo = digits.substring(3);
+    return '55' + ddd + corpo;
+  }
+
+  if (digits.length === 10) {
+    return '55' + digits;
+  }
+
+  return null;
+}
+
+// --- Adição de dias premium (número fixo) ---
+if (senderNumber === DESTINO_FIXO) {
+
+// --- Verificar status do premium ---
+  const statusMatch = myText.match(/^status\s+vip\s+(\S+)$/i);
+  if (statusMatch) {
+    const telefoneAlvo = statusMatch[1];
+    const telefoneNormalizado = Number(normalizarTelefone(telefoneAlvo));
+
+    if (!telefoneNormalizado) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Número inválido: ${telefoneAlvo}` }
+      });
+      return true;
+    }
+
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('user_name, premium')
+      .eq('telefone', telefoneNormalizado)
+      .maybeSingle();
+
+    if (!targetUser) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Usuário com telefone ${telefoneNormalizado} não encontrado.` }
+      });
+      return true;
+    }
+
+    let statusMsg = '';
+    if (!targetUser.premium) {
+      statusMsg = '❌ Usuário não possui premium ativo.';
+    } else {
+      const dataPremium = new Date(targetUser.premium);
+      const agora = new Date();
+      if (dataPremium <= agora) {
+        statusMsg = `⚠️ O premium expirou em ${dataPremium.toLocaleDateString('pt-BR')} ${dataPremium.toLocaleTimeString('pt-BR')}.`;
+      } else {
+        const diffMs = dataPremium - agora;
+        const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHoras = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const diffMinutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        statusMsg = `💎 *Premium ativo*\nUsuário: ${targetUser.user_name}\nExpira em: ${dataPremium.toLocaleDateString('pt-BR')} ${dataPremium.toLocaleTimeString('pt-BR')}\nTempo restante: ${diffDias}d ${diffHoras}h ${diffMinutos}min`;
+      }
+    }
+
+    await sendWhatsAppRaw({
+      messaging_product: "whatsapp",
+      to: DESTINO_FIXO,
+      type: "text",
+      text: { body: statusMsg }
+    });
+
+    return true;
+  }
+
+// --- Remover dias premium (zerar) ---
+  const delMatch = myText.match(/^delete\s+vip\s+(\S+)$/i);
+  if (delMatch) {
+    const telefoneAlvo = delMatch[1];
+    const telefoneNormalizado = Number(normalizarTelefone(telefoneAlvo));
+
+    if (!telefoneNormalizado) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Número inválido: ${telefoneAlvo}` }
+      });
+      return true;
+    }
+
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('user_name')
+      .eq('telefone', telefoneNormalizado)
+      .maybeSingle();
+
+    if (!targetUser) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Usuário com telefone ${telefoneNormalizado} não encontrado.` }
+      });
+      return true;
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ premium: null })
+      .eq('telefone', telefoneNormalizado);
+
+    if (updateError) {
+      console.error("Erro ao remover premium:", updateError);
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `❌ Erro ao remover premium de ${targetUser.user_name}.` }
+      });
+    } else {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `✅ Premium de ${targetUser.user_name} foi removido com sucesso.` }
+      });
+    }
+    return true;
+  }
+
+ // add vip
+  const addMatch = myText.match(/^add\s+(\d+)\s+(\S+)$/i);
+  if (addMatch) {
+    const diasAdicionar = parseInt(addMatch[1], 10);
+    const telefoneAlvo = addMatch[2];
+    const telefoneNormalizado = Number(normalizarTelefone(telefoneAlvo));
+
+    if (!telefoneNormalizado) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Número inválido: ${telefoneAlvo}` }
+      });
+      return true;
+    }
+
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telefone', telefoneNormalizado)
+      .maybeSingle();
+
+    if (!targetUser) {
+      await sendWhatsAppRaw({
+        messaging_product: "whatsapp",
+        to: DESTINO_FIXO,
+        type: "text",
+        text: { body: `⚠️ Usuário com telefone ${telefoneNormalizado} não encontrado.` }
+      });
+    } else {
+      const agora = new Date();
+      const premiumAtual = targetUser.premium ? new Date(targetUser.premium) : agora;
+      const novoPremium = new Date(Math.max(premiumAtual, agora));
+      novoPremium.setDate(novoPremium.getDate() + diasAdicionar);
+
+      const { error: updateError } = await supabase
         .from('users')
-        .select('*')
-        .eq('telefone', telefoneAlvo)
-        .maybeSingle();
+        .update({ premium: novoPremium.toISOString() })
+        .eq('telefone', telefoneNormalizado);
 
-      if (!targetUser) {
+      if (updateError) {
+        console.error("Erro ao atualizar premium:", updateError);
+      } else {
         await sendWhatsAppRaw({
           messaging_product: "whatsapp",
           to: DESTINO_FIXO,
           type: "text",
-          text: { body: `⚠️ Usuário com telefone ${telefoneAlvo} não encontrado.` }
+          text: {
+            body: `✅ Premium de ${targetUser.user_name} atualizado até ${novoPremium.toLocaleDateString('pt-BR')} ${novoPremium.toLocaleTimeString('pt-BR')}.`
+          }
         });
-      } else {
-        const agora = new Date();
-        const premiumAtual = targetUser.premium ? new Date(targetUser.premium) : agora;
-        const novoPremium = new Date(Math.max(premiumAtual, agora));
-        novoPremium.setDate(novoPremium.getDate() + diasAdicionar);
-
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ premium: novoPremium.toISOString() })
-          .eq('telefone', telefoneAlvo);
-
-        if (updateError) {
-          console.error("Erro ao atualizar premium:", updateError);
-        } else {
-          await sendWhatsAppRaw({
-            messaging_product: "whatsapp",
-            to: DESTINO_FIXO,
-            type: "text",
-            text: {
-              body: `✅ Premium de ${targetUser.user_name} atualizado até ${novoPremium.toLocaleDateString('pt-BR')} ${novoPremium.toLocaleTimeString('pt-BR')}.`
-            }
-          });
-        }
       }
-      return true; // indica que o comando foi tratado
     }
+    return true; // indica que o comando foi tratado
   }
+}
   
   // --- Comandos para upload ---
   if (/^enviar logo$/i.test(myText) && userData) {
@@ -139,7 +298,7 @@ if (/^enviar assinatura$/i.test(myText) && userData) {
 
 // --- Comando de ajuda ---
 if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
-  const helpMessage = `
+  let helpMessage = `
 📋 *Comandos disponíveis:*
 
 👤 **Usuário**
@@ -164,6 +323,17 @@ if (/^op(c|ç)(ões|oes)$/i.test(myText)) {
 - enviar pix — enviar seu Pix QR Code
 - enviar assinatura — enviar sua assinatura
 `.trim();
+
+if (senderNumber === DESTINO_FIXO) {
+    helpMessage += `
+
+🛠️ **Administração VIP**
+
+- add <dias> <número> — adicionar dias de premium
+- delete vip <número> — remover premium (zerar)
+- status vip <número> — verificar status do premium
+`;
+  }
 
   await sendWhatsAppRaw({
     messaging_product: "whatsapp",

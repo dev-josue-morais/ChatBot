@@ -15,15 +15,16 @@ async function processCommand(userMessage, userPhone) {
     const firstWords = getFirstWords(userMessage);
 
     const classificationPrompt = `
-  Analise a frase e retorne apenas JSON:
-  {
-    "modulo": "orcamento" | "agenda" | "despesas",
-    "action": "create" | "edit" | "delete" | "list" | "pdf",
-    "id": número de 10 dígitos ou null "nao e telefone"
-  }
-    obs: atendimento/evento = agenda
-  Frase: "${firstWords}"
-  `;
+      Analise a frase e retorne apenas JSON:
+      {
+        "modulo": "orcamento" | "agenda" | "despesas" | "outro",
+        "action": "create" | "edit" | "delete" | "list" | "pdf",
+        "id": número de 10 dígitos ou null "nao e telefone"
+      }
+        obs: atendimento/evento = agenda
+        - caso a msg não faz sentido use "outro".
+      Frase: "${firstWords}"
+      `;
 
     const quickResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",

@@ -49,17 +49,32 @@ async function reuploadMedia(mediaId, mimeType, filename = "file") {
   }
 }
 
-// Enviar mensagem de texto via WhatsApp
-async function sendWhatsAppMessage(to, message) {
+// Envia payload bruto via WhatsApp
+async function sendWhatsAppRaw(payload) {
   try {
-    await axios.post(
+    // console.log("📦 Payload recebido:", JSON.stringify(payload, null, 2));
+
+    // 🔧 converte número para string, se necessário
+    if (payload?.to && typeof payload.to === "number") {
+      payload.to = String(payload.to);
+    }
+
+    if (!payload?.to || typeof payload.to !== "string" || !payload.to.trim()) {
+      console.log(`⚠️ Ignorado: payload sem número de destino válido. Valor recebido: "${payload?.to}"`);
+      return null;
+    }
+
+    // ✅ Só valida body se for mensagem de texto
+    if (payload.type === "text") {
+      if (!payload?.text?.body || !payload.text.body.trim()) {
+        console.log(`⚠️ Ignorado: payload de texto sem body. Número: "${payload.to}"`);
+        return null;
+      }
+    }
+
+    const resp = await axios.post(
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        type: "text",
-        text: { body: message }
-      },
+      payload,
       {
         headers: {
           Authorization: `Bearer ${WHATSAPP_TOKEN}`,
@@ -67,19 +82,7 @@ async function sendWhatsAppMessage(to, message) {
         }
       }
     );
-  } catch (err) {
-    console.error('Erro ao enviar mensagem:', err.response?.data || err.message);
-  }
-}
 
-// Envia payload bruto via WhatsApp
-async function sendWhatsAppRaw(payload) {
-  try {
-    const resp = await axios.post(
-      `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
-      payload,
-      { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
-    );
     return resp.data;
   } catch (err) {
     console.error("❌ Erro ao enviar pela WhatsApp API:", err.response?.data || err.message);
@@ -201,7 +204,6 @@ async function sendPDFOrcamento(to, orcamento, config) {
 
 module.exports = {
   sendPDFOrcamento,
-  sendWhatsAppMessage,
   sendWhatsAppRaw,
   extractTextFromMsg,
   forwardMediaIfAny

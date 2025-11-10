@@ -1,18 +1,15 @@
 const { forwardMediaIfAny, sendWhatsAppRaw, extractTextFromMsg } = require('./whatsappService');
 const supabase = require('./supabase');
 const { DateTime } = require('luxon');
-const DESTINO_FIXO = require('../utils/config');
+const { DESTINO_FIXO } = require('../utils/config');
 
 /**
  * Trata mensagens recebidas de usuários não cadastrados.
  * - Encaminha texto e mídia para o número fixo.
  * - Envia aviso automático de redirecionamento uma única vez a cada 24h.
  */
-async function handleUnregisteredUser(msg, value) {
+async function handleUnregisteredUser(msg, value, senderNumber, senderName) {
   try {
-    const senderNumber = msg.from;
-    const senderName = msg?.profile?.name || "Contato desconhecido";
-
     const now = DateTime.now().setZone("America/Sao_Paulo");
     const saudacao =
       now.hour >= 5 && now.hour < 12

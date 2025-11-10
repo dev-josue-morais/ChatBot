@@ -144,26 +144,24 @@ case 'orcamento_pdf': {
   "id": número,
   "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
   "opcoes": {
-    "listaServicos": boolean,
-    "listaMateriais": boolean,
-    "ocultarValorServicos": boolean,
-    "garantia": boolean,
-    "assinaturaCliente": boolean,
-    "assinaturaEmpresa": boolean
+    "listaServicos": true,
+    "listaMateriais": true,
+    "ocultarValorServicos": false,
+    "garantia": true,
+    "assinaturaCliente": false,
+    "assinaturaEmpresa": false
   },
-  "valorRecibo": número|null
+  "valorRecibo": número | null
 }
 
 ⚠️ Regras:
 
 1. Sempre retorne JSON válido.
-2. Se tipo = "Recibo", inclua valorRecibo; se não informado, use null. Outros tipos: valorRecibo = null.
+2. Se tipo = "Recibo", inclua valorRecibo, se não informado valor use null.
 3. Não altere as flags sem instrução explícita do texto:
-   - “ocultar materiais” → listaMateriais: false
-   - “ocultar serviços” → listaServicos: false
+   - “ocultar materiais | serviços” → lista"Materiais | Servicos": false
    - nunca ocultar materiais e serviços no mesmo pdf
-   - Se não houver instrução, manter true.
-   - se "ocultarValorServicos" true obrigatoriamente "listaServicos" true.
+   - Se não houver instrução, use valores defalt do exemplo.
 
 Texto do usuário: """${userMessage}"""
   `;
@@ -196,25 +194,34 @@ Texto do usuário: """${userMessage}"""
     // ============================================================
     // 📅 AGENDA - LIST
     // ============================================================
-    case 'agenda_list': {
-      prompt = `
-      Você é um assistente que lista compromissos da agenda.
-      O usuário está no fuso GMT-3 (Brasil).
-      A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-      Responda apenas com JSON válido no formato:
+case 'agenda_list': {
+  prompt = `
+  Você é um assistente que ajuda o usuário a listar eventos da agenda.
+  O usuário está no fuso GMT-3 (Brasil).
+  A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
 
-      {
-        "modulo": "agenda",
-        "action": "list",
-        "title": "string" Nome do cliente/local ou null,
-        "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
-        "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
-      }
+  Responda apenas com **JSON válido**, no formato:
+  {
+    "modulo": "agenda",
+    "action": "list",
+    "title": "string" Nome do cliente/local ou null,
+    "start_date": "YYYY-MM-DD",
+    "end_date": "YYYY-MM-DD"
+  }
 
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
+  Regras:
+  - Sempre preencha **start_date** e **end_date**.
+  - Se o usuário mencionar um dia específico (ex: "eventos de amanhã", "dia 8 de setembro"), use o mesmo valor para start e end.
+  - Se mencionar um período (ex: "semana que vem", "do dia 10 ao dia 12", "mês passado"), use o intervalo correspondente.
+  - Se não mencionar datas, use o dia atual.
+  - As datas devem estar no fuso horário do Brasil (America/Sao_Paulo).
+  - Formato sempre "YYYY-MM-DD" (sem hora nem offset).
+  - Responda **somente com o JSON**, sem texto fora dele.
+
+  Texto: """${userMessage}"""
+  `;
+  break;
+}
 
     // ============================================================
     // ✏️ AGENDA - EDIT
@@ -234,8 +241,6 @@ const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
     .setZone('America/Sao_Paulo')
     .toISO();
 
-  console.log('📤 date enviado ao GPT (GMT-3):', dateBRT);
-
       prompt = `
 Você é um assistente que edita eventos de uma agenda.
 O usuário está no fuso horário GMT-3 (Brasil).
@@ -247,9 +252,11 @@ Regras obrigatórias:
 2️⃣ Quando o usuário disser algo como "daqui a X minutos", "daqui X horas", "mais tarde", "para amanhã", ou expressões semelhantes:
    - **Sempre use a hora atual (${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}) como ponto de referência.**
    - **Nunca use o campo "date" existente para somar tempo.**
+   - sempre inclua o campo boolean "notified" mesmo que no defalt false.
    - Exemplo: se o usuário disser "daqui a 10 minutos", o novo campo "date" deve ser a hora atual + 10 minutos.
 3️⃣ Quando o usuário disser uma hora exata ("às 14h", "para 8:30"), substitua apenas a hora no formato GMT-3.
 4️⃣ Mantenha a estrutura original do evento e atualize apenas os campos solicitados.
+
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}

@@ -9,7 +9,6 @@ const { continueUserRegistration } = require('../services/userRegistration');
 const handleUploads = require('../services/uploads');
 const handleUnregisteredUser = require('../services/handleUnregisteredUser');
 const { handleCommands, handleUserRegistrationCommand } = require("../services/handleCommands");
-// const createCheckoutPreference = require('../utils/mercadopago');
 
 const processedIds = new Set();
 setInterval(() => processedIds.clear(), 2 * 60 * 1000);
@@ -31,16 +30,16 @@ router.post('/', async (req, res, next) => {
     const value = change?.value;
     const messages = value?.messages;
     if (!messages) return res.sendStatus(200);
-    
+
     // console.log('🚀 Webhook acionado:', new Date().toISOString());
     for (let msg of messages) {
-    // console.log('📩 Mensagem recebida:', JSON.stringify(msg, null, 2));
-    // console.log('📡 Corpo completo do evento:', JSON.stringify(value, null, 2));
-      
+      // console.log('📩 Mensagem recebida:', JSON.stringify(msg, null, 2));
+
       const contact = value.contacts?.[0];
       if (!contact) continue;
       if (processedIds.has(msg.id)) continue;
       processedIds.add(msg.id);
+
       const senderName = contact.profile?.name || 'Usuário';
       const senderNumber = contact.wa_id;
       if (!senderNumber) continue;
@@ -71,7 +70,7 @@ router.post('/', async (req, res, next) => {
           messaging_product: "whatsapp",
           to: senderNumber,
           type: "text",
-          text: { body: "❌ Cadastro cancelado.\npara recomeçar digite Criar usuário" }
+          text: { body: "❌ Cadastro cancelado.\nPara recomeçar, digite 'Criar usuário'." }
         });
         continue;
       }
@@ -90,7 +89,7 @@ router.post('/', async (req, res, next) => {
       // --- Trata comandos conhecidos ---
       const handled = await handleCommands(myText, senderNumber, userData, now);
       if (handled) continue;
-      
+
       // --- Cadastro passo a passo ---
       if (session && session.step > 0) {
         await continueUserRegistration(session, senderNumber, myText);
@@ -99,11 +98,11 @@ router.post('/', async (req, res, next) => {
 
       // --- Usuário sem cadastro ---
       if (!userData) {
-        await handleUnregisteredUser(msg, value);
+        await handleUnregisteredUser(msg, value, senderNumber, senderName);
         continue;
       }
 
-      // Ignora mensagens sem conteúdo relevante ou com menos de 2 palavras
+      // Ignora mensagens sem conteúdo relevante ou curtas
       if (
         (!myText && !msg.type?.match(/text|interactive|image|document|audio|video|sticker/)) ||
         (myText && myText.split(/\s+/).length < 3)
@@ -113,12 +112,15 @@ router.post('/', async (req, res, next) => {
 
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText, senderNumber);
-      await sendWhatsAppRaw({
-        messaging_product: "whatsapp",
-        to: senderNumber,
-        type: "text",
-        text: { body: responseText }
-      });
+
+      if (responseText && typeof responseText === "string" && responseText.trim()) {
+        await sendWhatsAppRaw({
+          messaging_product: "whatsapp",
+          to: senderNumber,
+          type: "text",
+          text: { body: responseText }
+        });
+      }
     }
 
     res.sendStatus(200);

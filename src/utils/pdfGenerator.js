@@ -43,12 +43,17 @@ function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, assina
             </div>
         </div>
         ${(opcoes.assinaturaCliente || opcoes.assinaturaEmpresa) ? `
-            <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                ${opcoes.assinaturaEmpresa ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>${user.assinatura || user.empresa_nome || "Sua Empresa"}</strong></div>` : ""}
-                ${opcoes.assinaturaCliente ? `<div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;"><strong>Assinatura do Cliente</strong></div>` : ""}
+    <div style="display:flex; justify-content:space-between; margin-top:50px;">
+        ${opcoes.assinaturaEmpresa ? `
+            <div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;">
+                <strong>${user.empresa_nome || "Empresa"}</strong>
             </div>` : ""}
-        `;
-    }
+        ${opcoes.assinaturaCliente ? `
+            <div style="width:45%; text-align:center; border-top:2px solid #000; padding-top:5px; margin-top:40px;">
+                <strong>Assinatura do Cliente</strong>
+            </div>` : ""}
+    </div>` : ""}
+`;}
 }
 
 async function getBase64FromUrl(url) {
@@ -62,11 +67,9 @@ async function getBase64FromUrl(url) {
     }
 }
 function renderDescricaoAtividades(orcamento) {
-    // Se for null, undefined ou array vazio, não mostra nada
-    if (!Array.isArray(orcamento.descricao) || orcamento.descricao.length === 0) return '';
+    if (!Array.isArray(orcamento.descricoes) || orcamento.descricoes.length === 0) return '';
 
-    // Filtra itens vazios
-    const descricoes = orcamento.descricao.filter(Boolean);
+    const descricoes = orcamento.descricoes.filter(Boolean);
 
     if (descricoes.length === 0) return '';
 
@@ -80,7 +83,7 @@ function renderDescricaoAtividades(orcamento) {
     `;
 }
 function renderServicos(servicos, opcoes) {
-    if (!opcoes.listaServicos || !servicos?.length) return '';
+    if (!(opcoes.listaServicos || opcoes.ocultarValorServicos) || !servicos?.length) return '';
     return `
     <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
