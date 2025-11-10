@@ -113,13 +113,15 @@ router.post('/', async (req, res, next) => {
 
       // --- Processa comandos normais ---
       const responseText = await processCommand(myText, senderNumber);
-      await sendWhatsAppRaw({
-        messaging_product: "whatsapp",
-        to: senderNumber,
-        type: "text",
-        text: { body: responseText }
-      });
-    }
+
+if (responseText && typeof responseText === "string" && responseText.trim()) {
+  await sendWhatsAppRaw({
+    messaging_product: "whatsapp",
+    to: senderNumber,
+    type: "text",
+    text: { body: responseText }
+  });
+}
 
     res.sendStatus(200);
   } catch (err) {
