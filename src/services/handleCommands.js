@@ -31,6 +31,7 @@ const handleUserRegistrationCommand = async (myText, senderNumber, userData) => 
  * Inclui upload, ajuda, orçamentos, atendimentos, premium e renovação.
  */
 const handleCommands = async (myText, senderNumber, userData, now) => {
+// -- edita informação do usuário
 
 function normalizarTelefone(numero) {
   if (!numero) return null;

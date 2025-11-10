@@ -1,6 +1,7 @@
 const { handleGPTCommand } = require('./handleGPTCommand');
 const handleOrcamentoCommand = require('./handleOrcamentoCommand');
 const handleAgendaCommand = require('./handleAgendaCommand');
+const handleDespesasCommand = require('./handleDespesasCommand');
 const openai = require('./openai');
 
 // 🧠 Função para limitar primeiras palavras (melhor contexto curto)
@@ -16,7 +17,7 @@ async function processCommand(userMessage, userPhone) {
     const classificationPrompt = `
       Analise a frase e retorne apenas JSON:
       {
-        "modulo": "orcamento" | "agenda" | "outro",
+        "modulo": "orcamento" | "agenda" | "despesas" | "outro",
         "action": "create" | "edit" | "delete" | "list" | "pdf",
         "id": número de 10 dígitos ou null "nao e telefone"
       }
@@ -43,28 +44,32 @@ async function processCommand(userMessage, userPhone) {
 
     const { modulo, action, id } = classification;
 
-    if (modulo === 'agenda' && action === 'delete' && id) {
-      const result = await handleAgendaCommand(
-       { modulo, action, id },
-       userPhone
-       );
-      return result;
-    } else {
-      const gptData = await handleGPTCommand(userMessage, modulo, action, id);
-
-      gptData.modulo ??= modulo;
-      gptData.action ??= action;
-      if (!gptData.id && id) gptData.id = id;
-
-      // 3️⃣ Direciona execução
-      switch (gptData.modulo) {
-        case "agenda":
-          return await handleAgendaCommand(gptData, userPhone);
-        case "orcamento":
-          return await handleOrcamentoCommand(gptData, userPhone);
-        default:
-          return "⚠️ Não entendi se é AGENDA ou ORÇAMENTO.";
+    // 🔹 Para DELETE de agenda ou despesas, vamos direto para os handlers
+    if ((modulo === 'agenda' || modulo === 'despesas') && action === 'delete' && id) {
+      if (modulo === 'agenda') {
+        return await handleAgendaCommand({ modulo, action, id }, userPhone);
+      } else if (modulo === 'despesas') {
+        return await handleDespesasCommand({ modulo, action, id }, userPhone);
       }
+    }
+
+    // 🔹 Para os demais comandos, chama o GPT
+    const gptData = await handleGPTCommand(userMessage, modulo, action, id);
+
+    gptData.modulo ??= modulo;
+    gptData.action ??= action;
+    if (!gptData.id && id) gptData.id = id;
+
+    // 3️⃣ Direciona execução
+    switch (gptData.modulo) {
+      case "agenda":
+        return await handleAgendaCommand(gptData, userPhone);
+      case "orcamento":
+        return await handleOrcamentoCommand(gptData, userPhone);
+      case "despesas":
+        return await handleDespesasCommand(gptData, userPhone);
+      default:
+        return "⚠️ Não entendi se é AGENDA, ORÇAMENTO ou DESPESAS.";
     }
 
   } catch (err) {
