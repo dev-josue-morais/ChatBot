@@ -1,6 +1,26 @@
 const formatCurrency = require("./formatCurrency");
 const aplicarDesconto = require("./aplicarDesconto");
 
+// Formata para dd/mm/aaaa
+function formatDateBR(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// Calcula quantos dias atrás
+function diffDaysFromNow(dateStr) {
+  if (!dateStr) return null;
+  const final = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - final;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
 function formatOrcamento(o) {
   const totalMateriais = (o.materiais || []).reduce(
     (sum, m) => sum + (m.qtd || 0) * (m.valor || 0),
@@ -23,7 +43,7 @@ function formatOrcamento(o) {
       ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
       : null;
 
-  // Descricoes
+  // Descrições
   const descricoes =
     Array.isArray(o.descricoes) && o.descricoes.length > 0
       ? o.descricoes.map((d, i) => `   ${i + 1}. ${d}`).join("\n")
@@ -41,26 +61,23 @@ function formatOrcamento(o) {
   const etapaKey = (o.etapa || "negociacao").toLowerCase();
   const etapa = etapaMap[etapaKey] || etapaMap.negociacao;
 
+  // Data finalizado + dias
+  let dataFinalizado = "";
+  if (etapaKey === "finalizado" && o.finalizado_em) {
+    const dias = diffDaysFromNow(o.finalizado_em);
+    const data = formatDateBR(o.finalizado_em);
+
+    dataFinalizado = `📅 Finalizado há ${dias} dia${dias === 1 ? "" : "s"} (${data})`;
+  }
+
   return `
 📝 Orçamento ${o.orcamento_numero}
 👤 Cliente: ${o.nome_cliente}
 📞 Telefone: ${o.telefone_cliente}
 📌 Etapa: ${etapa.emoji} ${etapa.nome}
+${dataFinalizado ? dataFinalizado + "\n" : ""}
 ${observacoes ? `📌 Observações:\n${observacoes}\n` : ""}
 ${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}\n` : ""}
-📦 Materiais:
-${
-  (o.materiais && o.materiais.length > 0)
-    ? o.materiais
-        .map((m) => {
-          const total = (m.qtd || 0) * (m.valor || 0);
-          return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
-        })
-        .join("\n")
-    : "   Nenhum"
-}
-
-💰 Total Materiais: ${descontoMateriais.descricao}
 
 🔧 Serviços:
 ${
@@ -81,6 +98,20 @@ ${
       ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
       : formatCurrency(totalFinal)
   }
+
+📦 Materiais:
+${
+  (o.materiais && o.materiais.length > 0)
+    ? o.materiais
+        .map((m) => {
+          const total = (m.qtd || 0) * (m.valor || 0);
+          return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
+        })
+        .join("\n")
+    : "   Nenhum"
+}
+
+💰 Total Materiais: ${descontoMateriais.descricao}
 `.trim();
 }
 
