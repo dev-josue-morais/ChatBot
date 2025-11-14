@@ -75,9 +75,9 @@ function formatOrcamento(o) {
 👤 Cliente: ${o.nome_cliente}
 📞 Telefone: ${o.telefone_cliente}
 📌 Etapa: ${etapa.emoji} ${etapa.nome}
-${dataFinalizado ? dataFinalizado + "\n" : ""}
-${observacoes ? `📌 Observações:\n${observacoes}\n` : ""}
-${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}\n` : ""}
+${dataFinalizado ? dataFinalizado : ""}
+${observacoes ? `📌 Observações:\n${observacoes}` : ""}
+${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}` : ""}
 🔧 Serviços:
 ${
   (o.servicos && o.servicos.length > 0)
