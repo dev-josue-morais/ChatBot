@@ -78,7 +78,6 @@ function formatOrcamento(o) {
 ${dataFinalizado ? dataFinalizado + "\n" : ""}
 ${observacoes ? `📌 Observações:\n${observacoes}\n` : ""}
 ${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}\n` : ""}
-
 🔧 Serviços:
 ${
   (o.servicos && o.servicos.length > 0)
@@ -92,12 +91,6 @@ ${
 }
 
 💰 Total Serviços: ${descontoServicos.descricao}
-
-🧾 Total Geral: ${
-    totalFinal !== totalOriginal
-      ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
-      : formatCurrency(totalFinal)
-  }
 
 📦 Materiais:
 ${
@@ -113,6 +106,12 @@ ${
 
 💰 Total Materiais: ${descontoMateriais.descricao}
 `.trim();
+
+🧾 Total Geral: ${
+    totalFinal !== totalOriginal
+      ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
+      : formatCurrency(totalFinal)
+  }
 }
 
 module.exports = formatOrcamento;
