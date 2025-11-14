@@ -105,13 +105,13 @@ ${
 }
 
 💰 Total Materiais: ${descontoMateriais.descricao}
-`.trim();
+`.trim()
 
 🧾 Total Geral: ${
     totalFinal !== totalOriginal
       ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
       : formatCurrency(totalFinal)
-  }
+  };
 }
 
 module.exports = formatOrcamento;
