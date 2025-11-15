@@ -17,8 +17,7 @@ function diffDaysFromNow(dateStr) {
   const final = new Date(dateStr);
   const now = new Date();
   const diffMs = now - final;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
 function formatOrcamento(o) {
@@ -49,7 +48,7 @@ function formatOrcamento(o) {
       ? o.descricoes.map((d, i) => `   ${i + 1}. ${d}`).join("\n")
       : null;
 
-  // Mapeamento de emojis e nomes padronizados por etapa
+  // Mapeamento de etapas
   const etapaMap = {
     negociacao: { emoji: "🟡", nome: "Em negociação" },
     andamento: { emoji: "🔵", nome: "Em execução" },
@@ -66,51 +65,51 @@ function formatOrcamento(o) {
   if (etapaKey === "finalizado" && o.finalizado_em) {
     const dias = diffDaysFromNow(o.finalizado_em);
     const data = formatDateBR(o.finalizado_em);
-
     dataFinalizado = `📅 Finalizado há ${dias} dia${dias === 1 ? "" : "s"} (${data})`;
   }
 
-  return `
-📝 Orçamento ${o.orcamento_numero}
-👤 Cliente: ${o.nome_cliente}
-📞 Telefone: ${o.telefone_cliente}
-📌 Etapa: ${etapa.emoji} ${etapa.nome}
-${dataFinalizado ? dataFinalizado : ""}
-${observacoes ? `📌 Observações:\n${observacoes}` : ""}
-${descricoes ? `🗂️ Descrição de atividades:\n${descricoes}` : ""}
-🔧 Serviços:
-${
-  (o.servicos && o.servicos.length > 0)
-    ? o.servicos
-        .map((s) => {
-          const total = (s.quantidade || 0) * (s.valor || 0);
-          return `   - ${s.titulo} (Qtd: ${s.quantidade}, Unit: ${formatCurrency(s.valor)}, Total: ${formatCurrency(total)})`;
-        })
-        .join("\n")
-    : "   Nenhum"
-}
+  // ---------- AQUI COMEÇA A MÁGICA ----------
+  const linhas = [
+    `📝 Orçamento ${o.orcamento_numero}`,
+    `👤 Cliente: ${o.nome_cliente}`,
+    `📞 Telefone: ${o.telefone_cliente}`,
+    `📌 Etapa: ${etapa.emoji} ${etapa.nome}`,
+    dataFinalizado,
+    observacoes ? `📌 Observações:\n${observacoes}` : "",
+    descricoes ? `🗂️ Descrição de atividades:\n${descricoes}` : "",
+    `🔧 Serviços:`,
+    (o.servicos && o.servicos.length > 0)
+      ? o.servicos
+          .map((s) => {
+            const total = (s.quantidade || 0) * (s.valor || 0);
+            return `   - ${s.titulo} (Qtd: ${s.quantidade}, Unit: ${formatCurrency(s.valor)}, Total: ${formatCurrency(total)})`;
+          })
+          .join("\n")
+      : "   Nenhum",
+    ``,
+    `💰 Total Serviços: ${descontoServicos.descricao}`,
+    ``,
+    `📦 Materiais:`,
+    (o.materiais && o.materiais.length > 0)
+      ? o.materiais
+          .map((m) => {
+            const total = (m.qtd || 0) * (m.valor || 0);
+            return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
+          })
+          .join("\n")
+      : "   Nenhum",
+    ``,
+    `💰 Total Materiais: ${descontoMateriais.descricao}`,
+    ``,
+    `🧾 Total Geral: ${
+      totalFinal !== totalOriginal
+        ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
+        : formatCurrency(totalFinal)
+    }`
+  ];
 
-💰 Total Serviços: ${descontoServicos.descricao}
-
-📦 Materiais:
-${
-  (o.materiais && o.materiais.length > 0)
-    ? o.materiais
-        .map((m) => {
-          const total = (m.qtd || 0) * (m.valor || 0);
-          return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
-        })
-        .join("\n")
-    : "   Nenhum"
-}
-
-💰 Total Materiais: ${descontoMateriais.descricao}
-
-🧾 Total Geral: ${
-    totalFinal !== totalOriginal
-      ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
-      : formatCurrency(totalFinal)
-  }`.trim();
+  // Remove linhas vazias consecutivas e trim final
+  return linhas.filter(l => l !== "").join("\n");
 }
 
 module.exports = formatOrcamento;
