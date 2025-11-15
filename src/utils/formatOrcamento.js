@@ -36,19 +36,16 @@ function formatOrcamento(o) {
   const totalOriginal = totalMateriais + totalServicos;
   const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
 
-  // Observações
   const observacoes =
     Array.isArray(o.observacoes) && o.observacoes.length > 0
       ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
       : null;
 
-  // Descrições
   const descricoes =
     Array.isArray(o.descricoes) && o.descricoes.length > 0
       ? o.descricoes.map((d, i) => `   ${i + 1}. ${d}`).join("\n")
       : null;
 
-  // Mapeamento de etapas
   const etapaMap = {
     negociacao: { emoji: "🟡", nome: "Em negociação" },
     andamento: { emoji: "🔵", nome: "Em execução" },
@@ -60,21 +57,42 @@ function formatOrcamento(o) {
   const etapaKey = (o.etapa || "negociacao").toLowerCase();
   const etapa = etapaMap[etapaKey] || etapaMap.negociacao;
 
-  // Data finalizado + dias
+  // ==========================
+  //     DATA FINALIZADO
+  // ==========================
   let dataFinalizado = "";
+  let garantiaMensagem = "";
+
   if (etapaKey === "finalizado" && o.finalizado_em) {
     const dias = diffDaysFromNow(o.finalizado_em);
     const data = formatDateBR(o.finalizado_em);
+
     dataFinalizado = `📅 Finalizado há ${dias} dia${dias === 1 ? "" : "s"} (${data})`;
+
+    // ==========================
+    //         GARANTIA
+    // ==========================
+    const garantiaDias = 90;
+
+    if (dias < garantiaDias) {
+      const restam = garantiaDias - dias;
+      garantiaMensagem = `🟩 Garantia válida — ⌛ ${restam} dias restantes`;
+    } else {
+      const expirou = dias - garantiaDias;
+      garantiaMensagem = `🟥 Garantia expirada há ${expirou} dias`;
+    }
   }
 
-  // ---------- LINHAS AJUSTADAS ----------
+  // ==========================
+  //        LINHAS FINAIS
+  // ==========================
   const linhas = [
     `📝 Orçamento ${o.orcamento_numero}`,
     `👤 Cliente: ${o.nome_cliente}`,
     `📞 Telefone: ${o.telefone_cliente}`,
     `📌 Etapa: ${etapa.emoji} ${etapa.nome}`,
     dataFinalizado,
+    garantiaMensagem,
     observacoes ? `📌 Observações:\n${observacoes}` : "",
     descricoes ? `🗂️ Descrição de atividades:\n${descricoes}` : "",
     ``,
@@ -95,7 +113,7 @@ function formatOrcamento(o) {
       ? o.materiais
           .map((m) => {
             const total = (m.qtd || 0) * (m.valor || 0);
-            return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ''}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
+            return `   - ${m.nome} (Qtd: ${m.qtd} ${m.unidade || ""}, Unit: ${formatCurrency(m.valor)}, Total: ${formatCurrency(total)})`;
           })
           .join("\n")
       : "   Nenhum",
@@ -109,7 +127,6 @@ function formatOrcamento(o) {
     }`
   ];
 
-  // Junta removendo apenas linhas duplicadas
   return linhas
     .filter((line, i, arr) => line !== "" || arr[i - 1] !== "")
     .join("\n");
