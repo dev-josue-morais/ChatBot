@@ -129,39 +129,39 @@ const descricoes = Array.isArray(command.descricoes)
 
     query = query.order('criado_em', { ascending: false });
 
-    // Função de espera
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+    // ---- Função de espera (coloque fora do loop) ----
+    function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-const { data: orcamentos, error } = await query;
+    const { data: orcamentos, error } = await query;
 
-if (error) {
-    console.error("Erro ao listar orcamentos:", error);
-    return "⚠️ Não foi possível listar os orçamentos.";
-}
+    if (error) {
+        console.error("Erro ao listar orcamentos:", error);
+        return "⚠️ Não foi possível listar os orçamentos.";
+    }
 
-if (!orcamentos || orcamentos.length === 0) {
-    return "📄 Nenhum orçamento encontrado.";
-}
+    if (!orcamentos || orcamentos.length === 0) {
+        return "📄 Nenhum orçamento encontrado.";
+    }
 
-// Envia 1 por 1 com delay para evitar "pair rate limit"
-for (let i = 0; i < orcamentos.length; i++) {
-  const o = orcamentos[i];
+    // ---- Envio seguro com delay ----
+    for (let i = 0; i < orcamentos.length; i++) {
+        const o = orcamentos[i];
 
-  await sendWhatsAppRaw({
-    messaging_product: "whatsapp",
-    to: userPhone,
-    type: "text",
-    text: { body: formatOrcamento(o) },
-  });
+        await sendWhatsAppRaw({
+            messaging_product: "whatsapp",
+            to: userPhone,
+            type: "text",
+            text: { body: formatOrcamento(o) },
+        });
 
-  // Se não for o último item → aplica delay
-  if (i < orcamentos.length - 1) {
-    const delay = 1200 + Math.floor(Math.random() * 900); 
-    await wait(delay);
-  }
-}}
+        // Delay apenas entre mensagens
+        if (i < orcamentos.length - 1) {
+            const delay = 1200 + Math.floor(Math.random() * 900); // 1200–2100ms
+            await wait(delay);
+        }
+    }
 
     return `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
 }
