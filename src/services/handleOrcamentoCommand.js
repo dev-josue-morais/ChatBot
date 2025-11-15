@@ -129,25 +129,39 @@ const descricoes = Array.isArray(command.descricoes)
 
     query = query.order('criado_em', { ascending: false });
 
-    const { data: orcamentos, error } = await query;
+    // Função de espera
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-    if (error) {
-        console.error("Erro ao listar orçamentos:", error);
-        return "⚠️ Não foi possível listar os orçamentos.";
-    }
+const { data: orcamentos, error } = await query;
 
-    if (!orcamentos || orcamentos.length === 0) {
-        return "📄 Nenhum orçamento encontrado.";
-    }
+if (error) {
+    console.error("Erro ao listar orcamentos:", error);
+    return "⚠️ Não foi possível listar os orçamentos.";
+}
 
-    for (const o of orcamentos) {
+if (!orcamentos || orcamentos.length === 0) {
+    return "📄 Nenhum orçamento encontrado.";
+}
+
+// Envia 1 por 1 com delay para evitar "pair rate limit"
+for (let i = 0; i < orcamentos.length; i++) {
+  const o = orcamentos[i];
+
   await sendWhatsAppRaw({
     messaging_product: "whatsapp",
     to: userPhone,
     type: "text",
     text: { body: formatOrcamento(o) },
   });
-}
+
+  // Se não for o último item → aplica delay
+  if (i < orcamentos.length - 1) {
+    const delay = 1200 + Math.floor(Math.random() * 900); 
+    await wait(delay);
+  }
+}}
 
     return `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
 }
