@@ -68,7 +68,7 @@ function formatOrcamento(o) {
     dataFinalizado = `📅 Finalizado há ${dias} dia${dias === 1 ? "" : "s"} (${data})`;
   }
 
-  // ---------- AQUI COMEÇA A MÁGICA ----------
+  // ---------- LINHAS AJUSTADAS ----------
   const linhas = [
     `📝 Orçamento ${o.orcamento_numero}`,
     `👤 Cliente: ${o.nome_cliente}`,
@@ -77,6 +77,7 @@ function formatOrcamento(o) {
     dataFinalizado,
     observacoes ? `📌 Observações:\n${observacoes}` : "",
     descricoes ? `🗂️ Descrição de atividades:\n${descricoes}` : "",
+    ``,
     `🔧 Serviços:`,
     (o.servicos && o.servicos.length > 0)
       ? o.servicos
@@ -108,8 +109,10 @@ function formatOrcamento(o) {
     }`
   ];
 
-  // Remove linhas vazias consecutivas e trim final
-  return linhas.filter(l => l !== "").join("\n");
+  // Junta removendo apenas linhas duplicadas
+  return linhas
+    .filter((line, i, arr) => line !== "" || arr[i - 1] !== "")
+    .join("\n");
 }
 
 module.exports = formatOrcamento;
