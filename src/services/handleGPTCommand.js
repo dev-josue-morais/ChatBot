@@ -173,6 +173,9 @@ Texto do usuário: """${userMessage}"""
     // 📆 AGENDA - CREATE
     // ============================================================
     case 'agenda_create': {
+const now = getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss");
+
+  console.log("📅 [agenda_create] Data/hora enviada ao GPT:", now);
       prompt = `
       Você é um assistente que cria compromissos de agenda.
       O usuário está no fuso GMT-3 (Brasil).
@@ -228,6 +231,9 @@ case 'agenda_list': {
     // ✏️ AGENDA - EDIT
     // ============================================================
     case 'agenda_edit': {
+const now = getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss");
+
+  console.log("📅 [agenda_edit] Data/hora enviada ao GPT:", now);
       if (!id) return { error: "⚠️ É necessário informar o ID do evento para editar." };
 
       const { data: currentData, error: fetchError } = await supabase
