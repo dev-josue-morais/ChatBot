@@ -161,13 +161,11 @@ Texto: """${userMessage}"""
         // 📆 AGENDA - CREATE  (NOW atualizado)
         // ============================================================
         case 'agenda_create': {
-            const nowInfo = nowWithWeekday();
-            // console.log("📅 [agenda_create] Enviado ao GPT:", nowInfo);
 
             prompt = `
 Você é um assistente que cria compromissos de agenda.
 O usuário está no fuso GMT-3 (Brasil).
-${nowInfo}
+${nowWithWeekday()}
 
 Retorne apenas JSON válido.
 
@@ -188,12 +186,11 @@ Texto: """${userMessage}"""
         // 📅 AGENDA - LIST (NOW atualizado)
         // ============================================================
         case 'agenda_list': {
-            const nowInfo = nowWithWeekday();
 
             prompt = `
 Você é um assistente que lista eventos da agenda.
 O usuário está no fuso GMT-3 (Brasil).
-${nowInfo}
+${nowWithWeekday()}
 
 Responda apenas com JSON válido:
 
@@ -220,8 +217,6 @@ Texto: """${userMessage}"""
         // ✏️ AGENDA - EDIT  (NOW atualizado)
         // ============================================================
         case 'agenda_edit': {
-            const nowInfo = nowWithWeekday();
-            // console.log("📅 [agenda_edit] Enviado ao GPT:", nowInfo);
 
             if (!id)
                 return { error: "⚠️ É necessário informar o ID do evento para editar." };
@@ -241,7 +236,7 @@ Texto: """${userMessage}"""
 
             prompt = `
 Você é um assistente que edita eventos de uma agenda.
-${nowInfo}
+${nowWithWeekday()}
 
 Regras obrigatórias:
 1️⃣ Todas as datas em GMT-3 com offset "-03:00".
