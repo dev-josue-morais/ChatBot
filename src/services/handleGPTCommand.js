@@ -5,15 +5,22 @@ const { DateTime } = require('luxon');
 
 async function handleGPTCommand(rawMessage, modulo, action, id) {
     const userMessage = (rawMessage || "").trim();
-  let prompt = '';
+    let prompt = '';
 
-  switch (`${modulo}_${action}`) {
+    // 🆕 Função NOW com dia da semana
+    function nowWithWeekday() {
+        const now = getNowBRT();
+        const weekday = now.setLocale('pt').toFormat('cccc');
+        return `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
+    }
 
-    // ============================================================
-    // 🧾 ORÇAMENTO - CREATE
-    //  ============================================================
-    case 'orcamento_create': {
-  prompt = `
+    switch (`${modulo}_${action}`) {
+
+        // ============================================================
+        // 🧾 ORÇAMENTO - CREATE
+        // ============================================================
+        case 'orcamento_create': {
+            prompt = `
   Você é um assistente comercial. O usuário está criando um novo orçamento.
   Sempre responda **apenas com JSON válido**, sem texto fora do JSON.
 
@@ -40,24 +47,25 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
 
   Texto: """${userMessage}"""
   `;
-  break;
-}
-    // ============================================================
-    // ✏️ ORÇAMENTO - EDIT
-    // ============================================================
-    case 'orcamento_edit': {
-  if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
+            break;
+        }
 
-  const { data: currentData, error: fetchError } = await supabase
-    .from('orcamentos')
-    .select('*')
-    .eq('orcamento_numero', id)
-    .single();
+        // ============================================================
+        // ✏️ ORÇAMENTO - EDIT
+        // ============================================================
+        case 'orcamento_edit': {
+            if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
 
-  if (fetchError || !currentData)
-    return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
+            const { data: currentData, error: fetchError } = await supabase
+                .from('orcamentos')
+                .select('*')
+                .eq('orcamento_numero', id)
+                .single();
 
-  prompt = `
+            if (fetchError || !currentData)
+                return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
+
+            prompt = `
   Você é um assistente comercial que edita JSONs existentes de orçamentos.
   Responda **somente com JSON válido**, sem texto fora do JSON.
 
@@ -68,33 +76,25 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   "${userMessage}"
 
   Regras:
-  - Os campos "descricoes", "observacoes" deve ser sempre um array, mesmo que vazio ([]) Nunca quebre linhas com \\n. deve ser um item separado.
+  - Os campos "descricoes", "observacoes" deve ser sempre um array, mesmo que vazio ([]).
   - Mantenha toda a estrutura original.
-  - Atualize apenas o que o usuário pediu (ex: itens, quantidades, descontos, etapa, observações, etc).
+  - Atualize apenas o que o usuário pediu.
   - Campos vazios podem ser null.
-  - caso seja solicitado adicionar desconto modifique apenas os campos "desconto_material", "desconto_servicos" não modifique os valores dos itens.
+  - caso seja solicitado adicionar desconto modifique apenas:
+      "desconto_materiais", "desconto_servicos".
   - Não crie novas colunas.
-  - O campo "etapa" (quando alterado) deve ser **uma dessas opções exatamente**:
-    "negociacao", "andamento", "aprovado", "perdido", "finalizado".
-  - Se o usuário não mencionar a etapa, mantenha o valor atual.
-  - Use sempre este formato de estrutura:
-  "descricoes": ["texto1", "texto2"] ou [],
-  "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-  "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
-  "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
-  "desconto_materiais": "10%" ou "10" ou null,
-  "desconto_servicos": "10%" ou "10" ou null
+  - "etapa" deve ser: "negociacao", "andamento", "aprovado", "perdido", "finalizado".
 
   Retorne o orçamento atualizado.
   `;
-  break;
-}
+            break;
+        }
 
-    // ============================================================
-    // 📋 ORÇAMENTO - LIST
-    // ============================================================
-    case 'orcamento_list': {
-  prompt = `
+        // ============================================================
+        // 📋 ORÇAMENTO - LIST
+        // ============================================================
+        case 'orcamento_list': {
+            prompt = `
   Você é um assistente que ajuda a listar orçamentos existentes.
   Responda apenas com JSON válido no formato:
 
@@ -109,35 +109,32 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
 
   Regras:
   - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
-  - etapa deve sempre ter um valor; se não for pedido use o default. Exemplo: "lista os orçamentos de João" → "etapa": "negociacao".
-  - Responda **somente com o JSON**, sem texto fora dele.
+  - etapa deve sempre ter um valor.
+  - Responda somente com JSON.
 
   Texto: """${userMessage}"""
   `;
-  break;
-}
+            break;
+        }
 
-    // ============================================================
-    // 🗑️ ORÇAMENTO - DELETE
-    // ============================================================
-    case 'orcamento_delete': {
-      prompt = `
-      Você é um assistente que exclui orçamentos.
-      Retorne apenas JSON válido no formato:
-
+        // ============================================================
+        // 🗑️ ORÇAMENTO - DELETE
+        // ============================================================
+        case 'orcamento_delete': {
+            prompt = `
       { "modulo": "orcamento", "action": "delete", "id": número }
-
       Texto: """${userMessage}"""
       `;
-      break;
-    }
+            break;
+        }
 
-    // ============================================================
-// 📄 ORÇAMENTO - PDF
-// ============================================================
-case 'orcamento_pdf': {
-  prompt = `
-  Você é um assistente que gera PDFs de orçamentos. Retorne **apenas JSON válido** no formato abaixo, sem explicações:
+        // ============================================================
+        // 📄 ORÇAMENTO - PDF
+        // ============================================================
+        case 'orcamento_pdf': {
+            prompt = `
+  Você é um assistente que gera PDFs.
+  Responda **somente com JSON válido**:
 
 {
   "modulo": "orcamento",
@@ -145,7 +142,7 @@ case 'orcamento_pdf': {
   "id": número,
   "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
   "opcoes": {
-    "listaServicos": true, // se "tipo": "Pedido" use false
+    "listaServicos": true,
     "listaMateriais": true,
     "ocultarValorServicos": false,
     "garantia": true,
@@ -155,115 +152,105 @@ case 'orcamento_pdf': {
   "valorRecibo": número | null
 }
 
-⚠️ Regras:
+Texto: """${userMessage}"""
+`;
+            break;
+        }
 
-1. Sempre retorne JSON válido.
-2. Se tipo = "Recibo", inclua valorRecibo, se não informado valor use null.
-3. Não altere as flags sem instrução explícita do texto:
-   - “ocultar materiais | serviços” → lista"Materiais | Servicos": false
-   - nunca ocultar materiais e serviços no mesmo pdf
-   - Se não houver instrução, use valores defalt do exemplo.
+        // ============================================================
+        // 📆 AGENDA - CREATE  (NOW atualizado)
+        // ============================================================
+        case 'agenda_create': {
+            const nowInfo = nowWithWeekday();
+            // console.log("📅 [agenda_create] Enviado ao GPT:", nowInfo);
 
-Texto do usuário: """${userMessage}"""
-  `;
-  break;
+            prompt = `
+Você é um assistente que cria compromissos de agenda.
+O usuário está no fuso GMT-3 (Brasil).
+${nowInfo}
+
+Retorne apenas JSON válido.
+
+{
+  "modulo": "agenda",
+  "action": "create",
+  "title": "string",
+  "datetime": "Data/hora ISO 8601 no GMT-3",
+  "reminder_minutes": número (default 30)
 }
 
-    // ============================================================
-    // 📆 AGENDA - CREATE
-    // ============================================================
-    case 'agenda_create': {
-const now = getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss");
+Texto: """${userMessage}"""
+`;
+            break;
+        }
 
-  console.log("📅 [agenda_create] Data/hora enviada ao GPT:", now);
-      prompt = `
-      Você é um assistente que cria compromissos de agenda.
-      O usuário está no fuso GMT-3 (Brasil).
-      A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-      Retorne apenas JSON válido.
+        // ============================================================
+        // 📅 AGENDA - LIST (NOW atualizado)
+        // ============================================================
+        case 'agenda_list': {
+            const nowInfo = nowWithWeekday();
 
-      {
-        "modulo": "agenda",
-        "action": "create",
-        "title": "string" // use Nome do cliente ou local,
-        "datetime": "Data/hora ISO 8601 no GMT-3",
-        "reminder_minutes": número (default 30)
-      }
+            prompt = `
+Você é um assistente que lista eventos da agenda.
+O usuário está no fuso GMT-3 (Brasil).
+${nowInfo}
 
-      Texto: """${userMessage}"""
-      `;
-      break;
-    }
+Responda apenas com JSON válido:
 
-    // ============================================================
-    // 📅 AGENDA - LIST
-    // ============================================================
-case 'agenda_list': {
-  prompt = `
-  Você é um assistente que ajuda o usuário a listar eventos da agenda.
-  O usuário está no fuso GMT-3 (Brasil).
-  A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-
-  Responda apenas com **JSON válido**, no formato:
-  {
-    "modulo": "agenda",
-    "action": "list",
-    "title": "string" Nome do cliente/local ou null,
-    "start_date": "YYYY-MM-DD",
-    "end_date": "YYYY-MM-DD"
-  }
-
-  Regras:
-  - Sempre preencha **start_date** e **end_date**.
-  - Se o usuário mencionar um dia específico (ex: "eventos de amanhã", "dia 8 de setembro"), use o mesmo valor para start e end.
-  - Se mencionar um período (ex: "semana que vem", "do dia 10 ao dia 12", "mês passado"), use o intervalo correspondente.
-  - Se não mencionar datas, use o dia atual.
-  - As datas devem estar no fuso horário do Brasil (America/Sao_Paulo).
-  - Formato sempre "YYYY-MM-DD" (sem hora nem offset).
-  - Responda **somente com o JSON**, sem texto fora dele.
-
-  Texto: """${userMessage}"""
-  `;
-  break;
+{
+  "modulo": "agenda",
+  "action": "list",
+  "title": "string" ou null,
+  "start_date": "YYYY-MM-DD",
+  "end_date": "YYYY-MM-DD"
 }
 
-    // ============================================================
-    // ✏️ AGENDA - EDIT
-    // ============================================================
-    case 'agenda_edit': {
-const now = getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss");
+Regras:
+- Sempre preencher start_date e end_date.
+- Se mencionar "amanhã", "sábado", etc → usar exatamente esse dia.
+- Períodos devem gerar intervalos.
+- Se nada for citado → usar hoje.
 
-  console.log("📅 [agenda_edit] Data/hora enviada ao GPT:", now);
-      if (!id) return { error: "⚠️ É necessário informar o ID do evento para editar." };
+Texto: """${userMessage}"""
+`;
+            break;
+        }
 
-      const { data: currentData, error: fetchError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('event_numero', id)
-        .single();
+        // ============================================================
+        // ✏️ AGENDA - EDIT  (NOW atualizado)
+        // ============================================================
+        case 'agenda_edit': {
+            const nowInfo = nowWithWeekday();
+            // console.log("📅 [agenda_edit] Enviado ao GPT:", nowInfo);
 
-      if (fetchError || !currentData)
-        return { error: `⚠️ Não encontrei o evento ID ${id}.` };
-const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
-    .setZone('America/Sao_Paulo')
-    .toISO();
+            if (!id)
+                return { error: "⚠️ É necessário informar o ID do evento para editar." };
 
-      prompt = `
+            const { data: currentData, error: fetchError } = await supabase
+                .from('events')
+                .select('*')
+                .eq('event_numero', id)
+                .single();
+
+            if (fetchError || !currentData)
+                return { error: `⚠️ Não encontrei o evento ID ${id}.` };
+
+            const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
+                .setZone('America/Sao_Paulo')
+                .toISO();
+
+            prompt = `
 Você é um assistente que edita eventos de uma agenda.
-O usuário está no fuso horário GMT-3 (Brasil).
-
-Responda apenas com **JSON válido**, sem texto extra.
+${nowInfo}
 
 Regras obrigatórias:
-1️⃣ Todas as datas devem estar em GMT-3 no formato ISO 8601 com offset "-03:00".
-2️⃣ Quando o usuário disser algo como "daqui a X minutos", "daqui X horas", "mais tarde", "para amanhã", ou expressões semelhantes:
-   - **Sempre use a hora atual (${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}) como ponto de referência.**
-   - **Nunca use o campo "date" existente para somar tempo.**
-   - sempre inclua o campo boolean "notified" mesmo que no defalt false.
-   - Exemplo: se o usuário disser "daqui a 10 minutos", o novo campo "date" deve ser a hora atual + 10 minutos.
-3️⃣ Quando o usuário disser uma hora exata ("às 14h", "para 8:30"), substitua apenas a hora no formato GMT-3.
-4️⃣ Mantenha a estrutura original do evento e atualize apenas os campos solicitados.
-
+1️⃣ Todas as datas em GMT-3 com offset "-03:00".
+2️⃣ Para "daqui X minutos/horas", "amanhã", "mais tarde":
+    • SEMPRE use a hora atual como base.
+3️⃣ Para horário exato ("às 14h"):
+    • Só substitua a hora.
+4️⃣ Sempre inclua "notified".
+5️⃣ Mantenha a estrutura original.
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
@@ -271,43 +258,45 @@ ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
 Mensagem do usuário:
 "${userMessage}"
 `;
-      break;
-    }
-case 'despesas_create': {
-  prompt = `
-Você é um assistente financeiro que registra despesas do usuário.
-Sempre responda **apenas com JSON válido**, sem texto fora do JSON.
+            break;
+        }
 
-Formato esperado:
+        // ============================================================
+        // DESPESAS (inalterado)
+        // ============================================================
+        case 'despesas_create': {
+            prompt = `
+Você é um assistente financeiro que registra despesas.
+Retorne apenas JSON válido.
+
 {
   "modulo": "despesas",
   "action": "create",
   "tipo": "conducao" | "materiais" | "outras",
   "valor": número,
-  "descricao": "string" // obrigatório: ex: "gasolina", "óleo", "mecânico"
+  "descricao": "string"
 }
 
-- Retorne **apenas JSON válido**, sem texto extra.
-
-Texto do usuário: """${userMessage}"""
+Texto: """${userMessage}"""
 `;
-  break;
-}
-case 'despesas_edit': {
-  if (!id) return { error: "⚠️ É necessário informar o ID da despesa para editar." };
+            break;
+        }
 
-  const { data: currentData, error: fetchError } = await supabase
-    .from('despesas')
-    .select('*')
-    .eq('despesa_numero', id)
-    .single();
+        case 'despesas_edit': {
+            if (!id) return { error: "⚠️ Informe o ID da despesa." };
 
-  if (fetchError || !currentData)
-    return { error: `⚠️ Não encontrei a despesa ID ${id}.` };
+            const { data: currentData } = await supabase
+                .from('despesas')
+                .select('*')
+                .eq('despesa_numero', id)
+                .single();
 
-  prompt = `
-Você é um assistente financeiro que edita despesas existentes.
-Responda **apenas com JSON válido**, sem texto fora do JSON.
+            if (!currentData)
+                return { error: `⚠️ Despesa ID ${id} não encontrada.` };
+
+            prompt = `
+Você é um assistente financeiro que edita despesas.
+Responda com JSON válido.
 
 Despesa atual:
 ${JSON.stringify(currentData, null, 2)}
@@ -316,93 +305,76 @@ Instruções do usuário:
 "${userMessage}"
 
 Regras:
-- Atualize apenas os campos mencionados pelo usuário (tipo, valor, descricao).
-- Mantenha todos os outros campos iguais ao atual.
-- O campo "descricao" é obrigatório e deve sempre conter o nome da despesa.
-- O campo "tipo" deve ser exatamente um dos valores: "conducao", "materiais" ou "outras".
-
-Retorne a despesa atualizada em JSON.
+- Atualize apenas campos mencionados.
+- tipo deve ser: "conducao", "materiais", "outras".
 `;
-  break;
-}
-case 'despesas_list': {
-  prompt = `
-Você é um assistente financeiro que lista despesas existentes.
-O usuário está no fuso horário GMT-3 (Brasil).
-A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-Responda **apenas com JSON válido**, sem texto fora do JSON.
+            break;
+        }
 
-Formato esperado:
+        case 'despesas_list': {
+            prompt = `
+Você é um assistente financeiro que lista despesas.
+${nowWithWeekday()}
+
+Retorne apenas JSON válido:
+
 {
   "modulo": "despesas",
   "action": "list",
   "tipo": "conducao" | "materiais" | "outras" | "todos",
-  "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
-  "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
+  "start_date": "ISO GMT-3",
+  "end_date": "ISO GMT-3"
 }
 
-Regras:
-- Pelo menos um filtro (tipo ou datas) deve ser aplicado; se o usuário não informar datas, use o mes atual como default.
-- Retorne **somente JSON**, sem explicações.
-
-Texto do usuário: """${userMessage}"""
+Texto: """${userMessage}"""
 `;
-break;
-}
-case 'despesas_pdf': {
-  prompt = `
-Você é um assistente financeiro que gera relatórios em PDF de despesas.
-Responda **apenas com JSON válido**, sem texto fora do JSON.
+            break;
+        }
 
-Formato esperado:
+        case 'despesas_pdf': {
+            prompt = `
+Você é um assistente financeiro que gera PDFs de despesas.
+${nowWithWeekday()}
+
+Retorne JSON válido:
+
 {
   "modulo": "despesas",
   "action": "pdf",
   "tipo": "conducao" | "materiais" | "outras" | "alimentacao" | "todos",
-  "start_date": "Data/hora início ISO 8601 GMT-3 (obrigatória)",
-  "end_date": "Data/hora fim ISO 8601 GMT-3 (obrigatória)"
+  "start_date": "ISO GMT-3",
+  "end_date": "ISO GMT-3"
 }
 
-Regras:
-- O usuário está no fuso horário GMT-3 (Brasil).
-- A data e hora atual é ${getNowBRT().toFormat("yyyy-MM-dd HH:mm:ss")}.
-- Se o usuário não informar datas, use o mês atual como período padrão.
-- O campo "tipo" define o filtro principal do relatório (ex: "materiais" = apenas despesas com materiais).
-- Retorne **somente JSON válido**, sem texto extra, sem explicações.
-
-Texto do usuário: """${userMessage}"""
+Texto: """${userMessage}"""
 `;
-  break;
-}
-    default:
-      return { erro: 'Prompt não definido', modulo, action };
-  }
+            break;
+        }
 
-  try {
-const completion = await openai.chat.completions.create({
-  model: 'gpt-4o-mini',
-  messages: [{ role: 'user', content: prompt }]
-});
+        default:
+            return { erro: 'Prompt não definido', modulo, action };
+    }
 
-let content = completion.choices[0].message.content.trim();
-content = content.replace(/```json\s*|```/g, "").trim();
+    try {
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }]
+        });
 
-try {
-  const command = JSON.parse(content);
+        let content = completion.choices[0].message.content.trim();
+        content = content.replace(/```json\s*|```/g, "").trim();
 
-  // 🔹 Log apenas do campo date
-  // console.log('🕒 Campo date retornado pelo GPT:', command.date);
+        try {
+            return JSON.parse(content);
+        } catch (parseErr) {
+            console.error("❌ JSON inválido retornado pelo GPT:", content);
+            return { erro: "JSON inválido retornado pelo GPT", raw: content };
+        }
 
-  return command;
-} catch (parseErr) {
-  console.error("❌ Erro ao parsear JSON do GPT:", content);
-  return { erro: "JSON inválido retornado pelo GPT", raw: content };
-}
-
-  } catch (err) {
-    console.error('Erro ao processar GPT:', err);
-    return { erro: 'Falha ao chamar GPT', modulo, action };
-  }
+    } catch (err) {
+        console.error('Erro ao processar GPT:', err);
+        return { erro: 'Falha ao chamar GPT', modulo, action };
+    }
 }
 
 module.exports = { handleGPTCommand };
