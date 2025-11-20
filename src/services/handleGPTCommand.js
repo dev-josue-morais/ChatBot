@@ -185,9 +185,8 @@ Texto: """${userMessage}"""
         // ============================================================
         // 📅 AGENDA - LIST (NOW atualizado)
         // ============================================================
-        case 'agenda_list': {
-
-            prompt = `
+  case 'agenda_list': {
+  prompt = `
 Você é um assistente que lista eventos da agenda.
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
@@ -198,20 +197,24 @@ Responda apenas com JSON válido:
   "modulo": "agenda",
   "action": "list",
   "title": "string" ou null,
-  "start_date": "YYYY-MM-DD",
-  "end_date": "YYYY-MM-DD"
+  "id": "number" ou null,
+  "start_date": "YYYY-MM-DD" ou null,
+  "end_date": "YYYY-MM-DD" ou null
 }
 
 Regras:
-- Sempre preencher start_date e end_date.
-- Se mencionar "amanhã", "sábado", etc → usar exatamente esse dia.
-- Períodos devem gerar intervalos.
+- Sempre preencher start_date e end_date (mesmo que iguais).
+- Se o usuário mencionar "amanhã", "sábado", etc → usar exatamente esse dia.
+- Se o usuário mencionar um ID como "1171125001" → preencher id.
+- Se mencionar parte de um nome → preencher title.
 - Se nada for citado → usar hoje.
+- Se houver ID, ignore title.
+- Não invente nada: apenas interprete o texto.
 
 Texto: """${userMessage}"""
 `;
-            break;
-        }
+  break;
+}
 
         // ============================================================
         // ✏️ AGENDA - EDIT  (NOW atualizado)
