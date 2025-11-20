@@ -31,8 +31,9 @@ function formatPhone(num) {
 // Formata datas mantendo GMT-3 (sem conversão UTC)
 function formatLocal(brDateString) {
   if (!brDateString) return '';
-  return DateTime.fromISO(brDateString, { zone: "America/Sao_Paulo" })
-    .toFormat("dd/MM/yyyy HH:mm");
+  return DateTime
+    .fromISO(brDateString, { zone: "America/Sao_Paulo" })
+    .toFormat("dd/MM/yyyy 'as' HH:mm 'Hs'");
 }
 
 function formatPhoneNumber(phone) {
