@@ -128,25 +128,42 @@ async function handleAgendaCommand(command, userPhone) {
 case 'list': {
   const zone = 'America/Sao_Paulo';
 
-  const startDT = command.start_date
-    ? DateTime.fromISO(command.start_date, { zone }).startOf('day')
-    : DateTime.now().setZone(zone).startOf('day');
+  const hasId = !!command.id;
+  const hasTitle = !!command.title;
 
-  const endDT = command.end_date
-    ? DateTime.fromISO(command.end_date, { zone }).endOf('day')
-    : startDT.endOf('day'); // se não tiver end_date, usa o mesmo dia
-
-  // ⚙️ Mantém o offset (-03:00) para comparar corretamente com timestamptz
-  const start = startDT.toISO({ includeOffset: true });
-  const end = endDT.toISO({ includeOffset: true });
-
-  const { data: events, error } = await supabase
+  let query = supabase
     .from('events')
     .select('*')
-    .gte('date', start)
-    .lte('date', end)
-    .eq('user_telefone', userPhone)
-    .order('date', { ascending: true });
+    .eq('user_telefone', userPhone);
+
+  // 🔍 Filtro por ID tem prioridade absoluta e ignora datas
+  if (hasId) {
+    query = query.eq('event_numero', command.id);
+  }
+  else if (hasTitle) {
+    // 🔍 Filtro por nome também ignora datas
+    query = query.ilike('title', `%${command.title}%`);
+  }
+  else {
+    // 📅 Só aplica intervalo de datas quando NÃO pesquisa por id/title
+
+    const startDT = command.start_date
+      ? DateTime.fromISO(command.start_date, { zone }).startOf('day')
+      : DateTime.now().setZone(zone).startOf('day');
+
+    const endDT = command.end_date
+      ? DateTime.fromISO(command.end_date, { zone }).endOf('day')
+      : startDT.endOf('day');
+
+    const start = startDT.toISO({ includeOffset: true });
+    const end = endDT.toISO({ includeOffset: true });
+
+    query = query
+      .gte('date', start)
+      .lte('date', end);
+  }
+
+  const { data: events, error } = await query.order('date', { ascending: true });
 
   if (error) {
     console.error("❌ Erro ao buscar eventos:", error);
@@ -154,7 +171,13 @@ case 'list': {
   }
 
   if (!events?.length) {
-    return `📅 Nenhum evento encontrado entre ${formatLocal(start)} e ${formatLocal(end)}.`;
+    if (hasId || hasTitle) {
+      // mensagens mais coerentes para busca por nome/ID
+      if (hasId) return `📅 Nenhum evento encontrado com o ID ${command.id}.`;
+      return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
+    }
+
+    return `📅 Nenhum evento encontrado no período.`;
   }
 
   const list = events
