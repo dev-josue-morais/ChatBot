@@ -185,7 +185,7 @@ Texto: """${userMessage}"""
         // ============================================================
         // 📅 AGENDA - LIST (NOW atualizado)
         // ============================================================
-  case 'agenda_list': {
+case 'agenda_list': {
   prompt = `
 Você é um assistente que lista eventos da agenda.
 O usuário está no fuso GMT-3 (Brasil).
@@ -202,20 +202,28 @@ Responda apenas com JSON válido:
   "end_date": "YYYY-MM-DD" ou null
 }
 
-Regras:
-- Sempre preencher start_date e end_date (mesmo que iguais).
-- Se o usuário mencionar "amanhã", "sábado", etc → usar exatamente esse dia.
-- Se o usuário mencionar um ID como "1171125001" → preencher id.
-- Se mencionar parte de um nome → preencher title.
-- Se nada for citado → usar hoje.
-- Se houver ID, ignore title.
-- Não invente nada: apenas interprete o texto.
+Regras importantes:
+
+1. **ID sempre prevalece sobre título**
+   - Se o usuário mencionar um id (ex: "1171125001"),
+   - Quando "id" estiver preenchido, "title" deve ser null.
+
+2. **Título**
+   - Só preencha "title" se o usuário citar (nome ou local)
+   - Não trate números como título.
+
+3. **Datas**
+   - Sempre preencher "start_date" e "end_date".
+   - Se o usuário citar dias como "amanhã", "sábado", etc → usar exatamente esse dia.
+   - Se citar um período ("de segunda a sexta") → gerar um intervalo correspondente.
+   - Se não falar nada sobre data → usar a data de hoje para ambos.
+
+4. Não invente nada. Analise somente o texto fornecido.
 
 Texto: """${userMessage}"""
 `;
   break;
 }
-
         // ============================================================
         // ✏️ AGENDA - EDIT  (NOW atualizado)
         // ============================================================
