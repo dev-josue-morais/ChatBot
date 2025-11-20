@@ -198,14 +198,14 @@ Responda apenas com JSON válido:
   "action": "list",
   "title": "string" ou null,
   "id": "number" ou null,
-  "start_date": "YYYY-MM-DD" ou null,
-  "end_date": "YYYY-MM-DD" ou null
+  "start_date": "YYYY-MM-DD",
+  "end_date": "YYYY-MM-DD"
 }
 
 Regras importantes:
 
 1. **ID sempre prevalece sobre título**
-   - Se o usuário mencionar um id (ex: "1171125001"),
+   - preencher Se o usuário mencionar um ID (ex: "1171125001"),
    - Quando "id" estiver preenchido, "title" deve ser null.
 
 2. **Título**
