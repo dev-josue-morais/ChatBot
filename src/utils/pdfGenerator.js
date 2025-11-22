@@ -1,10 +1,23 @@
 const pdf = require('html-pdf-node');
-const formatCurrency = require('./formatCurrency');
 const { formatarData } = require('./utils');
 const aplicarDesconto = require('./aplicarDesconto');
 const axios = require("axios");
 const { DateTime } = require("luxon");
 const dataAtual = DateTime.now().setZone("America/Sao_Paulo");
+
+function formatCurrency(value) {
+  const val = Number(value) || 0;
+  const formatted = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(val);
+
+  if (val === 0) {
+    return `<span style="color: red;">${formatted}</span>`;
+  }
+
+  return formatted;
+}
 
 function renderBlocoPagamento(documentoTipo, valorReciboFinal, pixBase64, assinaturaBase64, opcoes, user, orcamento) {
     if (documentoTipo === "Recibo") {
