@@ -1,8 +1,15 @@
 function formatCurrency(value) {
-  return new Intl.NumberFormat("pt-BR", {
+  const val = Number(value) || 0;
+  const formatted = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL"
-  }).format(value || 0);
+  }).format(val);
+
+  if (val === 0) {
+    return `<span style="color: red;">${formatted}</span>`;
+  }
+
+  return formatted;
 }
 
 module.exports = formatCurrency;
