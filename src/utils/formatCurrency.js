@@ -5,10 +5,6 @@ function formatCurrency(value) {
     currency: "BRL"
   }).format(val);
 
-  if (val === 0) {
-    return `<span style="color: red;">${formatted}</span>`;
-  }
-
   return formatted;
 }
 
