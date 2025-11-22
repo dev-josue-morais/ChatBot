@@ -9,5 +9,27 @@ jobs:
   call-api:
     runs-on: ubuntu-latest
     steps:
-      - name: Acordar o Render
-        run: curl -s https://chatbot-6viu.onrender.com/live
+      - name: Tentar acordar o Render com retry
+        run: |
+          URL="https://chatbot-6viu.onrender.com/live"
+          MAX_ATTEMPTS=10
+          DELAY=15
+
+          echo "Pingando o servidor: $URL"
+          
+          for ((i=1;i<=MAX_ATTEMPTS;i++)); do
+            echo "Tentativa $i de $MAX_ATTEMPTS..."
+            
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" "$URL")
+
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Servidor acordou! (200 OK)"
+              exit 0
+            fi
+
+            echo "Resposta $STATUS — tentando novamente em ${DELAY}s..."
+            sleep $DELAY
+          done
+
+          echo "Falhou após $MAX_ATTEMPTS tentativas 😢"
+          exit 1
