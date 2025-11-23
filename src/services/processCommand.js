@@ -15,7 +15,7 @@ async function processCommand(userMessage, userPhone) {
     const firstWords = getFirstWords(userMessage);
 
     const classificationPrompt = `
-      Analise a frase e Responda **APENAS JSON VÁLIDO**, sem texto fora do JSON.
+      Analise a frase e Responda **APENAS JSON VÁLIDO**, sem texto fora do JSON (explicações, comentários...).
       {
         "modulo": "orcamento" | "agenda" | "despesas" | "outro",
         "action": "create" | "edit" | "delete" | "list" | "pdf",
