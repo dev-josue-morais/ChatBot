@@ -22,7 +22,7 @@ async function processCommand(userMessage, userPhone) {
         "id": número de 10 dígitos ou null "nao e telefone"
       }
         obs: atendimento/evento = agenda
-        - caso a msg não faz sentido use "outro".
+        - caso a msg não faz sentido use "modulo": "outro".
       Frase: "${firstWords}"
 `;
 
