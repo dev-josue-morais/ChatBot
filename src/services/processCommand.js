@@ -15,7 +15,7 @@ async function processCommand(userMessage, userPhone) {
     const firstWords = getFirstWords(userMessage);
 
     const classificationPrompt = `
-      Analise a frase e retorne apenas JSON:
+      Analise a frase e Responda **APENAS JSON VÁLIDO**, sem texto fora do JSON.
       {
         "modulo": "orcamento" | "agenda" | "despesas" | "outro",
         "action": "create" | "edit" | "delete" | "list" | "pdf",
@@ -24,10 +24,7 @@ async function processCommand(userMessage, userPhone) {
         obs: atendimento/evento = agenda
         - caso a msg não faz sentido use "outro".
       Frase: "${firstWords}"
-
-⚠️ IMPORTANTE: 
-Responda **APENAS JSON VÁLIDO**, sem texto fora do JSON, 
-sem explicações, sem comentários, sem mensagens antes ou depois.`;
+`;
 
     const quickResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
