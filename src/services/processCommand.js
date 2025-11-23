@@ -24,7 +24,10 @@ async function processCommand(userMessage, userPhone) {
         obs: atendimento/evento = agenda
         - caso a msg não faz sentido use "outro".
       Frase: "${firstWords}"
-      `;
+
+⚠️ IMPORTANTE: 
+Responda **APENAS JSON VÁLIDO**, sem texto fora do JSON, 
+sem explicações, sem comentários, sem mensagens antes ou depois.`;
 
     const quickResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
