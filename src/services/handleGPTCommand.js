@@ -96,6 +96,8 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
         case 'orcamento_list': {
     prompt = `
   Você é um assistente que ajuda a listar orçamentos existentes.
+O usuário está no fuso GMT-3 (Brasil).
+${nowWithWeekday()}
   Responda apenas com JSON válido no seguinte formato:
 
   {
