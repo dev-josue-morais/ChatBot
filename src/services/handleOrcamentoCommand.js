@@ -125,17 +125,24 @@ const descricoes = Array.isArray(command.descricoes)
         query = query.ilike('nome_cliente', `%${nome}%`);
     }
     if (command.periodo_start && command.periodo_end) {
-        const startIso = new Date(command.periodo_start).toISOString();
-        const endIso = new Date(command.periodo_end).toISOString();
-        const campoData =
-            command.etapa === "finalizado"
-                ? "finalizado_em"
-                : "criado_em";
 
-        query = query
-            .gte(campoData, startIso)
-            .lte(campoData, endIso);
-    }
+    // Monta datas completas com fuso GMT-3
+    const startLocal = `${command.periodo_start}T00:00:00-03:00`;
+    const endLocal   = `${command.periodo_end}T23:59:59-03:00`;
+
+    // Converte para ISO UTC corretamente
+    const startIso = new Date(startLocal).toISOString();
+    const endIso   = new Date(endLocal).toISOString();
+
+    const campoData =
+        command.etapa === "finalizado"
+            ? "finalizado_em"
+            : "criado_em";
+
+    query = query
+        .gte(campoData, startIso)
+        .lte(campoData, endIso);
+}
     query = query.order('criado_em', { ascending: false });
 
     function wait(ms) {
