@@ -68,6 +68,20 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
             prompt = `
   Você é um assistente comercial que edita JSONs existentes de orçamentos.
   Responda **somente com JSON válido**, sem texto fora do JSON.
+  Exemplo:
+  {
+    "modulo": "orcamento",
+    "action": "create",
+    "nome_cliente": "string",
+    "descricoes": ["texto1", "texto2"] ou [],
+    "telefone_cliente": "string",
+    "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
+    "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
+    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
+    "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+    "desconto_materiais": "10%" ou "10" ou null,
+    "desconto_servicos": "10%" ou "10" ou null
+  }
 
   Orçamento atual:
   ${JSON.stringify(currentData, null, 2)}
@@ -83,7 +97,6 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - caso seja solicitado adicionar desconto modifique apenas:
       "desconto_materiais", "desconto_servicos".
   - Não crie novas colunas.
-  - "etapa" deve ser: "negociacao", "andamento", "aprovado", "perdido", "finalizado".
 
   Retorne o orçamento atualizado.
   `;
