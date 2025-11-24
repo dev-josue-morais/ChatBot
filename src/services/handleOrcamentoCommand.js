@@ -103,6 +103,7 @@ const descricoes = Array.isArray(command.descricoes)
 
  // ------------------- LIST -------------------
             case 'list': {
+console.log(comand);
     let query = supabase
         .from('orcamentos')
         .select('*')
