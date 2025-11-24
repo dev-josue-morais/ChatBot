@@ -44,6 +44,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - O campo "etapa" deve ser sempre ser enviado.
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
+  - se o valor não for informado use 0.
 
   Texto: """${userMessage}"""
   `;
@@ -95,6 +96,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - Atualize apenas o que o usuário pediu.
   - Campos vazios podem ser null.
   - caso seja solicitado adicionar desconto modifique apenas:
+  - se o valor não for informado use 0.
       "desconto_materiais", "desconto_servicos".
   - Não crie novas colunas.
 
