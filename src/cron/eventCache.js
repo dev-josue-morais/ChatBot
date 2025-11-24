@@ -15,7 +15,8 @@ async function loadInitialEventsCache() {
     .select('*')
     .gte('date', start)
     .lte('date', end)
-    .eq('notified', false);
+    .eq('notified', false)
+    .order('date', { ascending: true });
 
   if (error) {
     console.error('❌ Erro ao carregar cache inicial:', error);
