@@ -27,7 +27,8 @@ function scheduleDailySummary() {
         .select('*')
         .gte('date', start)
         .lte('date', end)
-        .eq('notified', false);
+        .eq('notified', false)
+        .order('date', { ascending: true });
 
       if (eventError) {
         console.error('❌ Erro ao buscar eventos:', eventError);
