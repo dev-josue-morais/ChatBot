@@ -28,7 +28,7 @@ function scheduleDailySummary() {
         .gte('date', start)
         .lte('date', end)
         .eq('notified', false)
-        .order('date', { ascending: true });
+        .order('event_numero', { ascending: true });
 
       if (eventError) {
         console.error('❌ Erro ao buscar eventos:', eventError);
