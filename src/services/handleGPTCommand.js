@@ -94,9 +94,9 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
         // 📋 ORÇAMENTO - LIST
         // ============================================================
         case 'orcamento_list': {
-            prompt = `
+    prompt = `
   Você é um assistente que ajuda a listar orçamentos existentes.
-  Responda apenas com JSON válido no formato:
+  Responda apenas com JSON válido no seguinte formato:
 
   {
     "modulo": "orcamento",
@@ -104,18 +104,22 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "id": número ou null,
     "nome_cliente": string ou null,
     "telefone_cliente": string ou null,
-    "etapa": "negociacao" | "andamento" | "aprovado" | "perdido" | "finalizado" | "todos"
+    "etapa": "negociacao" | "andamento" | "aprovado" | "perdido" | "finalizado" | "todos",
+    "periodo_start": "YYYY-MM-DD",
+    "periodo_end": "YYYY-MM-DD",
+    "periodo_texto": string
   }
 
-  Regras:
+  Regras importantes:
   - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
-  - etapa deve sempre ter um valor se não for mencionado use "negociacao" só use "todos" se for solicitado.
-  - Responda somente com JSON.
+  - Se a etapa não for mencionada, use "negociacao", so Use "todos" apenas se o usuário pedir explicitamente.
+  - O período é sempre obrigatório. Se o usuário não pedir → usar últimos 6 meses.
+  - "periodo_texto" deve sempre conter uma descrição humana do período solicitado, como: "últimos 6 meses", "de 10 a 20 de março", "ano de 2024", "todo o período", etc.
 
-  Texto: """${userMessage}"""
+  Texto do usuário: """${userMessage}"""
   `;
-            break;
-        }
+    break;
+}
 
         // ============================================================
         // 🗑️ ORÇAMENTO - DELETE
