@@ -8,7 +8,7 @@ async function handleOrcamentoCommand(command, userPhone) {
         if (command.telefone_cliente) { command.telefone_cliente = formatPhoneNumber(command.telefone_cliente);}
         switch (command.action) {
 
-            // ------------------- CREATE -------------------
+// ------------------- CREATE -------------------
             case 'create': {
                 if (!command.nome_cliente) return "⚠️ O campo *nome do cliente* é obrigatório.";
                 if (!command.telefone_cliente) return "⚠️ O campo *telefone do cliente* é obrigatório.";
@@ -39,7 +39,7 @@ const descricoes = Array.isArray(command.descricoes)
                 return `${formatOrcamento(data[0])}`;
             }
 
-            // ------------------- DELETE -------------------
+// ------------------- DELETE -------------------
             case 'delete': {
                 if (!command.id) return '⚠️ É necessário informar o ID do orçamento para deletar.';
 
@@ -60,7 +60,7 @@ const descricoes = Array.isArray(command.descricoes)
                 return `🗑 Orçamento ${command.id} deletado com sucesso.`;
             }
 
-  // ------------------- EDIT -------------------
+// ------------------- EDIT -------------------
             case 'edit': {
                 if (!command.orcamento_numero)
                     return '⚠️ É necessário informar o ID do orçamento para editar.';
@@ -101,7 +101,7 @@ const descricoes = Array.isArray(command.descricoes)
                 return `${formatOrcamento(data[0])}`;
             }
 
- // ------------------- LIST -------------------
+// ------------------- LIST -------------------
             case 'list': {
   // console.log('🧠 JSON recebido do GPT para lista:', JSON.stringify(command, null, 2));
     let query = supabase
