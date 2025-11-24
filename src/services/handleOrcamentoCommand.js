@@ -100,40 +100,46 @@ const descricoes = Array.isArray(command.descricoes)
 
                 return `${formatOrcamento(data[0])}`;
             }
-            // ------------------- LIST -------------------
+
+ // ------------------- LIST -------------------
             case 'list': {
     let query = supabase
         .from('orcamentos')
         .select('*')
         .eq('user_telefone', userPhone);
 
-    // Se for buscar por ID, aplica só esse filtro
     if (command.id) {
         query = query.eq('orcamento_numero', command.id);
     } else {
-        // Só aplica o filtro de etapa se não tiver ID
         const etapa = (command.etapa || 'negociacao').trim().toLowerCase();
         if (etapa !== 'todos') {
             query = query.eq('etapa', etapa);
         }
     }
-
     if (command.telefone_cliente) {
         query = query.eq('telefone_cliente', command.telefone_cliente);
     }
-
     if (command.nome_cliente) {
         const nome = command.nome_cliente.trim();
         query = query.ilike('nome_cliente', `%${nome}%`);
     }
+    if (command.periodo_start && command.periodo_end) {
+        const startIso = new Date(command.periodo_start).toISOString();
+        const endIso = new Date(command.periodo_end).toISOString();
+        const campoData =
+            command.etapa === "finalizado"
+                ? "finalizado_em"
+                : "criado_em";
 
+        query = query
+            .gte(campoData, startIso)
+            .lte(campoData, endIso);
+    }
     query = query.order('criado_em', { ascending: false });
 
-    // ---- Função de espera (coloque fora do loop) ----
     function wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-
     const { data: orcamentos, error } = await query;
 
     if (error) {
@@ -144,8 +150,6 @@ const descricoes = Array.isArray(command.descricoes)
     if (!orcamentos || orcamentos.length === 0) {
         return "📄 Nenhum orçamento encontrado.";
     }
-
-    // ---- Envio seguro com delay ----
     for (let i = 0; i < orcamentos.length; i++) {
         const o = orcamentos[i];
 
@@ -156,14 +160,12 @@ const descricoes = Array.isArray(command.descricoes)
             text: { body: formatOrcamento(o) },
         });
 
-        // Delay apenas entre mensagens
         if (i < orcamentos.length - 1) {
-            const delay = 1200 + Math.floor(Math.random() * 900); // 1200–2100ms
+            const delay = 1200 + Math.floor(Math.random() * 900);
             await wait(delay);
         }
     }
-
-    return `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
+    return `✅ ${orcamentos.length} orçamento(s) enviado(s).\n📅 Período: ${command.periodo_texto}`;
 }
 
 // ------------------- PDF -------------------
