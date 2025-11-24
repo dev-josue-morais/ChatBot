@@ -29,18 +29,17 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "modulo": "orcamento",
     "action": "create",
     "nome_cliente": "string",
-    "descricoes": ["texto1", "texto2"] ou [],
+    "descricoes": ["texto1", "texto2"] | [],
     "telefone_cliente": "string",
     "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
-    "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
-    "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+    "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
+    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }] | [],
+    "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }] | [],
     "desconto_materiais": "10%" ou "10" ou null,
     "desconto_servicos": "10%" ou "10" ou null
   }
 
-  Regras:
-  - Os campos "descricoes", "observacoes" **sempre deve ser um array**, mesmo que vazio ([]).
+  Regras
   - O campo "etapa" deve ser sempre ser enviado.
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
@@ -96,6 +95,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - Atualize apenas o que o usuário pediu.
   - Campos vazios podem ser null.
   - caso seja solicitado adicionar desconto modifique apenas:
+  - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
       "desconto_materiais", "desconto_servicos".
   - Não crie novas colunas.
