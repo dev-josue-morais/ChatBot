@@ -115,7 +115,7 @@ ${nowWithWeekday()}
   Regras importantes:
   - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
   - Se a etapa não for mencionada, use "negociacao", so Use "todos" apenas se o usuário pedir explicitamente.
-  - O período é sempre obrigatório. Se o usuário não pedir → usar últimos 6 meses.
+  - O período é sempre obrigatório. Se o usuário não pedir → usar últimos 30 dias.
   - "periodo_texto" deve sempre conter uma descrição humana do período solicitado, como: "últimos 6 meses", "de 10 a 20 de março", "ano de 2024", "todo o período", etc.
 
   Texto do usuário: """${userMessage}"""
