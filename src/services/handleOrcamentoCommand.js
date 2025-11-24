@@ -60,7 +60,7 @@ const descricoes = Array.isArray(command.descricoes)
                 return `🗑 Orçamento ${command.id} deletado com sucesso.`;
             }
 
-            // ------------------- EDIT -------------------
+  // ------------------- EDIT -------------------
             case 'edit': {
                 if (!command.orcamento_numero)
                     return '⚠️ É necessário informar o ID do orçamento para editar.';
@@ -103,7 +103,7 @@ const descricoes = Array.isArray(command.descricoes)
 
  // ------------------- LIST -------------------
             case 'list': {
-  // console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
+  // console.log('🧠 JSON recebido do GPT para lista:', JSON.stringify(command, null, 2));
     let query = supabase
         .from('orcamentos')
         .select('*')
