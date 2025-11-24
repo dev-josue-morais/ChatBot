@@ -43,6 +43,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - O campo "etapa" deve ser sempre ser enviado.
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
+  - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - se o valor não for informado use 0.
 
   Texto: """${userMessage}"""
@@ -94,10 +95,10 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - Mantenha toda a estrutura original.
   - Atualize apenas o que o usuário pediu.
   - Campos vazios podem ser null.
-  - caso seja solicitado adicionar desconto modifique apenas:
+  - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos".
+  - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
-      "desconto_materiais", "desconto_servicos".
   - Não crie novas colunas.
 
   Retorne o orçamento atualizado.
