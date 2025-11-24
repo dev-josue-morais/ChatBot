@@ -103,7 +103,7 @@ const descricoes = Array.isArray(command.descricoes)
 
 // ------------------- LIST -------------------
             case 'list': {
-  // console.log('🧠 JSON recebido do GPT para lista:', JSON.stringify(command, null, 2));
+  console.log('🧠 JSON recebido do GPT para lista:', JSON.stringify(command, null, 2));
     let query = supabase
         .from('orcamentos')
         .select('*')
