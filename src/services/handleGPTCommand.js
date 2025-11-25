@@ -31,16 +31,15 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "nome_cliente": "string",
     "descricoes": ["texto1", "texto2"] | [],
     "telefone_cliente": "string",
-    "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
+    "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado", // defalt "negociacao"
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
     "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }] | [],
     "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }] | [],
-    "desconto_materiais": "10%" ou "10" ou null,
-    "desconto_servicos": "10%" ou "10" ou null
+    "desconto_materiais": "10%" ou "10" | null,
+    "desconto_servicos": "10%" ou "10" | null
   }
 
   Regras
-  - O campo "etapa" deve ser sempre ser enviado.
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
@@ -91,9 +90,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   "${userMessage}"
 
   Regras:
-  - Os campos "descricoes", "observacoes" deve ser sempre um array, mesmo que vazio ([]).
-  - Mantenha toda a estrutura original.
-  - Atualize apenas o que o usuário pediu.
+  - Mantenha toda a estrutura original Atualize apenas o que o usuário pediu.
   - Campos vazios podem ser null.
   - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos".
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
@@ -162,7 +159,7 @@ ${nowWithWeekday()}
   "modulo": "orcamento",
   "action": "pdf",
   "id": número,
-  "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
+  "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo", // defalt "Orçamento"
   "opcoes": {
     "listaServicos": true,
     "listaMateriais": true,
