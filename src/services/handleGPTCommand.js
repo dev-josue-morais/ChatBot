@@ -172,12 +172,20 @@ ${nowWithWeekday()}
 }
 
 Texto: """${userMessage}"""
+⚠️ Regras:
+
+1. Sempre retorne JSON válido.
+2. Se tipo = "Recibo", inclua valorRecibo, se não informado valor use null.
+3. Não altere as flags sem instrução explícita do texto:
+   - “ocultar materiais | serviços” → lista"Materiais | Servicos": false
+   - nunca ocultar materiais e serviços no mesmo pdf
+   - Se não houver instrução, use valores defalt do exemplo.
 `;
             break;
         }
 
         // ============================================================
-        // 📆 AGENDA - CREATE  (NOW atualizado)
+        // 📆 AGENDA - CREATE
         // ============================================================
         case 'agenda_create': {
 
