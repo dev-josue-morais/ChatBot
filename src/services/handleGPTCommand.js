@@ -199,9 +199,9 @@ Retorne apenas JSON válido.
 {
   "modulo": "agenda",
   "action": "create",
-  "title": "string",
+  "title": "string", // nome ou local 
   "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número (default 30)
+  "reminder_minutes": número (default 30) // lembrete
 }
 
 Texto: """${userMessage}"""
