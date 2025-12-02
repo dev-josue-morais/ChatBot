@@ -201,7 +201,7 @@ Retorne apenas JSON válido.
   "action": "create",
   "title": "string", // nome ou local 
   "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número (default 30) // lembrete
+  "reminder_minutes": número (default 30) // lembrete em minutos 
 }
 
 Texto: """${userMessage}"""
