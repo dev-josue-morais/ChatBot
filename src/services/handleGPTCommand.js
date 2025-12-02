@@ -276,14 +276,23 @@ Texto: """${userMessage}"""
 Você é um assistente que edita eventos de uma agenda.
 ${nowWithWeekday()}
 
+Retorne apenas JSON válido.
+
+{
+  "modulo": "agenda",
+  "action": "create",
+  "title": "string", // nome ou local 
+  "datetime": "Data/hora ISO 8601 no GMT-3",
+  "reminder_minutes": número (default 30) // lembrete em minutos.
+}
+
 Regras obrigatórias:
 1️⃣ Todas as datas em GMT-3 com offset "-03:00".
 2️⃣ Para "daqui X minutos/horas", "amanhã", "mais tarde":
-    • SEMPRE use a hora atual como base.
-3️⃣ Para horário exato ("às 14h"):
+    • SEMPRE use a hora atual como base da soma.
+3️⃣ Para horário exato ("às 14h" ou "7:40"):
     • Só substitua a hora.
-4️⃣ Sempre inclua "notified".
-5️⃣ Mantenha a estrutura original.
+4️⃣ Mantenha a estrutura original.
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
