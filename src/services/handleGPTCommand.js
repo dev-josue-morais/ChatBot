@@ -71,7 +71,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   Exemplo:
   {
     "modulo": "orcamento",
-    "action": "create",
+    "action": "edit",
     "nome_cliente": "string",
     "descricoes": ["texto1", "texto2"] ou [],
     "telefone_cliente": "string",
@@ -280,7 +280,7 @@ Retorne apenas JSON válido.
 
 {
   "modulo": "agenda",
-  "action": "create",
+  "action": "edit",
   "title": "string", // nome ou local 
   "datetime": "Data/hora ISO 8601 no GMT-3",
   "reminder_minutes": número (default 30) // lembrete em minutos.
@@ -304,7 +304,7 @@ Mensagem do usuário:
         }
 
         // ============================================================
-        // DESPESAS (inalterado)
+        // DESPESAS
         // ============================================================
         case 'despesas_create': {
             prompt = `
