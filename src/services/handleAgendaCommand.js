@@ -65,7 +65,9 @@ async function handleAgendaCommand(command, userPhone) {
 
         await deleteOldEvents(userPhone);
 
-        return `✅ Evento ID ${data[0].event_numero} criado: "${data[0].title}" em ${formatLocal(data[0].date)}`;
+        return `✅ Evento criado: "${data[0].title}
+ID ${data[0].event_numero}
+dia ${formatLocal(data[0].date)}`;
       }
 
       // 🔹 Deletar evento
@@ -121,7 +123,9 @@ async function handleAgendaCommand(command, userPhone) {
 
         await deleteOldEvents(userPhone);
 
-        return `✅ Evento ID ${data[0].event_numero} atualizado: "${data[0].title}" em ${formatLocal(data[0].date)}.`;
+        return `✅ Evento atualizado: ${data[0].title}
+ID ${data[0].event_numero}
+dia ${formatLocal(data[0].date)}.`;
       }
 
 // 🔹 Listar eventos
@@ -181,7 +185,7 @@ case 'list': {
   }
 
   const list = events
-    .map(e => `- ID ${e.event_numero}: ${e.title} em ${formatLocal(e.date)}`)
+    .map(e => `- ID ${e.event_numero}: ${e.title}/nDia ${formatLocal(e.date)}`)
     .join('\n');
 
   return `📅 Seus eventos:\n${list}`;
