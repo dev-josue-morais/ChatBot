@@ -65,7 +65,7 @@ async function handleAgendaCommand(command, userPhone) {
 
         await deleteOldEvents(userPhone);
 
-        return `✅ Evento criado: "${data[0].title}
+        return `✅ Evento criado: ${data[0].title}
 ID ${data[0].event_numero}
 dia ${formatLocal(data[0].date)}`;
       }
