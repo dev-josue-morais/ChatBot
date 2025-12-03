@@ -36,7 +36,9 @@ await sendWhatsAppRaw({
   to: String(userPhone),
   type: "text",
   text: {
-    body: `⏰ Lembrete: "ID ${event.event_numero} ${event.title}" às ${formatLocal(event.date)}`
+    body: `⏰ Lembrete: ${event.title}
+ID ${event.event_numero}
+às ${formatLocal(event.date)}`
   }
 });
 
