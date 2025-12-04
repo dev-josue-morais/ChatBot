@@ -290,12 +290,12 @@ const blocoPagamento = renderBlocoPagamento(documentoTipo, valorReciboFinal, pix
         </div>
     </div>
 </div>
-        ${renderDescricaoAtividades(orcamento)}
-        ${renderServicos(orcamento.servicos, opcoes)}
-        ${renderMateriais(orcamento.materiais, opcoes)}
-        ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
-        ${renderObservacoes(orcamento, opcoes, tipo)}
-        ${blocoPagamento}
+  ${documentoTipo === "Pedido" ? "" : renderDescricaoAtividades(orcamento)}
+  ${renderServicos(orcamento.servicos, opcoes)}
+  ${renderMateriais(orcamento.materiais, opcoes)}
+  ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
+  ${documentoTipo === "Pedido" ? "" : renderObservacoes(orcamento, opcoes, tipo)}
+  ${documentoTipo === "Pedido" ? "" : blocoPagamento}
         </body>
         </html>
         `;
