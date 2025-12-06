@@ -185,7 +185,8 @@ case 'list': {
   }
 
   const list = events
-    .map(e => `- ID ${e.event_numero}: ${e.title}/nDia ${formatLocal(e.date)}`)
+    .map(e => `- ID ${e.event_numero}: ${e.title}
+Dia ${formatLocal(e.date)}`)
     .join('\n');
 
   return `📅 Seus eventos:\n${list}`;
