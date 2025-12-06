@@ -175,14 +175,18 @@ case 'list': {
   }
 
   if (!events?.length) {
-    if (hasId || hasTitle) {
-      // mensagens mais coerentes para busca por nome/ID
-      if (hasId) return `📅 Nenhum evento encontrado com o ID ${command.id}.`;
-      return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
-    }
-
-    return `📅 Nenhum evento encontrado no período.`;
+  if (hasId || hasTitle) {
+    if (hasId) return `📅 Nenhum evento encontrado com o ID ${command.id}.`;
+    return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
   }
+
+  const startBr = startDT.toFormat('dd/LL');
+  const endBr = endDT.toFormat('dd/LL');
+  const periodo =
+    startBr === endBr ? startBr : `${startBr} a ${endBr}`;
+
+  return `📅 Nenhum evento encontrado no período ${periodo}.`;
+}
 
   const list = events
     .map(e => `- ID ${e.event_numero}: ${e.title}
