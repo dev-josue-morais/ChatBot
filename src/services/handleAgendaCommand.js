@@ -140,6 +140,10 @@ case 'list': {
     .select('*')
     .eq('user_telefone', userPhone);
 
+  // mover para escopo externo para podermos usar depois
+  let startDT;
+  let endDT;
+
   // 🔍 Filtro por ID tem prioridade absoluta e ignora datas
   if (hasId) {
     query = query.eq('event_numero', command.id);
@@ -151,11 +155,11 @@ case 'list': {
   else {
     // 📅 Só aplica intervalo de datas quando NÃO pesquisa por id/title
 
-    const startDT = command.start_date
+    startDT = command.start_date
       ? DateTime.fromISO(command.start_date, { zone }).startOf('day')
       : DateTime.now().setZone(zone).startOf('day');
 
-    const endDT = command.end_date
+    endDT = command.end_date
       ? DateTime.fromISO(command.end_date, { zone }).endOf('day')
       : startDT.endOf('day');
 
@@ -175,18 +179,23 @@ case 'list': {
   }
 
   if (!events?.length) {
-  if (hasId || hasTitle) {
-    if (hasId) return `📅 Nenhum evento encontrado com o ID ${command.id}.`;
-    return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
+    if (hasId || hasTitle) {
+      if (hasId) return `📅 Nenhum evento encontrado com o ID ${command.id}.`;
+      return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
+    }
+
+    // por segurança, garanta que startDT/endDT existam (não deveriam faltar aqui)
+    if (!startDT || !endDT) {
+      startDT = DateTime.now().setZone(zone).startOf('day');
+      endDT = startDT.endOf('day');
+    }
+
+    const startBr = startDT.toFormat('dd/LL');
+    const endBr = endDT.toFormat('dd/LL');
+    const periodo = startBr === endBr ? startBr : `${startBr} a ${endBr}`;
+
+    return `📅 Nenhum evento encontrado no período ${periodo}.`;
   }
-
-  const startBr = startDT.toFormat('dd/LL');
-  const endBr = endDT.toFormat('dd/LL');
-  const periodo =
-    startBr === endBr ? startBr : `${startBr} a ${endBr}`;
-
-  return `📅 Nenhum evento encontrado no período ${periodo}.`;
-}
 
   const list = events
     .map(e => `- ID ${e.event_numero}: ${e.title}
