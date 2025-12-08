@@ -138,16 +138,6 @@ function renderMateriais(materiais, opcoes) {
 }
 
 function renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento) {
-    const materiaisHTML = (opcoes.listaMateriais && totalMateriais > 0) ? `
-        <p style="margin:5px 0;"><strong>Total Materiais:</strong> ${descontoMateriais.totalFinal !== totalMateriais
-            ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalMateriais)}</span>
-                   <span style="color:#007bff; margin:0 5px; font-weight:bold;">-${typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
-                ? orcamento.desconto_materiais
-                : formatCurrency(orcamento.desconto_materiais || 0)
-            }</span>
-                   <span style="color:green; font-weight:bold;">${formatCurrency(descontoMateriais.totalFinal)}</span>`
-            : `<span style="color:green; font-weight:bold;">${formatCurrency(totalMateriais)}</span>`
-        }</p>` : '';
 
     const servicosHTML = (opcoes.listaServicos && totalServicos > 0) ? `
         <p style="margin:5px 0;"><strong>Total Serviços:</strong> ${descontoServicos.totalFinal !== totalServicos
@@ -159,7 +149,16 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
                    <span style="color:green; font-weight:bold;">${formatCurrency(descontoServicos.totalFinal)}</span>`
             : `<span style="color:green; font-weight:bold;">${formatCurrency(totalServicos)}</span>`
         }</p>` : '';
-
+   const materiaisHTML = (opcoes.listaMateriais && totalMateriais > 0) ? `
+        <p style="margin:5px 0;"><strong>Total Materiais:</strong> ${descontoMateriais.totalFinal !== totalMateriais
+            ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalMateriais)}</span>
+                   <span style="color:#007bff; margin:0 5px; font-weight:bold;">-${typeof orcamento.desconto_materiais === "string" && orcamento.desconto_materiais.includes("%")
+                ? orcamento.desconto_materiais
+                : formatCurrency(orcamento.desconto_materiais || 0)
+            }</span>
+                   <span style="color:green; font-weight:bold;">${formatCurrency(descontoMateriais.totalFinal)}</span>`
+            : `<span style="color:green; font-weight:bold;">${formatCurrency(totalMateriais)}</span>`
+        }</p>` : '';
     const totalHTML = `
         <p style="margin:5px 0;"><strong>Total Geral:</strong> ${totalFinal !== totalOriginal
             ? `<span style="text-decoration:line-through; color:red; margin-right:8px;">${formatCurrency(totalOriginal)}</span><span style="color:green; font-weight:bold;">${formatCurrency(totalFinal)}</span>`
