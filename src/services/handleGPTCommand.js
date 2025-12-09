@@ -45,7 +45,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - se o valor não for informado use 0.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
-  - sempre separe os fios por cor (ex: 25m cada fio 4mm sendo azul e verde) = 25m fio 4mm azul, 25m fio 4mm verde)
+  - sempre separe os itens (ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
 
   Texto: """${userMessage}"""
   `;
@@ -100,6 +100,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
   - Não crie novas colunas.
+  - sempre separe os itens(ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
 
   Retorne o orçamento atualizado.
   `;
