@@ -294,7 +294,7 @@ const blocoPagamento = renderBlocoPagamento(documentoTipo, valorReciboFinal, pix
   ${renderMateriais(orcamento.materiais, opcoes)}
   ${renderTotais(totalMateriais, totalServicos, descontoMateriais, descontoServicos, totalOriginal, totalFinal, opcoes, orcamento)}
   ${documentoTipo === "Pedido" ? "" : renderObservacoes(orcamento, opcoes, tipo)}
-  ${["Pedido", "Orcamento"].includes(documentoTipo) ? "" : blocoPagamento}
+  ${["Pedido", "Orçamento"].includes(documentoTipo) ? "" : blocoPagamento}
         </body>
         </html>
         `;
