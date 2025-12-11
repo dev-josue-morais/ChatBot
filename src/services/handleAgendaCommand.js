@@ -184,12 +184,6 @@ case 'list': {
       return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
     }
 
-    // por segurança, garanta que startDT/endDT existam (não deveriam faltar aqui)
-    if (!startDT || !endDT) {
-      startDT = DateTime.now().setZone(zone).startOf('day');
-      endDT = startDT.endOf('day');
-    }
-
     const startBr = startDT.toFormat('dd/LL');
     const endBr = endDT.toFormat('dd/LL');
     const periodo = startBr === endBr ? startBr : `${startBr} a ${endBr}`;
