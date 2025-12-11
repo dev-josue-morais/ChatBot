@@ -202,7 +202,15 @@ case 'list': {
 Dia ${formatLocal(e.date)}`)
     .join('\n');
 
-  return `📅 Seus eventos:\n${list}`;
+if (hasId || hasTitle) {
+  return `📅 Eventos encontrados:\n${list}`;
+}
+
+const startBr = startDT.toFormat('dd/LL');
+const endBr = endDT.toFormat('dd/LL');
+const periodo = startBr === endBr ? startBr : `${startBr} a ${endBr}`;
+
+return `📅 Eventos encontrados no período ${periodo}:\n${list}`;
 }
       default:
         console.warn('⚠️ Ação de agenda não reconhecida:', command.action);
