@@ -67,12 +67,6 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
             if (fetchError || !currentData)
                 return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
 
-const { id, orcamento_numero, ...resto } = currentData;
-
-const dataFinal = {
-  ...resto,
-  id
-};
             prompt = `
   Você é um assistente comercial que edita JSONs existentes de orçamentos.
   Responda **somente com JSON válido**, sem texto fora do JSON.
@@ -93,7 +87,7 @@ const dataFinal = {
   }
 
   Orçamento atual:
-  ${JSON.stringify(dataFinal, null, 2)}
+  ${JSON.stringify(currentData, null, 2)}
 
   Instruções do usuário:
   "${userMessage}"
