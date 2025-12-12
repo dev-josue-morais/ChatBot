@@ -62,7 +62,7 @@ const descricoes = Array.isArray(command.descricoes)
 
 // ------------------- EDIT -------------------
             case 'edit': {
-                if (!command.id)
+                if (!command.orcamento_numero)
                     return '⚠️ É necessário informar o ID do orçamento para editar.';
   // console.log('🧠 JSON recebido do GPT para edição:', JSON.stringify(command, null, 2));
 
@@ -85,17 +85,17 @@ const descricoes = Array.isArray(command.descricoes)
                 const { data, error } = await supabase
                     .from('orcamentos')
                     .update(validFields)
-                    .eq('orcamento_numero', command.id)
+                    .eq('orcamento_numero', command.orcamento_numero)
                     .eq('user_telefone', userPhone)
                     .select();
 
                 if (error) {
                     console.error("Erro ao editar orçamento:", error);
-                    return `⚠️ Não consegui editar o orçamento ${command.id}.`;
+                    return `⚠️ Não consegui editar o orçamento ${command.orcamento_numero}.`;
                 }
 
                 if (!data || data.length === 0) {
-                    return `⚠️ Nenhum orçamento encontrado com o número ${command.id}.`;
+                    return `⚠️ Nenhum orçamento encontrado com o número ${command.orcamento_numero}.`;
                 }
 
                 return `${formatOrcamento(data[0])}`;
