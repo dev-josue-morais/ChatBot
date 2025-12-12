@@ -71,7 +71,7 @@ const { id, orcamento_numero, ...resto } = currentData;
 
 const dataFinal = {
   ...resto,
-  id: orcamento_numero
+  id
 };
             prompt = `
   Você é um assistente comercial que edita JSONs existentes de orçamentos.
