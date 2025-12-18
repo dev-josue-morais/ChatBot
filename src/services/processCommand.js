@@ -19,7 +19,7 @@ async function processCommand(userMessage, userPhone) {
       {
         "modulo": "orcamento" | "agenda" | "despesas" | "outro",
         "action": "create" | "edit" | "delete" | "list" | "pdf",
-        "id": número de 10 dígitos ou null "nao e telefone"
+        "id": número // ex 1181225001
       }
         obs: atendimento/evento = agenda
         - caso a msg não faz sentido use "modulo": "outro".
