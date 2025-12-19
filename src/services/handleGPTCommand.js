@@ -75,7 +75,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   {
     "modulo": "orcamento",
     "action": "edit",
-    "id": número, // ex = 1051225003
+    "orcamento_numero": número, // ex = 1051225001
     "nome_cliente": "string",
     "descricoes": ["texto1", "texto2"] ou [],
     "telefone_cliente": "string",
