@@ -57,7 +57,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
         // ============================================================
         case 'orcamento_edit': {
   // console.log(rawMessage, modulo, action, id)
-            if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar. erro aqui" };
+            if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
 
             const { data: currentData, error: fetchError } = await supabase
                 .from('orcamentos')
