@@ -14,8 +14,7 @@ async function deleteOldEvents(userPhone) {
     const { error } = await supabase
       .from('events')
       .delete()
-      .lt('date', twoDaysAgo)
-      .eq('user_telefone', userPhone);
+      .lt('date', twoDaysAgo);
 
     if (error) {
       console.error('❌ Erro ao deletar eventos antigos:', error);
