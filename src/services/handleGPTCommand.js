@@ -292,12 +292,13 @@ Retorne apenas JSON válido.
 }
 
 Regras obrigatórias:
-1️⃣ Todas as datas em GMT-3 com offset "-03:00".
-2️⃣ Para "daqui X minutos/horas", "amanhã", "mais tarde":
+ Todas as datas em GMT-3 com offset "-03:00".
+ Para "daqui X minutos/horas", "amanhã", "mais tarde":
     • SEMPRE use a hora atual como base da soma.
-3️⃣ Para horário exato ("às 14h" ou "7:40"):
-    • Só substitua a hora.
-4️⃣ Mantenha a estrutura original.
+ Para horário exato ("às 14h" ou "7:40"): Só substitua a hora.
+ atualizar a data solicitada conforme semana ou dia.
+ Mantenha a estrutura original.
+
 
 Evento atual:
 ${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
