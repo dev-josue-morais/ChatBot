@@ -95,12 +95,12 @@ dia ${formatLocal(data[0].date)}`;
 
       // 🔹 Editar evento
       case 'edit': {
-  console.log('JSON:', JSON.stringify(command, null, 2));
+//  console.log('JSON:', JSON.stringify(command, null, 2));
         if (!command.id) return '⚠️ É necessário informar o ID do evento para editar.';
 
         const updates = {
           title: command.title,
-          date: command.date,
+          date: command.datetime,
           reminder_minutes: command.reminder_minutes ?? 30,
           notified: typeof command.notified === 'boolean' ? command.notified : false,
         };
