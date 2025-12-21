@@ -260,7 +260,7 @@ Texto: """${userMessage}"""
         // ✏️ AGENDA - EDIT  (NOW atualizado)
         // ============================================================
         case 'agenda_edit': {
-console.log('hoje enviado ao gpt:', nowWithWeekday());
+// console.log('hoje enviado ao gpt:', nowWithWeekday());
             if (!id)
                 return { error: "⚠️ É necessário informar o ID do evento para editar." };
 
