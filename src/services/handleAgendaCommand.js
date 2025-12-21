@@ -95,6 +95,7 @@ dia ${formatLocal(data[0].date)}`;
 
       // 🔹 Editar evento
       case 'edit': {
+  console.log('JSON:', JSON.stringify(command, null, 2));
         if (!command.id) return '⚠️ É necessário informar o ID do evento para editar.';
 
         const updates = {
