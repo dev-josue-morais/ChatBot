@@ -26,14 +26,12 @@ async function deleteOldEvents(userPhone) {
 
 async function handleAgendaCommand(command, userPhone) {
   try {
-    // 🔹 Normaliza datas
+    let date = null;
     if (command.datetime) {
-      command.datetime = DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
-        .toISO({ includeOffset: false });
+      date = DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' }).toUTC().toISO();
     }
     if (command.start_date) {
-      command.start_date = DateTime.fromISO(command.start_date, { zone: 'America/Sao_Paulo' })
-        .toISO({ includeOffset: false });
+      command.start_date = DateTime.fromISO(command.start_date, { zone: 'America/Sao_Paulo' }).toISO({ includeOffset: false });
     }
     if (command.end_date) {
       command.end_date = DateTime.fromISO(command.end_date, { zone: 'America/Sao_Paulo' })
@@ -48,9 +46,7 @@ async function handleAgendaCommand(command, userPhone) {
           .from('events')
           .insert([{
             title: command.title,
-            date: DateTime.fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
-              .toUTC()
-              .toISO(),
+            date,
             reminder_minutes: command.reminder_minutes || 30,
             user_telefone: userPhone
           }])
@@ -99,7 +95,7 @@ dia ${formatLocal(data[0].date)}`;
 
         const updates = {
           title: command.title,
-          date: command.datetime,
+          ...(date && { date }),
           reminder_minutes: command.reminder_minutes ?? 30,
           notified: typeof command.notified === 'boolean' ? command.notified : false,
         };
