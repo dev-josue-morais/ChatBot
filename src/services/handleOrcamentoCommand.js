@@ -5,6 +5,29 @@ const { formatPhoneNumber } = require("../utils/utils");
 
 async function handleOrcamentoCommand(command, userPhone) {
     try {
+
+function normalizeMoney(value) {
+    if (value === null || value === undefined) return 0;
+
+    // Percentual mantém string
+    if (typeof value === "string" && value.includes("%")) {
+        return value.replace(",", ".").trim();
+    }
+
+    if (typeof value === "number") return value;
+
+    let str = String(value).trim();
+
+    // Se tiver vírgula, assume formato BR (1.500,30)
+    if (str.includes(",")) {
+        str = str.replace(/\./g, "").replace(",", ".");
+    }
+
+    const parsed = parseFloat(str);
+
+    return isNaN(parsed) ? 0 : parsed;
+}
+
         if (command.telefone_cliente) { command.telefone_cliente = formatPhoneNumber(command.telefone_cliente);}
         switch (command.action) {
 
@@ -12,6 +35,22 @@ async function handleOrcamentoCommand(command, userPhone) {
             case 'create': {
                 if (!command.nome_cliente) return "⚠️ O campo *nome do cliente* é obrigatório.";
                 if (!command.telefone_cliente) return "⚠️ O campo *telefone do cliente* é obrigatório.";
+
+const materiais = Array.isArray(command.materiais)
+    ? command.materiais.map(m => ({
+        ...m,
+        qtd: normalizeMoney(m.qtd),
+        valor: normalizeMoney(m.valor)
+    }))
+    : [];
+
+const servicos = Array.isArray(command.servicos)
+    ? command.servicos.map(s => ({
+        ...s,
+        quantidade: normalizeMoney(s.quantidade),
+        valor: normalizeMoney(s.valor)
+    }))
+    : [];
 
                 const observacoes = Array.isArray(command.observacoes) ? command.observacoes.filter(Boolean) : [];
 const descricoes = Array.isArray(command.descricoes)
@@ -24,10 +63,10 @@ const descricoes = Array.isArray(command.descricoes)
     etapa: command.etapa || "negociacao",
     observacoes,
     descricoes,
-    materiais: command.materiais || [],
-    servicos: command.servicos || [],
-    desconto_materiais: command.desconto_materiais || 0,
-    desconto_servicos: command.desconto_servicos || 0,
+    materiais,
+    servicos,
+    desconto_materiais: normalizeMoney(command.desconto_materiais),
+    desconto_servicos: normalizeMoney(command.desconto_servicos),
     user_telefone: userPhone
 }]).select();
 
@@ -69,16 +108,35 @@ const descricoes = Array.isArray(command.descricoes)
 const descricoes = Array.isArray(command.descricoes)
                 ? command.descricoes.map(d => String(d).replace(/\n/g, '').trim()).filter(Boolean)
                 : null;
+const materiais = Array.isArray(command.materiais)
+    ? command.materiais.map(m => ({
+        ...m,
+        qtd: normalizeMoney(m.qtd),
+        valor: normalizeMoney(m.valor)
+    }))
+    : undefined;
+
+const servicos = Array.isArray(command.servicos)
+    ? command.servicos.map(s => ({
+        ...s,
+        quantidade: normalizeMoney(s.quantidade),
+        valor: normalizeMoney(s.valor)
+    }))
+    : undefined;
 
                 const validFields = {
     nome_cliente: command.nome_cliente,
     telefone_cliente: command.telefone_cliente,
     etapa: command.etapa || undefined,
     observacoes: command.observacoes,
-    materiais: command.materiais,
-    servicos: command.servicos,
-    desconto_materiais: command.desconto_materiais,
-    desconto_servicos: command.desconto_servicos,
+    materiais,
+    servicos,
+    desconto_materiais: command.desconto_materiais !== undefined
+        ? normalizeMoney(command.desconto_materiais)
+        : undefined,
+    desconto_servicos: command.desconto_servicos !== undefined
+        ? normalizeMoney(command.desconto_servicos)
+        : undefined,
     descricoes
 };
 
