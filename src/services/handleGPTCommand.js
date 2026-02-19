@@ -35,8 +35,8 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
     "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }] | [],
     "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }] | [],
-    "desconto_materiais": "10%" ou "10" | null,
-    "desconto_servicos": "10%" ou "10" | null
+    "desconto_materiais": number | "10%" | null,
+    "desconto_servicos": number | "10%" | null
   }
 
   Regras
@@ -46,6 +46,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - se o valor não for informado use 0.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - sempre separe os itens (ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
+  - Valores monetários devem ser números usando ponto como decimal (ex: 10.20).
 
   Texto: """${userMessage}"""
   `;
@@ -83,8 +84,8 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
     "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
     "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
-    "desconto_materiais": "10%" ou "10" ou null,
-    "desconto_servicos": "10%" ou "10" ou null
+    "desconto_materiais": number | "10%" | null,
+    "desconto_servicos": number | "10%" | null
   }
 
   Orçamento atual:
@@ -102,6 +103,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - se o valor não for informado use 0.
   - Não crie novas colunas.
   - sempre separe os itens(ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
+  - Valores monetários devem ser números usando ponto como decimal (ex: 10.20).
 
   Retorne o orçamento atualizado.
   `;
