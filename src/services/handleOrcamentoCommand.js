@@ -9,7 +9,6 @@ async function handleOrcamentoCommand(command, userPhone) {
 function normalizeMoney(value) {
     if (value === null || value === undefined) return 0;
 
-    // Percentual mantém string
     if (typeof value === "string" && value.includes("%")) {
         return value.replace(",", ".").trim();
     }
@@ -18,16 +17,24 @@ function normalizeMoney(value) {
 
     let str = String(value).trim();
 
-    // Se tiver vírgula, assume formato BR (1.500,30)
-    if (str.includes(",")) {
+    // Remove tudo que não for número, vírgula ou ponto
+    str = str.replace(/[^\d.,-]/g, "");
+
+    const lastComma = str.lastIndexOf(",");
+    const lastDot = str.lastIndexOf(".");
+
+    if (lastComma > lastDot) {
+        // vírgula é decimal
         str = str.replace(/\./g, "").replace(",", ".");
+    } else if (lastDot > lastComma) {
+        // ponto é decimal
+        str = str.replace(/,/g, "");
     }
 
     const parsed = parseFloat(str);
 
     return isNaN(parsed) ? 0 : parsed;
 }
-
         if (command.telefone_cliente) { command.telefone_cliente = formatPhoneNumber(command.telefone_cliente);}
         switch (command.action) {
 
