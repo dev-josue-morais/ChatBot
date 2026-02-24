@@ -42,7 +42,6 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   Regras
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
-  - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - se o valor não for informado use 0.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - sempre separe os itens (ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
