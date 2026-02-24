@@ -47,6 +47,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - sempre separe os itens (ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
   - Valores monetários devem ser números usando ponto como decimal (ex: 10.20).
+  - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos" usando valores como "40" ou "4.5%""10%" etc, não modifique valores dos serviços ou materiais.
 
   Texto: """${userMessage}"""
   `;
@@ -97,7 +98,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   Regras:
   - Mantenha toda a estrutura original Atualize apenas o que o usuário pediu.
   - Campos vazios podem ser null.
-  - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos".
+  - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos" usando valores como "40" ou "4.5%""10%" etc, não modifique valores dos serviços ou materiais.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
