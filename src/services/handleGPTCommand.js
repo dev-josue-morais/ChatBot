@@ -40,7 +40,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   }
 
   Regras
-  - números antes de serviço ou materiais se refere a quantidade e não ordem ex "1 tem1 10$, 2 item2 7$ = item1 valor 10 quant 1, item2 valor 7 quant 2".
+  - números antes de serviço ou materiais se refere a quantidade e não ordem ex "1 ok instalar luz 10$, 2 ligar luz 7$ = instalar luz valor 10 qtd 1, ligar luz valor 7 qtd 2".
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
