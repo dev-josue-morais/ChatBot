@@ -47,14 +47,15 @@ const materiais = Array.isArray(command.materiais)
     ? command.materiais.map(m => ({
         ...m,
         qtd: normalizeMoney(m.qtd),
-        valor: normalizeMoney(m.valor)
+        valor: normalizeMoney(m.valor),
+        unidade: m.und
     }))
     : [];
 
 const servicos = Array.isArray(command.servicos)
     ? command.servicos.map(s => ({
         ...s,
-        quantidade: normalizeMoney(s.quantidade),
+        quantidade: normalizeMoney(s.qtd),
         valor: normalizeMoney(s.valor)
     }))
     : [];
