@@ -34,13 +34,12 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado", // defalt "negociacao"
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
     "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }] | [],
-    "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }] | [],
+    "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }] | [],
     "desconto_materiais": number | "10%" | null,
     "desconto_servicos": number | "10%" | null
   }
 
   Regras
-  - números antes de serviço ou materiais se refere a quantidade e não ordem ex "1 ok instalar luz 10$, 2 ligar luz 7$ = instalar luz valor 10 qtd 1, ligar luz valor 7 qtd 2".
   - Não inclua expressões matemáticas, apenas números.
   - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
