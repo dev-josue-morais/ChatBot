@@ -33,7 +33,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "telefone_cliente": "string",
     "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado", // defalt "negociacao"
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
-    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }] | [],
+    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }] | [],
     "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }] | [],
     "desconto_materiais": number | "10%" | null,
     "desconto_servicos": number | "10%" | null
@@ -41,7 +41,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
 
   Regras
   - Não inclua expressões matemáticas, apenas números.
-  - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
+  - Campo "und" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
   - sempre separe os itens (ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
@@ -82,8 +82,8 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     "telefone_cliente": "string",
     "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
     "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "unidade": "m", "valor": 2.5 }],
-    "servicos": [{ "titulo": "Instalação de tomada", "quantidade": 10, "valor": 25.0 }],
+    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }],
+    "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }],
     "desconto_materiais": number | "10%" | null,
     "desconto_servicos": number | "10%" | null
   }
@@ -99,7 +99,7 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   - Campos vazios podem ser null.
   - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos" usando valores como "40" ou "4.5%""10%" etc, não modifique valores dos serviços ou materiais.
   - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
-  - Campo "unidade" pode ser: "und", "m", "cm", "kit", "caixa", etc.
+  - Campo "und" pode ser: "und", "m", "cm", "kit", "caixa", etc.
   - se o valor não for informado use 0.
   - Não crie novas colunas.
   - sempre separe os itens(ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
