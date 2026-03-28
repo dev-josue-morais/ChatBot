@@ -87,7 +87,7 @@ function renderDescricaoAtividades(orcamento) {
     if (descricoes.length === 0) return '';
 
     return `
-    <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
+    <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px; page-break-inside:avoid;">
         <h3 style="margin-bottom:10px; font-size:18px; color:#333;">Descrição de Atividades</h3>
         <ul style="margin:0; padding-left:20px;">
             ${descricoes.map(desc => `<li>${desc}</li>`).join('')}
@@ -98,7 +98,7 @@ function renderDescricaoAtividades(orcamento) {
 function renderServicos(servicos, opcoes) {
     if (!(opcoes.listaServicos || opcoes.ocultarValorServicos) || !servicos?.length) return '';
     return `
-    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
+    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px; page-break-inside:avoid;">
       <tr style="background-color:#e5e5e5;">
         <th style="border:2px solid #000; padding:8px; text-align:left;">Serviço</th>
         <th style="border:2px solid #000; padding:8px; text-align:left;">Quantidade</th>
@@ -118,7 +118,7 @@ function renderServicos(servicos, opcoes) {
 function renderMateriais(materiais, opcoes) {
     if (!opcoes.listaMateriais || !materiais?.length) return '';
     return `
-    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
+    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px; page-break-inside:avoid;">
       <tr style="background-color:#e5e5e5;">
         <th style="border:2px solid #000; padding:8px; text-align:left;">Material</th>
         <th style="border:2px solid #000; padding:8px; text-align:left;">Preço</th>
@@ -167,7 +167,7 @@ function renderTotais(totalMateriais, totalServicos, descontoMateriais, desconto
     `;
 
     return `
-    <div style="display:flex; justify-content:center; margin:20px 0;">
+    <div style="display:flex; justify-content:center; margin:20px 0; page-break-inside:avoid;">
         <div style="width:100%; border:2px solid #000; background-color:#f9f9f9; padding:10px 15px; margin-top:10px; text-align:right; box-sizing:border-box;">
             ${materiaisHTML}
             ${servicosHTML}
@@ -201,7 +201,7 @@ function renderObservacoes(orcamento, opcoes, tipo) {
     const allObs = [...defaultObs, ...gptObs];
 
     return `
-    <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px;">
+    <div style="display:flex; justify-content:center; align-items:center; border:2px solid #000; padding:15px; flex-direction:column; margin-top:20px; page-break-inside:avoid;">
         <h3 style="margin-bottom:10px; font-size:18px; color:#333;">Observações Importantes</h3>
         <ul style="margin:0; padding-left:20px;">
             ${allObs.map(obs => `<li>${obs}</li>`).join('')}
