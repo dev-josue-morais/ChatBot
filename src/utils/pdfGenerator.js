@@ -233,8 +233,13 @@ async function generatePDF(orcamento, user, config = {}) {
             ? orcamento.servicos.reduce((sum, s) => sum + (s.quantidade || 0) * (s.valor || 0), 0)
             : 0;
 
-        const descontoMateriais = aplicarDesconto(totalMateriais, orcamento.desconto_materiais);
-        const descontoServicos = aplicarDesconto(totalServicos, orcamento.desconto_servicos);
+        const descontoMateriais = (opcoes.listaMateriais && totalMateriais > 0)
+    ? aplicarDesconto(totalMateriais, orcamento.desconto_materiais)
+    : { totalFinal: 0, descontoAplicado: 0 };
+
+        const descontoServicos = (opcoes.listaServicos && totalServicos > 0)
+    ? aplicarDesconto(totalServicos, orcamento.desconto_servicos)
+    : { totalFinal: 0, descontoAplicado: 0 };
 
         const totalOriginal = totalMateriais + totalServicos;
         const totalFinal = descontoMateriais.totalFinal + descontoServicos.totalFinal;
