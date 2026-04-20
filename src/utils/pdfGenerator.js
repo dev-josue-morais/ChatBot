@@ -98,7 +98,7 @@ function renderDescricaoAtividades(orcamento) {
 function renderServicos(servicos, opcoes) {
     if (!(opcoes.listaServicos || opcoes.ocultarValorServicos) || !servicos?.length) return '';
     return `
-    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px; page-break-inside:avoid;">
+    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
         <th style="border:2px solid #000; padding:8px; text-align:left;">Serviço</th>
         <th style="border:2px solid #000; padding:8px; text-align:left;">Quantidade</th>
@@ -118,7 +118,7 @@ function renderServicos(servicos, opcoes) {
 function renderMateriais(materiais, opcoes) {
     if (!opcoes.listaMateriais || !materiais?.length) return '';
     return `
-    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px; page-break-inside:avoid;">
+    <table style="width:100%; border-collapse: collapse; border:2px solid #000; margin-top:15px;">
       <tr style="background-color:#e5e5e5;">
         <th style="border:2px solid #000; padding:8px; text-align:left;">Material</th>
         <th style="border:2px solid #000; padding:8px; text-align:left;">Preço</th>
