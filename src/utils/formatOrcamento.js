@@ -41,10 +41,39 @@ function formatOrcamento(o) {
       ? o.observacoes.map((obs, i) => `   ${i + 1}. ${obs}`).join("\n")
       : null;
 
-  const descricoes =
-    Array.isArray(o.descricoes) && o.descricoes.length > 0
-      ? o.descricoes.map((d, i) => `   ${i + 1}. ${d}`).join("\n")
-      : null;
+  function formatDescricaoWhatsApp(html) {
+  if (!html) return "";
+
+  return html
+    // Converte <br> em quebra de linha
+    .replace(/<br\s*\/?>/gi, "\n")
+
+    // Converte <strong>...</strong> em negrito do WhatsApp
+    .replace(/<strong>(.*?)<\/strong>/gi, "*$1*")
+
+    // Remove outras tags HTML
+    .replace(/<[^>]*>/g, "")
+
+    // Decodifica entidades HTML comuns
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+
+    // Evita excesso de linhas vazias
+    .replace(/\n{3,}/g, "\n\n")
+
+    .trim();
+}
+
+const descricoes =
+  Array.isArray(o.descricoes) && o.descricoes.length > 0
+    ? o.descricoes
+        .map((d) => formatDescricaoWhatsApp(d))
+        .filter(Boolean)
+        .join("\n\n")
+    : null;
 
   const etapaMap = {
     negociacao: { emoji: "🟡", nome: "Em negociação" },
