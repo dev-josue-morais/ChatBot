@@ -1,8 +1,11 @@
 const express = require('express');
+
 const router = express.Router();
 
 const { getNowBRT } = require('../utils/utils');
+
 const { processCommand } = require('../services/processCommand');
+
 const {
   sendWhatsAppRaw,
   extractTextFromMsg
@@ -67,24 +70,39 @@ router.post('/', async (req, res, next) => {
 
       if (!senderNumber) continue;
 
-      // 🔄 Ignora mensagens geradas pelo Auto Wakeup
+      // 🔄 Extrai texto da mensagem
       const myText = extractTextFromMsg(msg)?.trim();
 
-const normalizedText = myText
-  ?.normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
-  .replace(/\s+/g, ' ')
-  .trim()
-  .toLowerCase();
+      // 🔎 DEBUG COMPLETO DO WEBHOOK
+      console.log('\n========== 📩 WEBHOOK DEBUG ==========');
+      console.log('📱 senderNumber:', senderNumber);
+      console.log('📱 DESTINO_FIXO:', String(DESTINO_FIXO));
+      console.log('📝 myText:', JSON.stringify(myText));
+      console.log('📦 msg.type:', msg.type);
+      console.log('📦 msg.id:', msg.id);
+      console.log('📦 MSG COMPLETA:');
+      console.log(JSON.stringify(msg, null, 2));
+      console.log('======================================\n');
 
-if (
-  senderNumber === String(DESTINO_FIXO) &&
-  normalizedText === 'auto wakeup'
-) {
-  console.log('🔄 Auto Wakeup recebido — ignorando processamento.');
-  continue;
-}
+      // 🔄 Normaliza o texto para identificar Auto Wakeup
+      const normalizedText = (myText || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+      console.log('🔎 Texto normalizado:', JSON.stringify(normalizedText));
+
+      // 🔄 Ignora mensagens geradas pelo Auto Wakeup
+      if (
+        String(senderNumber) === String(DESTINO_FIXO) &&
+        normalizedText.includes('auto wakeup')
+      ) {
+        console.log('🔄 Auto Wakeup recebido — ignorando processamento.');
+        continue;
+      }
 
       const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, '');
 
