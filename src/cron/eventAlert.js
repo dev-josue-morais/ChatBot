@@ -10,8 +10,8 @@ const {
   startDayChangeWatcher
 } = require('./eventCache');
 
-function scheduleEventAlerts() {
-  loadInitialEventsCache();
+async function scheduleEventAlerts() {
+  await loadInitialEventsCache();
   startDayChangeWatcher();
 
   cron.schedule('*/1 * * * *', async () => {
@@ -25,7 +25,7 @@ function scheduleEventAlerts() {
         const eventDateBRT = DateTime.fromISO(event.date, { zone: 'America/Sao_Paulo' });
         const diffMinutes = eventDateBRT.diff(nowBRT, 'minutes').minutes;
 
-        if (diffMinutes <= (event.reminder_minutes || 30) && diffMinutes >= 0) {
+        if (diffMinutes <= (event.reminder_minutes || 30)) {
           const userPhone = event.user_telefone;
           if (!userPhone) continue;
 
