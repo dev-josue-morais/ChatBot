@@ -1,0 +1,19 @@
+name: Auto Wakeup Backup
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+    - cron: '0 15 * * *'
+    - cron: '0 21 * * *'
+    - cron: '0 3 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  wakeup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Acordar Render
+        run: |
+          curl -f --max-time 30 https://chatbot-6viu.onrender.com/auto-wakeup
