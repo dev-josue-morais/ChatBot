@@ -405,25 +405,104 @@ Texto: """${userMessage}"""
             return { erro: 'Prompt não definido', modulo, action };
     }
 
-    try {
+        try {
+        console.log('\n');
+        console.log('======================================================');
+        console.log('🤖 [GPT] INICIANDO PROCESSAMENTO');
+        console.log('======================================================');
+        console.log('📩 Mensagem original:', userMessage);
+        console.log('📦 Módulo:', modulo);
+        console.log('⚙️ Action:', action);
+        console.log('🆔 ID:', id);
+        console.log('------------------------------------------------------');
+        console.log('📤 PROMPT ENVIADO AO GPT:');
+        console.log(prompt);
+        console.log('======================================================');
+
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [{ role: 'user', content: prompt }]
         });
 
+        console.log('\n======================================================');
+        console.log('🤖 [GPT] RESPOSTA RECEBIDA');
+        console.log('======================================================');
+
         let content = completion.choices[0].message.content.trim();
+
+        console.log('📥 RESPOSTA RAW DO GPT:');
+        console.log(content);
+
+        console.log('------------------------------------------------------');
+        console.log('📏 Tamanho da resposta:', content.length);
+        console.log('======================================================\n');
+
         content = content.replace(/```json\s*|```/g, "").trim();
 
+        console.log('======================================================');
+        console.log('🧹 RESPOSTA APÓS REMOVER MARKDOWN');
+        console.log('======================================================');
+        console.log(content);
+        console.log('======================================================\n');
+
         try {
-            return JSON.parse(content);
+            const parsedContent = JSON.parse(content);
+
+            console.log('======================================================');
+            console.log('✅ [GPT] JSON PARSEADO COM SUCESSO');
+            console.log('======================================================');
+            console.log(JSON.stringify(parsedContent, null, 2));
+            console.log('======================================================\n');
+
+            return parsedContent;
+
         } catch (parseErr) {
-            console.error("❌ JSON inválido retornado pelo GPT:", content);
-            return { erro: "JSON inválido retornado pelo GPT", raw: content };
+
+            console.error('\n======================================================');
+            console.error('❌ [GPT] ERRO AO FAZER JSON.parse()');
+            console.error('======================================================');
+            console.error('📩 Mensagem original:');
+            console.error(userMessage);
+
+            console.error('\n📦 Módulo:', modulo);
+            console.error('⚙️ Action:', action);
+            console.error('🆔 ID:', id);
+
+            console.error('\n📥 JSON QUE O GPT DEVOLVEU:');
+            console.error(content);
+
+            console.error('\n💥 ERRO DO JSON.parse:');
+            console.error(parseErr.message);
+
+            console.error('\n📚 STACK DO ERRO:');
+            console.error(parseErr.stack);
+
+            console.error('======================================================\n');
+
+            return {
+                erro: "JSON inválido retornado pelo GPT",
+                raw: content
+            };
         }
 
     } catch (err) {
-        console.error('Erro ao processar GPT:', err);
-        return { erro: 'Falha ao chamar GPT', modulo, action };
+
+        console.error('\n======================================================');
+        console.error('🔥 [GPT] ERRO AO CHAMAR OPENAI');
+        console.error('======================================================');
+        console.error('📩 Mensagem original:', userMessage);
+        console.error('📦 Módulo:', modulo);
+        console.error('⚙️ Action:', action);
+        console.error('🆔 ID:', id);
+        console.error('\n💥 Erro:', err);
+        console.error('\n📚 Stack:', err.stack);
+        console.error('======================================================\n');
+
+        return {
+            erro: 'Falha ao chamar GPT',
+            modulo,
+            action
+        };
     }
 }
 
