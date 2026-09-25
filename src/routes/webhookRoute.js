@@ -70,13 +70,21 @@ router.post('/', async (req, res, next) => {
       // 🔄 Ignora mensagens geradas pelo Auto Wakeup
       const myText = extractTextFromMsg(msg)?.trim();
 
-      if (
-        senderNumber === String(DESTINO_FIXO) &&
-        myText === '🔄 Auto Wakeup'
-      ) {
-        console.log('🔄 Auto Wakeup recebido — ignorando processamento.');
-        continue;
-      }
+const normalizedText = myText
+  ?.normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLowerCase();
+
+if (
+  senderNumber === String(DESTINO_FIXO) &&
+  normalizedText === 'auto wakeup'
+) {
+  console.log('🔄 Auto Wakeup recebido — ignorando processamento.');
+  continue;
+}
 
       const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, '');
 

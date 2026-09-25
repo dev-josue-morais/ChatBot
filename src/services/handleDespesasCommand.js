@@ -169,6 +169,4 @@ async function handleDespesasCommand(command, userPhone) {
   }
 }
 
-module.exports = {
-  handleDespesasCommand,
-};
+module.exports = handleDespesasCommand ;

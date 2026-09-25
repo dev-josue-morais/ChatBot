@@ -833,4 +833,4 @@
       }
   }
 
-  module.exports = { handleGPTCommand };
+  module.exports = handleGPTCommand ;
