@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
       }
     });
 
-    console.log('✅ Auto Wakeup enviado com sucesso.');
+    // console.log('✅ Auto Wakeup enviado com sucesso.');
 
     res.status(200).json({
       success: true,

@@ -14,7 +14,7 @@ function scheduleAutoWakeup() {
         }
       });
 
-      console.log('✅ Auto Wakeup enviado com sucesso.');
+      // console.log('✅ Auto Wakeup enviado com sucesso.');
     } catch (err) {
       console.error(
         '❌ Erro no Auto Wakeup:',
