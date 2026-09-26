@@ -84,26 +84,6 @@ router.post('/', async (req, res, next) => {
       console.log(JSON.stringify(msg, null, 2));
       console.log('======================================\n');
 
-      // 🔄 Normaliza o texto para identificar Auto Wakeup
-      const normalizedText = (myText || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-
-      console.log('🔎 Texto normalizado:', JSON.stringify(normalizedText));
-
-      // 🔄 Ignora mensagens geradas pelo Auto Wakeup
-      if (
-        String(senderNumber) === String(DESTINO_FIXO) &&
-        normalizedText.includes('auto wakeup')
-      ) {
-        console.log('🔄 Auto Wakeup recebido — ignorando processamento.');
-        continue;
-      }
-
       const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, '');
 
       if (senderNumber === botNumber) continue;
