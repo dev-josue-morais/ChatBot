@@ -1,13 +1,13 @@
 const cron = require('node-cron');
 const { sendWhatsAppRaw } = require('../services/whatsappService');
-const { DESTINO_FIXO } = require('../utils/config');
+const { BOT_NUMBER } = require('../utils/config');
 
 function scheduleAutoWakeup() {
   cron.schedule('*/13 * * * *', async () => {
     try {
       await sendWhatsAppRaw({
         messaging_product: "whatsapp",
-        to: String(DESTINO_FIXO),
+        to: String(BOT_NUMBER),
         type: "text",
         text: {
           body: "🔄 Auto Wakeup"

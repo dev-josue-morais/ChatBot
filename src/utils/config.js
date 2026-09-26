@@ -2,6 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 module.exports = {
   DESTINO_FIXO: process.env.DESTINO_FIXO,
+  BOT_NUMBER: process.env.BOT_NUMBER,
   PORT: process.env.PORT || 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
   WEBHOOK_VERIFY_TOKEN: process.env.WEBHOOK_VERIFY_TOKEN,
