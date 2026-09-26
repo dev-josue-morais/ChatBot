@@ -74,9 +74,12 @@ async function processCommand(userMessage, userPhone) {
 `;
 
     const quickResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: classificationPrompt }],
-    });
+    model: "gpt-4o-mini",
+    messages: [{ role: 'user', content: classificationPrompt }],
+    response_format: {
+        type: 'json_object'
+    }
+});
 
     let quickJSON = quickResponse.choices[0].message.content;
     quickJSON = quickJSON.replace(/```json\s*|```/g, "").trim();

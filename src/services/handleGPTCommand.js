@@ -147,12 +147,35 @@ ${nowWithWeekday()}
         // 🗑️ ORÇAMENTO - DELETE
         // ============================================================
         case 'orcamento_delete': {
-            prompt = `
-      { "modulo": "orcamento", "action": "delete", "id": número }
-      Texto: """${userMessage}"""
-      `;
-            break;
-        }
+    prompt = `
+Você é um assistente que identifica dados para excluir um orçamento.
+
+RESPONDA SOMENTE COM JSON VÁLIDO.
+NÃO escreva explicações.
+NÃO escreva frases antes ou depois do JSON.
+NÃO use markdown.
+NÃO use bloco \`\`\`json.
+
+Formato obrigatório:
+
+{
+  "modulo": "orcamento",
+  "action": "delete",
+  "id": número
+}
+
+Regras:
+- "id" deve ser exatamente o número do orçamento informado pelo usuário.
+- Não altere o número.
+- Não faça cálculos.
+- Não invente dados.
+- Se o ID não estiver presente, use null.
+
+Texto do usuário:
+"""${userMessage}"""
+`;
+    break;
+}
 
         // ============================================================
         // 📄 ORÇAMENTO - PDF
@@ -408,9 +431,12 @@ Texto: """${userMessage}"""
         try {
 
         const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: prompt }]
-        });
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    response_format: {
+        type: 'json_object'
+    }
+});
 
         let content = completion.choices[0].message.content.trim();
 
