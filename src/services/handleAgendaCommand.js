@@ -51,33 +51,36 @@ async function handleAgendaCommand(command, userPhone) {
 
       // 🔹 Criar evento
       case 'create': {
-        const { data, error } = await supabase
-          .from('events')
-          .insert([{
-            title: command.title,
-            date,
-            reminder_minutes: command.reminder_minutes || 30,
-            user_telefone: userPhone,
-            telefone: command.telefone ?? null
-          }])
-          .select('event_numero, title, date, telefone');
+  const { data, error } = await supabase
+    .from('events')
+    .insert([{
+      title: command.title,
+      date,
+      reminder_minutes: command.reminder_minutes || 30,
+      user_telefone: userPhone,
+      telefone: command.telefone ?? null
+    }])
+    .select('event_numero, title, date, telefone');
 
-        if (error) {
-          console.error('❌ Erro ao criar evento:', error);
-          console.error(
-            '📦 Payload enviado ao Supabase:',
-            JSON.stringify(command, null, 2)
-          );
-          return '⚠️ Erro ao criar evento.';
-        }
+  if (error) {
+    console.error('❌ Erro ao criar evento:', error);
+    console.error(
+      '📦 Payload enviado ao Supabase:',
+      JSON.stringify(command, null, 2)
+    );
+    return '⚠️ Erro ao criar evento.';
+  }
 
-        await deleteOldEvents(userPhone);
+  await deleteOldEvents(userPhone);
 
-        return `✅ Evento criado: ${data[0].title}
+  const telefone = data[0].telefone
+    ? `\ntelefone ${data[0].telefone}`
+    : '';
+
+  return `✅ Evento criado: ${data[0].title}
 ID ${data[0].event_numero}
-dia ${formatLocal(data[0].date)}`;
-      }
-
+dia ${formatLocal(data[0].date)}${telefone}`;
+}
       // 🔹 Deletar evento
       case 'delete': {
         if (!command.id) {
@@ -103,7 +106,7 @@ dia ${formatLocal(data[0].date)}`;
         return `🗑 Evento ID ${data[0].event_numero} "${data[0].title}" removido com sucesso.`;
       }
 
-      // 🔹 Editar evento
+            // 🔹 Editar evento
       case 'edit': {
         if (!command.id) {
           return '⚠️ É necessário informar o ID do evento para editar.';
@@ -118,9 +121,7 @@ dia ${formatLocal(data[0].date)}`;
             : false,
         };
 
-        // 📞 Só altera telefone se o campo realmente veio no comando.
-        // Isso evita apagar um telefone existente quando o usuário
-        // estiver editando apenas título, data ou lembrete.
+        // 📞 Só altera o telefone se ele foi informado no comando
         if (Object.prototype.hasOwnProperty.call(command, 'telefone')) {
           updates.telefone = command.telefone;
         }
@@ -147,12 +148,16 @@ dia ${formatLocal(data[0].date)}`;
 
         await deleteOldEvents(userPhone);
 
+        const telefone = data[0].telefone
+          ? `\ntelefone ${data[0].telefone}`
+          : '';
+
         return `✅ Evento atualizado: ${data[0].title}
 ID ${data[0].event_numero}
-dia ${formatLocal(data[0].date)}.`;
+dia ${formatLocal(data[0].date)}${telefone}`;
       }
 
-      // 🔹 Listar eventos
+            // 🔹 Listar eventos
       case 'list': {
         const zone = 'America/Sao_Paulo';
 
@@ -222,8 +227,14 @@ dia ${formatLocal(data[0].date)}.`;
         }
 
         const list = events
-          .map(e => `- ID ${e.event_numero}: ${e.title}
-Dia ${formatLocal(e.date)}`)
+          .map(e => {
+            const telefone = e.telefone
+              ? `\nTelefone ${e.telefone}`
+              : '';
+
+            return `- ID ${e.event_numero}: ${e.title}
+Dia ${formatLocal(e.date)}${telefone}`;
+          })
           .join('\n');
 
         if (hasId || hasTitle) {
