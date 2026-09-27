@@ -147,12 +147,35 @@ ${nowWithWeekday()}
         // 🗑️ ORÇAMENTO - DELETE
         // ============================================================
         case 'orcamento_delete': {
-            prompt = `
-      { "modulo": "orcamento", "action": "delete", "id": número }
-      Texto: """${userMessage}"""
-      `;
-            break;
-        }
+    prompt = `
+Você é um assistente que identifica dados para excluir um orçamento.
+
+RESPONDA SOMENTE COM JSON VÁLIDO.
+NÃO escreva explicações.
+NÃO escreva frases antes ou depois do JSON.
+NÃO use markdown.
+NÃO use bloco \`\`\`json.
+
+Formato obrigatório:
+
+{
+  "modulo": "orcamento",
+  "action": "delete",
+  "id": número
+}
+
+Regras:
+- "id" deve ser exatamente o número do orçamento informado pelo usuário.
+- Não altere o número.
+- Não faça cálculos.
+- Não invente dados.
+- Se o ID não estiver presente, use null.
+
+Texto do usuário:
+"""${userMessage}"""
+`;
+    break;
+}
 
         // ============================================================
         // 📄 ORÇAMENTO - PDF
@@ -405,25 +428,72 @@ Texto: """${userMessage}"""
             return { erro: 'Prompt não definido', modulo, action };
     }
 
-    try {
+        try {
+
         const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: prompt }]
-        });
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    response_format: {
+        type: 'json_object'
+    }
+});
 
         let content = completion.choices[0].message.content.trim();
+
         content = content.replace(/```json\s*|```/g, "").trim();
 
         try {
-            return JSON.parse(content);
+            const parsedContent = JSON.parse(content);
+
+            return parsedContent;
+
         } catch (parseErr) {
-            console.error("❌ JSON inválido retornado pelo GPT:", content);
-            return { erro: "JSON inválido retornado pelo GPT", raw: content };
+
+            console.error('\n======================================================');
+            console.error('❌ [GPT] ERRO AO FAZER JSON.parse()');
+            console.error('======================================================');
+            console.error('📩 Mensagem original:');
+            console.error(userMessage);
+
+            console.error('\n📦 Módulo:', modulo);
+            console.error('⚙️ Action:', action);
+            console.error('🆔 ID:', id);
+
+            console.error('\n📥 JSON QUE O GPT DEVOLVEU:');
+            console.error(content);
+
+            console.error('\n💥 ERRO DO JSON.parse:');
+            console.error(parseErr.message);
+
+            console.error('\n📚 STACK DO ERRO:');
+            console.error(parseErr.stack);
+
+            console.error('======================================================\n');
+
+            return {
+                erro: "JSON inválido retornado pelo GPT",
+                raw: content
+            };
         }
 
     } catch (err) {
-        console.error('Erro ao processar GPT:', err);
-        return { erro: 'Falha ao chamar GPT', modulo, action };
+
+        console.error('\n======================================================');
+        console.error('🔥 [GPT] ERRO AO CHAMAR OPENAI');
+        console.error('======================================================');
+        console.error('📩 Mensagem original:', userMessage);
+        console.error('📦 Módulo:', modulo);
+        console.error('⚙️ Action:', action);
+        console.error('🆔 ID:', id);
+        console.error('\n💥 Erro:', err);
+        console.error('\n📚 Stack:', err.stack);
+        console.error('======================================================\n');
+
+        return {
+            erro: 'Falha ao chamar GPT',
+            modulo,
+            action
+        };
     }
 }
 
