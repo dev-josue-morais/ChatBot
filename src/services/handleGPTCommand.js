@@ -110,36 +110,236 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
             break;
         }
 
-        // ============================================================
-        // 📋 ORÇAMENTO - LIST
-        // ============================================================
-        case 'orcamento_list': {
+       // ============================================================
+// 📋 ORÇAMENTO - LIST
+// ============================================================
+case 'orcamento_list': {
     prompt = `
-  Você é um assistente que ajuda a listar orçamentos existentes.
+Você é um assistente que interpreta comandos para LISTAR ORÇAMENTOS.
+
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
-  Responda apenas com JSON válido no seguinte formato:
 
-  {
-    "modulo": "orcamento",
-    "action": "list",
-    "id": número ou null,
-    "nome_cliente": string ou null,
-    "telefone_cliente": string ou null,
-    "etapa": "negociacao" | "andamento" | "aprovado" | "perdido" | "finalizado" | "todos",
-    "periodo_start": "YYYY-MM-DD",
-    "periodo_end": "YYYY-MM-DD",
-    "periodo_texto": string
-  }
+Sua função é identificar EXATAMENTE quais filtros o usuário solicitou.
 
-  Regras importantes:
-  - Pelo menos um dos campos (id, nome_cliente, telefone_cliente ou etapa) é obrigatório.
-  - Se a etapa não for mencionada, use "negociacao", so Use "todos" apenas se o usuário pedir explicitamente.
-  - O período é sempre obrigatório. Se o usuário não pedir → usar últimos 30 dias.
-  - "periodo_texto" deve sempre conter uma descrição humana do período solicitado, como: "últimos 6 meses", "de 10 a 20 de março", "ano de 2024", "todo o período", etc.
+Responda SOMENTE com JSON válido.
+NÃO escreva explicações.
+NÃO use markdown.
+NÃO coloque texto fora do JSON.
 
-  Texto do usuário: """${userMessage}"""
-  `;
+FORMATO OBRIGATÓRIO:
+
+{
+  "modulo": "orcamento",
+  "action": "list",
+
+  "filtros": {
+    "por_id": false,
+    "por_nome_cliente": false,
+    "por_telefone_cliente": false,
+    "por_etapa": false,
+    "por_periodo": false
+  },
+
+  "mostrar_filtros": false,
+
+  "id": null,
+  "nome_cliente": null,
+  "telefone_cliente": null,
+  "etapa": null,
+
+  "periodo_start": null,
+  "periodo_end": null,
+  "periodo_texto": null
+}
+
+============================================================
+REGRAS
+============================================================
+
+1. por_id
+------------------------------------------------------------
+Marque true SOMENTE se o usuário informar o ID/número do orçamento.
+
+Quando true:
+- preencher "id"
+- não inventar outros filtros.
+
+Se não informar ID:
+- false
+- id = null
+
+Não confunda número de orçamento com telefone.
+
+============================================================
+
+2. por_nome_cliente
+------------------------------------------------------------
+Marque true SOMENTE se o usuário informar o nome do cliente.
+
+Exemplos:
+"orçamentos do João"
+"orçamentos de Maria"
+
+Preencha somente o nome informado em "nome_cliente".
+
+============================================================
+
+3. por_telefone_cliente
+------------------------------------------------------------
+Marque true SOMENTE se o usuário informar o telefone do cliente.
+
+Preencha "telefone_cliente".
+
+Não transforme número de orçamento em telefone.
+
+============================================================
+
+4. por_etapa
+------------------------------------------------------------
+Marque true SOMENTE quando o usuário informar explicitamente
+uma etapa/status.
+
+Valores aceitos:
+
+"negociacao"
+"andamento"
+"aprovado"
+"perdido"
+"finalizado"
+
+Se não informar etapa:
+- por_etapa = false
+- etapa = null
+
+NÃO use "negociacao" como padrão.
+
+============================================================
+
+5. por_periodo
+------------------------------------------------------------
+Marque true quando existir um período de consulta.
+
+Exemplos:
+"últimos 6 meses"
+"últimos 30 dias"
+"este mês"
+"este ano"
+"em 2025"
+"de março até junho"
+"de 10 a 20 de março"
+
+Quando true:
+- preencher "periodo_start"
+- preencher "periodo_end"
+- preencher "periodo_texto"
+
+As datas devem considerar o fuso GMT-3 e a data/hora informada acima.
+
+------------------------------------------------------------
+PERÍODO PADRÃO
+------------------------------------------------------------
+Se o usuário NÃO informar nenhum período:
+
+- por_periodo = true
+- usar automaticamente os ÚLTIMOS 30 DIAS
+- periodo_start = data de 30 dias atrás
+- periodo_end = data de hoje
+- periodo_texto = "últimos 30 dias"
+
+============================================================
+
+6. TODO O PERÍODO
+------------------------------------------------------------
+Se o usuário disser:
+
+"todo o período"
+"todos os períodos"
+"desde o começo"
+"sem limite de data"
+"não importa a data"
+
+Então:
+
+- por_periodo = false
+- periodo_start = null
+- periodo_end = null
+- periodo_texto = "todo o período"
+
+NÃO crie datas artificiais.
+
+"periodo_texto" é apenas uma descrição humana do período
+que será exibida ao usuário. Ele NÃO deve ser usado pelo handle
+para decidir o filtro.
+
+============================================================
+
+7. MÚLTIPLOS FILTROS
+------------------------------------------------------------
+Os filtros podem ser combinados.
+
+Exemplo:
+
+"Lista todos os orçamentos de João em andamento dos últimos 6 meses"
+
+Resultado:
+
+{
+  "filtros": {
+    "por_id": false,
+    "por_nome_cliente": true,
+    "por_telefone_cliente": false,
+    "por_etapa": true,
+    "por_periodo": true
+  },
+  "mostrar_filtros": false,
+  "id": null,
+  "nome_cliente": "João",
+  "telefone_cliente": null,
+  "etapa": "andamento",
+  "periodo_start": "2026-03-26",
+  "periodo_end": "2026-09-26",
+  "periodo_texto": "últimos 6 meses"
+}
+
+============================================================
+
+8. MOSTRAR FILTROS
+------------------------------------------------------------
+Se o usuário pedir para mostrar os filtros utilizados:
+
+"mostre os filtros"
+"quais filtros foram usados"
+"me diga os filtros"
+"mostrar filtros"
+
+→ mostrar_filtros = true
+
+Caso contrário:
+→ mostrar_filtros = false
+
+============================================================
+
+9. REGRA ABSOLUTA
+------------------------------------------------------------
+TODAS as propriedades do JSON devem existir SEMPRE.
+
+Nunca omita nenhuma propriedade.
+
+Use null quando não houver valor.
+
+As flags dentro de "filtros" devem ser SEMPRE booleanos
+true ou false.
+
+O handle irá verificar as flags e aplicar SOMENTE os filtros
+marcados como true.
+
+============================================================
+
+Texto do usuário:
+"""${userMessage}"""
+`;
+
     break;
 }
 
