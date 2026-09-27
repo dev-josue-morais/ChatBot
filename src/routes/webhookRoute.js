@@ -74,15 +74,15 @@ router.post('/', async (req, res, next) => {
       const myText = extractTextFromMsg(msg)?.trim();
 
       // 🔎 DEBUG COMPLETO DO WEBHOOK
-      console.log('\n========== 📩 WEBHOOK DEBUG ==========');
-      console.log('📱 senderNumber:', senderNumber);
-      console.log('📱 DESTINO_FIXO:', String(DESTINO_FIXO));
-      console.log('📝 myText:', JSON.stringify(myText));
-      console.log('📦 msg.type:', msg.type);
-      console.log('📦 msg.id:', msg.id);
-      console.log('📦 MSG COMPLETA:');
-      console.log(JSON.stringify(msg, null, 2));
-      console.log('======================================\n');
+      // console.log('\n========== 📩 WEBHOOK DEBUG ==========');
+      // console.log('📱 senderNumber:', senderNumber);
+      // console.log('📱 DESTINO_FIXO:', String(DESTINO_FIXO));
+      // console.log('📝 myText:', JSON.stringify(myText));
+      // console.log('📦 msg.type:', msg.type);
+      // console.log('📦 msg.id:', msg.id);
+      // console.log('📦 MSG COMPLETA:');
+      // console.log(JSON.stringify(msg, null, 2));
+      // console.log('======================================\n');
 
       const botNumber = value?.metadata?.phone_number_id?.replace(/\D/g, '');
 
