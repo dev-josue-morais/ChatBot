@@ -46,7 +46,13 @@ function scheduleDailySummary() {
         if (!userEvents.length) continue;
 
         const list = userEvents
-          .map(e => `- ID ${e.event_numero} ${e.title} em ${formatLocal(e.date)}`)
+          .map(e => {
+            const telefone = e.telefone
+              ? `\n  Telefone ${e.telefone}`
+              : '';
+
+            return `- ID ${e.event_numero} ${e.title} em ${formatLocal(e.date)}${telefone}`;
+          })
           .join('\n');
 
         try {
@@ -54,7 +60,9 @@ function scheduleDailySummary() {
             messaging_product: "whatsapp",
             to: String(phone),
             type: "text",
-            text: { body: `📅 Seus eventos de hoje:\n${list}` }
+            text: {
+              body: `📅 Seus eventos de hoje:\n${list}`
+            }
           });
 
           enviados++;
