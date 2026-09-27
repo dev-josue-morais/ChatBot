@@ -469,73 +469,6 @@ Texto: """${userMessage}"""
 }
 
         // ============================================================
-// ✏️ AGENDA - EDIT
-// ============================================================
-case 'agenda_edit': {
-
-    if (!id)
-        return { error: "⚠️ É necessário informar o ID do evento para editar." };
-
-    const { data: currentData, error: fetchError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('event_numero', id)
-        .single();
-
-    if (fetchError || !currentData)
-        return { error: `⚠️ Não encontrei o evento ID ${id}.` };
-
-    const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
-        .setZone('America/Sao_Paulo')
-        .toISO();
-
-    prompt = `
-Você é um assistente que edita eventos de uma agenda.
-${nowWithWeekday()}
-
-Retorne apenas JSON válido.
-
-{
-  "modulo": "agenda",
-  "action": "edit",
-  "title": "string",
-  "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número,
-  "telefone": "string" ou null
-}
-
-Regras obrigatórias:
-
-1. Mantenha a estrutura original do evento.
-
-2. Atualize SOMENTE os campos que o usuário solicitar.
-
-3. "telefone":
-- É opcional.
-- Se o usuário informar um novo telefone, atualize o campo.
-- Se o usuário pedir para remover/apagar o telefone, use null.
-- Se o usuário NÃO mencionar telefone, mantenha o telefone atual do evento.
-- Nunca invente ou altere o telefone sem solicitação.
-- Não confunda o telefone do usuário que está utilizando o sistema com o telefone do contato do evento.
-
-4. Todas as datas devem estar em GMT-3 com offset "-03:00".
-
-5. Para "daqui X minutos/horas", "amanhã", "mais tarde":
-- SEMPRE use a hora atual como base da soma.
-
-6. Para horário exato ("às 14h" ou "7:40"):
-- Só substitua a hora quando apropriado.
-- Atualize a data conforme o dia solicitado.
-
-Evento atual:
-${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
-
-Mensagem do usuário:
-"${userMessage}"
-`;
-    break;
-}
-        // ============================================================
         // ✏️ AGENDA - EDIT  (NOW atualizado)
         // ============================================================
         case 'agenda_edit': {
@@ -1209,45 +1142,6 @@ Texto do usuário:
     break;
 }
 
- case 'despesas_pdf': {
-    prompt = `
-Você é um assistente financeiro que gera PDFs de despesas.
-
-O usuário está no fuso GMT-3 (Brasil).
-${nowWithWeekday()}
-
-Retorne SOMENTE JSON válido.
-
-{
-  "modulo": "despesas",
-  "action": "pdf",
-  "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
-  "start_date": "ISO GMT-3",
-  "end_date": "ISO GMT-3"
-}
-
-REGRAS:
-
-- "conducao" = combustível, gasolina, transporte etc.
-- "materiais" = materiais e ferramentas.
-- "alimentacao" = marmita, almoço, jantar, café etc.
-- "outras" = outras despesas.
-- "todos" = todas as categorias.
-
-Se o usuário não informar categoria:
-→ tipo = "todos"
-
-Se o usuário não informar período:
-→ utilizar os últimos 30 dias.
-
-Todas as datas devem estar em ISO 8601 com GMT-3.
-
-Texto do usuário:
-"""${userMessage}"""
-`;
-
-    break;
-}
         default:
             return { erro: 'Prompt não definido', modulo, action };
     }
