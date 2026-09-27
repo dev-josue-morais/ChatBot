@@ -268,85 +268,65 @@ case 'list': {
     }
 
     // ==================================================
-    // FILTRO POR ETAPA
     // ==================================================
-    if (filtros.por_etapa === true) {
+// FILTRO POR ETAPA
+// ==================================================
+if (filtros.por_etapa === true) {
 
-        if (!command.etapa) {
-            return '⚠️ O filtro por etapa foi identificado, mas nenhuma etapa foi informada.';
-        }
+    const etapa = String(command.etapa || '')
+        .trim()
+        .toLowerCase();
 
-        const etapa = String(command.etapa)
+    const etapasValidas = [
+        'negociacao',
+        'andamento',
+        'aprovado',
+        'perdido',
+        'finalizado'
+    ];
+
+    if (!etapasValidas.includes(etapa)) {
+        return `⚠️ Etapa inválida: ${command.etapa}`;
+    }
+
+    query = query.eq('etapa', etapa);
+}
+// ==================================================
+// FILTRO POR PERÍODO
+// ==================================================
+if (filtros.por_periodo === true) {
+
+    if (!command.periodo_start || !command.periodo_end) {
+        return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
+    }
+
+    const startLocal =
+        `${command.periodo_start}T00:00:00-03:00`;
+
+    const endLocal =
+        `${command.periodo_end}T23:59:59-03:00`;
+
+    const startIso =
+        new Date(startLocal).toISOString();
+
+    const endIso =
+        new Date(endLocal).toISOString();
+
+    const etapaFinalizado =
+        filtros.por_etapa === true &&
+        String(command.etapa || '')
             .trim()
-            .toLowerCase();
+            .toLowerCase() === 'finalizado';
 
-        const etapasValidas = [
-            'negociacao',
-            'andamento',
-            'aprovado',
-            'perdido',
-            'finalizado'
-        ];
+    const campoData =
+        etapaFinalizado
+            ? 'finalizado_em'
+            : 'criado_em';
 
-        if (!etapasValidas.includes(etapa)) {
-            return `⚠️ Etapa inválida: ${etapa}`;
-        }
-
-        query = query.eq(
-            'etapa',
-            etapa
-        );
-    }
-
-    // ==================================================
-    // FILTRO POR PERÍODO
-    // ==================================================
-    if (filtros.por_periodo === true) {
-
-        if (
-            !command.periodo_start ||
-            !command.periodo_end
-        ) {
-            return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
-        }
-
-        // Data inicial no horário de Brasília
-        const startLocal =
-            `${command.periodo_start}T00:00:00-03:00`;
-
-        // Data final no horário de Brasília
-        const endLocal =
-            `${command.periodo_end}T23:59:59-03:00`;
-
-        // Converte corretamente para UTC
-        const startIso =
-            new Date(startLocal).toISOString();
-
-        const endIso =
-            new Date(endLocal).toISOString();
-
-        /*
-         * Quando o usuário está filtrando por
-         * "finalizado", usamos finalizado_em.
-         *
-         * Nos demais casos usamos criado_em.
-         */
-        const etapaFinalizado =
-            filtros.por_etapa === true &&
-            String(command.etapa || '')
-                .trim()
-                .toLowerCase() === 'finalizado';
-
-        const campoData =
-            etapaFinalizado
-                ? 'finalizado_em'
-                : 'criado_em';
-
-        query = query
-            .gte(campoData, startIso)
-            .lte(campoData, endIso);
-    }
-
+    query = query
+        .gte(campoData, startIso)
+        .lte(campoData, endIso);
+}
     // ==================================================
     // ORDENAÇÃO
     // ==================================================
