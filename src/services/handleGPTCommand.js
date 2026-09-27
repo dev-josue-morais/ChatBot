@@ -164,60 +164,92 @@ FORMATO OBRIGATÓRIO
 1. RESUMO / RELATÓRIO
 ============================================================
 
-Use:
+O campo "resumo" controla se o usuário quer:
+
+- uma LISTAGEM dos orçamentos individualmente
+OU
+- um RELATÓRIO consolidado.
+
+Use obrigatoriamente:
 
 "resumo": true
 
-quando o usuário solicitar:
+quando a mensagem indicar qualquer intenção de relatório,
+resumo, panorama, totais ou valores consolidados.
 
-- resumo
+PALAVRAS E EXPRESSÕES QUE INDICAM RESUMO:
+
 - relatório
+- resumo
+- relatório de orçamentos
+- relatório dos meus orçamentos
+- relatório de orçamento
+- resumo dos orçamentos
+- resumo dos meus orçamentos
 - total de orçamentos
-- quantidade por etapa
+- quantidade de orçamentos
+- quantos orçamentos tenho
 - quanto tenho em orçamentos
-- valor dos meus orçamentos
-- valores por etapa
-- situação dos meus orçamentos
+- valor dos orçamentos
+- valores dos orçamentos
+- situação dos orçamentos
 - panorama dos orçamentos
-
-Exemplos:
-
-"Resumo dos meus orçamentos"
-→ resumo = true
-
-"Relatório dos meus orçamentos deste mês"
-→ resumo = true
-
-"Quanto tenho em orçamentos?"
-→ resumo = true
-
-"Me mostra o total dos meus orçamentos"
-→ resumo = true
-
-Quando o usuário pedir apenas uma lista detalhada:
-
-"Lista meus orçamentos"
-→ resumo = false
-
-"Mostra os orçamentos de João"
-→ resumo = false
+- valores por etapa
+- quantidade por etapa
+- relatório completo
+- relatório geral
 
 IMPORTANTE:
 
-O resumo NÃO altera os filtros.
+A palavra "relatório" SEMPRE significa:
 
-Os filtros solicitados pelo usuário continuam sendo aplicados
-normalmente.
+"resumo": true
 
-Exemplo:
+mesmo que a mensagem também contenha palavras como:
 
-"Resumo dos orçamentos de João em andamento"
+- lista
+- listar
+- mostrar
+- mostra
+- meus
+- todos
 
-→ resumo = true
-→ por_nome_cliente = true
-→ nome_cliente = "João"
-→ por_etapa = true
-→ etapa = "andamento"
+EXEMPLOS:
+
+"Lista meu relatório de orçamento todo o período"
+→ resumo=true
+
+"Lista o relatório dos meus orçamentos"
+→ resumo=true
+
+"Lista meus orçamentos todo o período"
+→ resumo=false
+
+"Relatório dos meus orçamentos todo o período"
+→ resumo=true
+
+"Resumo dos meus orçamentos deste mês"
+→ resumo=true
+
+"Mostra meus orçamentos de João"
+→ resumo=false
+
+"Lista todos os orçamentos de João"
+→ resumo=false
+
+ATENÇÃO:
+
+"lista meu relatório" NÃO significa listar os
+orçamentos individualmente.
+
+Nesse caso o usuário está solicitando um RELATÓRIO
+CONSOLIDADO.
+
+Quando "resumo": true, o sistema NÃO deve enviar
+cada orçamento individualmente.
+
+O resultado deverá ser um único relatório consolidado
+por etapa.
 
 ============================================================
 2. FILTRO POR ID
