@@ -109,28 +109,24 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
   `;
             break;
         }
-
-  // ============================================================
+// ============================================================
 // 📋 ORÇAMENTO - LIST
 // ============================================================
 case 'orcamento_list': {
 
     prompt = `
-Você é um assistente que interpreta comandos para LISTAR ORÇAMENTOS.
+Você interpreta comandos para CONSULTAR ORÇAMENTOS.
 
-O usuário está no fuso GMT-3 (Brasil).
+Fuso horário: GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Sua função é identificar EXATAMENTE quais filtros o usuário solicitou
-e se ele deseja uma LISTAGEM DETALHADA ou um RESUMO/RELATÓRIO.
-
 Responda SOMENTE com JSON válido.
-NÃO escreva explicações.
-NÃO use markdown.
-NÃO coloque texto fora do JSON.
+Não escreva explicações.
+Não use markdown.
+Não escreva nada fora do JSON.
 
 ============================================================
-FORMATO OBRIGATÓRIO
+FORMATO
 ============================================================
 
 {
@@ -153,7 +149,7 @@ FORMATO OBRIGATÓRIO
   "nome_cliente": null,
   "telefone_cliente": null,
 
-  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
+  "etapa": "negociacao",
 
   "periodo_start": null,
   "periodo_end": null,
@@ -161,475 +157,342 @@ FORMATO OBRIGATÓRIO
 }
 
 ============================================================
-1. RESUMO / RELATÓRIO
+1. LISTA OU RELATÓRIO
 ============================================================
 
-O campo "resumo" controla se o usuário quer:
+Esta é a regra MAIS IMPORTANTE.
 
-- uma LISTAGEM dos orçamentos individualmente
-OU
-- um RELATÓRIO consolidado.
+"resumo": true SOMENTE quando o usuário pedir
+explicitamente um RESUMO ou RELATÓRIO consolidado.
 
-Use obrigatoriamente:
-
-"resumo": true
-
-quando a mensagem indicar qualquer intenção de relatório,
-resumo, panorama, totais ou valores consolidados.
-
-PALAVRAS E EXPRESSÕES QUE INDICAM RESUMO:
+Ative resumo=true para expressões como:
 
 - relatório
 - resumo
-- relatório de orçamentos
-- relatório dos meus orçamentos
-- relatório de orçamento
-- resumo dos orçamentos
-- resumo dos meus orçamentos
+- panorama
 - total de orçamentos
 - quantidade de orçamentos
-- quantos orçamentos tenho
-- quanto tenho em orçamentos
-- valor dos orçamentos
-- valores dos orçamentos
-- situação dos orçamentos
-- panorama dos orçamentos
-- valores por etapa
 - quantidade por etapa
-- relatório completo
-- relatório geral
+- valores por etapa
+- quanto tenho em orçamentos
+- valor total dos orçamentos
+- situação geral dos orçamentos
+
+Caso contrário:
+
+"resumo": false
 
 IMPORTANTE:
 
-A palavra "relatório" SEMPRE significa:
-
-"resumo": true
-
-mesmo que a mensagem também contenha palavras como:
+As palavras abaixo NÃO significam relatório:
 
 - lista
 - listar
 - mostrar
 - mostra
-- meus
-- todos
+- consultar
+- consultar meus orçamentos
+- ver meus orçamentos
 
-EXEMPLOS:
+Exemplos:
 
-"Lista meu relatório de orçamento todo o período"
-→ resumo=true
-
-"Lista o relatório dos meus orçamentos"
-→ resumo=true
-
-"Lista meus orçamentos todo o período"
+"Lista meus orçamentos"
 → resumo=false
 
-"Relatório dos meus orçamentos todo o período"
-→ resumo=true
-
-"Resumo dos meus orçamentos deste mês"
-→ resumo=true
-
-"Mostra meus orçamentos de João"
+"Lista meus orçamentos aprovados"
 → resumo=false
 
-"Lista todos os orçamentos de João"
+"Lista meus orçamentos em andamento"
 → resumo=false
 
-ATENÇÃO:
+"Lista meus orçamentos de João todo o período"
+→ resumo=false
 
-"lista meu relatório" NÃO significa listar os
-orçamentos individualmente.
+"lista Relatório dos meus orçamentos"
+→ resumo=true
 
-Nesse caso o usuário está solicitando um RELATÓRIO
-CONSOLIDADO.
+"lista Resumo dos meus orçamentos"
+→ resumo=true
 
-Quando "resumo": true, o sistema NÃO deve enviar
-cada orçamento individualmente.
+"lista Relatório dos meus orçamentos aprovados"
+→ resumo=true
 
-O resultado deverá ser um único relatório consolidado
-por etapa.
+"lista resumo dos orçamentos de João em andamento"
+→ resumo=true
+
+NUNCA transforme uma solicitação de LISTA em resumo=true
+somente porque existem filtros de etapa, cliente ou período.
 
 ============================================================
 2. FILTRO POR ID
 ============================================================
 
-Marque "por_id": true SOMENTE se o usuário informar
-o ID/número do orçamento.
+Use:
 
-Quando true:
+"por_id": true
 
-- preencher "id"
-- não inventar outros valores.
+SOMENTE quando o usuário informar claramente o número/ID
+de um orçamento.
 
-Se não informar ID:
+Exemplo:
 
-- por_id = false
-- id = null
+"Lista o orçamento 1060926001"
 
-Não confunda número de orçamento com telefone.
+→ por_id=true
+→ id="1060926001"
+
+Caso contrário:
+
+→ por_id=false
+→ id=null
 
 ============================================================
-3. FILTRO POR NOME DO CLIENTE
+3. FILTRO POR CLIENTE
 ============================================================
 
-Marque "por_nome_cliente": true SOMENTE se o usuário
-informar o nome do cliente.
-
-Exemplos:
+Se o usuário informar o nome do cliente:
 
 "orçamentos do João"
 "orçamentos de Maria"
-"resumo dos orçamentos do João"
 
-Resultado:
+Use:
 
 "por_nome_cliente": true
-"nome_cliente": "João"
 
-Preencha somente o nome informado pelo usuário.
+e coloque somente o nome informado em:
 
-Não invente sobrenome.
+"nome_cliente"
+
+Caso contrário:
+
+por_nome_cliente=false
+nome_cliente=null
 
 ============================================================
-4. FILTRO POR TELEFONE DO CLIENTE
+4. FILTRO POR TELEFONE
 ============================================================
 
-Marque "por_telefone_cliente": true SOMENTE se o usuário
-informar o telefone do cliente.
+Use por_telefone_cliente=true SOMENTE quando o usuário
+informar claramente um telefone de cliente.
 
-Preencha:
-
-"telefone_cliente"
-
-Não transforme número de orçamento em telefone.
-
-Não transforme outros números da mensagem em telefone
-sem que o usuário indique claramente que é um telefone.
+Não confunda telefone com ID de orçamento.
 
 ============================================================
 5. FILTRO POR ETAPA / STATUS
 ============================================================
 
-Marque "por_etapa": true SOMENTE quando o usuário
-informar explicitamente uma etapa/status.
+Use por_etapa=true SOMENTE quando o usuário informar
+explicitamente uma etapa ou status.
 
-Valores aceitos:
+Valores:
 
-"negociacao"
-"andamento"
-"aprovado"
-"perdido"
-"finalizado"
+negociacao
+andamento
+aprovado
+perdido
+finalizado
 
-Interpretação:
+Conversões:
 
-- negociação → "negociacao"
-- em negociação → "negociacao"
-- andamento → "andamento"
-- em andamento → "andamento"
-- aprovado → "aprovado"
-- aprovados → "aprovado"
-- perdido → "perdido"
-- perdidos → "perdido"
-- recusado → "perdido"
-- recusados → "perdido"
-- finalizado → "finalizado"
-- finalizados → "finalizado"
+negociação → negociacao
+em negociação → negociacao
+
+andamento → andamento
+em andamento → andamento
+
+aprovado → aprovado
+aprovados → aprovado
+
+perdido → perdido
+perdidos → perdido
+
+recusado → perdido
+recusados → perdido
+
+finalizado → finalizado
+finalizados → finalizado
 
 Exemplos:
 
-"Lista meus orçamentos em andamento"
+"Lista meus orçamentos aprovados"
 
-→ por_etapa = true
-→ etapa = "andamento"
+→ resumo=false
+→ por_etapa=true
+→ etapa="aprovado"
 
-"Resumo dos orçamentos aprovados"
+"Lista meus orçamentos em negociação"
 
-→ por_etapa = true
-→ etapa = "aprovado"
+→ resumo=false
+→ por_etapa=true
+→ etapa="negociacao"
 
-"Lista meus orçamentos recusados"
+"lista meu relatório dos orçamentos aprovados"
 
-→ por_etapa = true
-→ etapa = "perdido"
+→ resumo=true
+→ por_etapa=true
+→ etapa="aprovado"
 
-IMPORTANTE:
+Se nenhuma etapa for informada:
 
-Se o usuário NÃO informar uma etapa:
+→ por_etapa=false
+→ etapa="negociacao"
 
-→ por_etapa = false
-
-O campo "etapa" deve continuar preenchido com:
-
-"negociacao"
-
-Mas essa etapa NÃO deve ser usada como filtro quando
-"por_etapa" for false.
-
-NUNCA use "todos" em "etapa".
+Quando por_etapa=false, o valor de etapa NÃO deve ser
+usado como filtro.
 
 ============================================================
 6. FILTRO POR PERÍODO
 ============================================================
 
-Marque "por_periodo": true quando existir um período
-de consulta.
+Se o usuário informar um período, use:
+
+por_periodo=true
+
+e preencha:
+
+periodo_start
+periodo_end
+periodo_texto
 
 Exemplos:
 
-"últimos 6 meses"
-"últimos 30 dias"
 "este mês"
+"últimos 30 dias"
+"últimos 6 meses"
 "este ano"
 "em 2025"
 "de março até junho"
-"de 10 a 20 de março"
-"desde janeiro"
-"neste mês"
-
-Quando true:
-
-- preencher "periodo_start"
-- preencher "periodo_end"
-- preencher "periodo_texto"
-
-As datas devem considerar o fuso GMT-3 e a data/hora
-informada acima.
-
-============================================================
-PERÍODO PADRÃO
-============================================================
-
-Se o usuário NÃO informar nenhum período:
-
-- por_periodo = true
-- usar automaticamente os ÚLTIMOS 30 DIAS
-- periodo_start = data de 30 dias atrás
-- periodo_end = data atual
-- periodo_texto = "últimos 30 dias"
 
 ============================================================
 7. TODO O PERÍODO
 ============================================================
 
-Quando o usuário disser:
+Se o usuário disser:
 
 - todo o período
-- todos os períodos
 - período completo
 - período inteiro
 - desde o começo
 - desde sempre
-- todos os meus orçamentos
 - todos os orçamentos
-
-NÃO aplique filtro de data.
 
 Use:
 
-"por_periodo": false
+por_periodo=false
 
-e:
+periodo_start=null
+periodo_end=null
+periodo_texto="todo o período"
 
-"periodo_start": null
-"periodo_end": null
+IMPORTANTE:
 
-Porém, se a expressão "todo o período" aparecer junto
-com "relatório" ou "resumo", mantenha:
-
-"resumo": true
+"todo o período" NÃO altera o campo resumo.
 
 Exemplo:
 
-"Lista meu relatório de orçamento todo o período"
+"Lista meus orçamentos aprovados todo o período"
 
-deve resultar em:
+→ resumo=false
+→ por_etapa=true
+→ etapa="aprovado"
+→ por_periodo=false
 
-{
-  "resumo": true,
-  "filtros": {
-    "por_periodo": false
-  },
-  "periodo_start": null,
-  "periodo_end": null,
-  "periodo_texto": "todo o período"
-}
+Enquanto:
+
+"lista relatório dos meus orçamentos aprovados todo o período"
+
+→ resumo=true
+→ por_etapa=true
+→ etapa="aprovado"
+→ por_periodo=false
 
 ============================================================
-8. MÚLTIPLOS FILTROS
+8. PERÍODO PADRÃO
+============================================================
+
+Se o usuário NÃO informar nenhum período:
+
+→ por_periodo=true
+
+Use os últimos 30 dias.
+
+Preencha:
+
+periodo_start
+periodo_end
+periodo_texto="últimos 30 dias"
+
+============================================================
+9. MÚLTIPLOS FILTROS
 ============================================================
 
 Os filtros podem ser combinados.
 
 Exemplo:
 
-"Lista todos os orçamentos de João em andamento dos últimos 6 meses"
+"Lista todos os orçamentos de João aprovados dos últimos 6 meses"
 
-Resultado:
+→ resumo=false
+→ por_nome_cliente=true
+→ nome_cliente="João"
+→ por_etapa=true
+→ etapa="aprovado"
+→ por_periodo=true
 
-{
-  "modulo": "orcamento",
-  "action": "list",
-  "resumo": false,
+Exemplo:
 
-  "filtros": {
-    "por_id": false,
-    "por_nome_cliente": true,
-    "por_telefone_cliente": false,
-    "por_etapa": true,
-    "por_periodo": true
-  },
+"lista relatório dos orçamentos de João aprovados dos últimos 6 meses"
 
-  "mostrar_filtros": false,
-
-  "id": null,
-  "nome_cliente": "João",
-  "telefone_cliente": null,
-  "etapa": "andamento",
-
-  "periodo_start": "2026-03-27",
-  "periodo_end": "2026-09-27",
-  "periodo_texto": "últimos 6 meses"
-}
-
-============================================================
-9. EXEMPLOS IMPORTANTES
-============================================================
-
-Exemplo 1:
-
-"Lista meus orçamentos"
-
-→ resumo = false
-→ por_id = false
-→ por_nome_cliente = false
-→ por_telefone_cliente = false
-→ por_etapa = false
-→ por_periodo = true
-→ últimos 30 dias
-
-------------------------------------------------------------
-
-Exemplo 2:
-
-"Lista todos os orçamentos de João em andamento todo o período"
-
-→ resumo = false
-→ por_nome_cliente = true
-→ nome_cliente = "João"
-→ por_etapa = true
-→ etapa = "andamento"
-→ por_periodo = false
-→ periodo_texto = "todo o período"
-
-NÃO aplicar filtro de data.
-
-------------------------------------------------------------
-
-Exemplo 3:
-
-"Resumo dos meus orçamentos deste mês"
-
-→ resumo = true
-→ por_etapa = false
-→ por_periodo = true
-
-------------------------------------------------------------
-
-Exemplo 4:
-
-"Resumo dos orçamentos de João em andamento deste mês"
-
-→ resumo = true
-→ por_nome_cliente = true
-→ nome_cliente = "João"
-→ por_etapa = true
-→ etapa = "andamento"
-→ por_periodo = true
-
-------------------------------------------------------------
-
-Exemplo 5:
-
-"Resumo dos meus orçamentos aprovados"
-
-→ resumo = true
-→ por_etapa = true
-→ etapa = "aprovado"
-
-------------------------------------------------------------
-
-Exemplo 6:
-
-"Resumo dos meus orçamentos recusados"
-
-→ resumo = true
-→ por_etapa = true
-→ etapa = "perdido"
-
-------------------------------------------------------------
-
-Exemplo 7:
-
-"Lista os orçamentos do João"
-
-→ resumo = false
-→ por_nome_cliente = true
-→ nome_cliente = "João"
+→ resumo=true
+→ por_nome_cliente=true
+→ nome_cliente="João"
+→ por_etapa=true
+→ etapa="aprovado"
+→ por_periodo=true
 
 ============================================================
 10. MOSTRAR FILTROS
 ============================================================
 
-Se o usuário pedir:
+Somente use:
 
-"mostre os filtros"
-"quais filtros foram usados"
-"me diga os filtros"
-"mostrar filtros"
+"mostrar_filtros": true
 
-→ mostrar_filtros = true
+se o usuário pedir explicitamente para mostrar os filtros
+utilizados.
 
 Caso contrário:
 
-→ mostrar_filtros = false
+"mostrar_filtros": false
 
 ============================================================
-11. REGRAS ABSOLUTAS
+11. REGRAS FINAIS
 ============================================================
 
-TODAS as propriedades do JSON devem existir SEMPRE.
-
-Nunca omita nenhuma propriedade.
+Todas as propriedades devem existir.
 
 Use null quando não houver valor.
 
-As flags dentro de "filtros" devem ser SEMPRE booleanos:
-
-true ou false.
-
-"resumo" deve ser SEMPRE booleano:
-
-true ou false.
-
-Não invente nomes.
-
-Não invente telefones.
+Flags devem ser true ou false.
 
 Não invente IDs.
-
+Não invente nomes.
+Não invente telefones.
 Não invente etapas.
-
 Não invente datas.
 
-O handle irá verificar as flags e aplicar SOMENTE os filtros
-marcados como true.
+REGRA PRINCIPAL:
+
+LISTA = resumo=false
+
+RELATÓRIO/RESUMO = resumo=true
+
+Filtros de cliente, etapa e período NÃO transformam uma
+lista em relatório.
 
 ============================================================
 
-Texto do usuário:
+Mensagem do usuário:
 
 """${userMessage}"""
 `;
