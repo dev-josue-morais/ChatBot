@@ -18,7 +18,39 @@ const TIPOS_DESPESA = [
 // ======================================================
 // FUNÇÕES AUXILIARES
 // ======================================================
+function emojiTipo(tipo) {
 
+  const emojis = {
+    conducao: '🚗',
+    materiais: '🔨',
+    alimentacao: '🍽️',
+    outras: '📦'
+  };
+
+  return emojis[tipo] || '📂';
+}
+
+
+function formatPeriodoTitulo(periodo) {
+
+  if (!periodo) {
+    return '';
+  }
+
+  const textos = {
+    'este mês': 'Setembro/2026',
+    'mês passado': 'Mês passado',
+    'esta semana': 'Esta semana',
+    'semana passada': 'Semana passada',
+    'hoje': 'Hoje',
+    'ontem': 'Ontem',
+    'últimos 30 dias': 'Últimos 30 dias',
+    'últimos 6 meses': 'Últimos 6 meses',
+    'todo o período': 'Todo o período'
+  };
+
+  return textos[periodo] || periodo;
+}
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString('pt-BR', {
     style: 'currency',
@@ -264,14 +296,17 @@ async function handleDespesasCommand(command, userPhone) {
       }
 
 
-      // ======================================================
-      // 📋 LIST
+            // ======================================================
+      // 📋 LIST / 📊 RESUMO
       // ======================================================
 
       case 'list': {
 
         const filtros =
           command.filtros || {};
+
+        const resumo =
+          command.resumo === true;
 
         // ------------------------------
         // Query inicial
@@ -363,16 +398,22 @@ async function handleDespesasCommand(command, userPhone) {
             error
           );
 
-          return "❌ Erro ao listar despesas.";
+          return "❌ Erro ao consultar despesas.";
         }
+
+        // ==================================================
+        // NENHUM RESULTADO
+        // ==================================================
 
         if (!data || data.length === 0) {
 
           return [
-            "📋 Nenhuma despesa encontrada.",
+            resumo
+              ? "📊 Nenhuma despesa encontrada para gerar o resumo."
+              : "📋 Nenhuma despesa encontrada.",
             "",
             command.periodo_texto
-              ? `Período: ${command.periodo_texto}`
+              ? `📅 Período: ${command.periodo_texto}`
               : ""
           ]
             .filter(Boolean)
@@ -380,7 +421,115 @@ async function handleDespesasCommand(command, userPhone) {
         }
 
         // ==================================================
-        // LISTAGEM
+        // 📊 RESUMO
+        // ==================================================
+
+        if (resumo) {
+
+          // ----------------------------------------------
+          // Soma por categoria
+          // ----------------------------------------------
+
+          const totais = {
+            conducao: 0,
+            materiais: 0,
+            alimentacao: 0,
+            outras: 0
+          };
+
+          data.forEach((d) => {
+
+            const valor =
+              Number(d.valor || 0);
+
+            if (
+              Object.prototype.hasOwnProperty.call(
+                totais,
+                d.tipo
+              )
+            ) {
+
+              totais[d.tipo] += valor;
+            }
+
+          });
+
+          // ----------------------------------------------
+          // Total geral
+          // ----------------------------------------------
+
+          const totalGeral = data.reduce(
+            (sum, d) =>
+              sum + Number(d.valor || 0),
+            0
+          );
+
+          // ----------------------------------------------
+          // Título
+          // ----------------------------------------------
+
+          let titulo =
+            "📊 Despesas";
+
+          if (command.periodo_texto) {
+
+            titulo +=
+              ` — ${formatPeriodoTitulo(
+                command.periodo_texto
+              )}`;
+          }
+
+          // ----------------------------------------------
+          // Linhas
+          // ----------------------------------------------
+
+          const linhas = [];
+
+          const tipoSelecionado =
+            filtros.por_tipo === true &&
+            command.tipo &&
+            command.tipo !== 'todos';
+
+          if (tipoSelecionado) {
+
+            linhas.push(
+              `${emojiTipo(command.tipo)} ${nomeTipo(command.tipo)}:       ${formatCurrency(totais[command.tipo])}`
+            );
+
+          } else {
+
+            linhas.push(
+              `🚗 Condução:       ${formatCurrency(totais.conducao)}`
+            );
+
+            linhas.push(
+              `🔨 Materiais:      ${formatCurrency(totais.materiais)}`
+            );
+
+            linhas.push(
+              `🍽️ Alimentação:    ${formatCurrency(totais.alimentacao)}`
+            );
+
+            linhas.push(
+              `📦 Outras:         ${formatCurrency(totais.outras)}`
+            );
+          }
+
+          // ----------------------------------------------
+          // Retorno
+          // ----------------------------------------------
+
+          return [
+            titulo,
+            "",
+            linhas.join('\n'),
+            "────────────────────────",
+            `💰 Total: ${formatCurrency(totalGeral)}`
+          ].join('\n');
+        }
+
+        // ==================================================
+        // 📋 LISTAGEM NORMAL
         // ==================================================
 
         const linhas = data.map((d) => {
@@ -424,7 +573,6 @@ async function handleDespesasCommand(command, userPhone) {
           `💰 Total: ${formatCurrency(total)}`
         ].join('\n');
       }
-
 
       // ======================================================
       // 🗑️ DELETE
