@@ -2,6 +2,163 @@ const supabase = require("./supabase");
 const formatOrcamento = require("../utils/formatOrcamento");
 const { sendWhatsAppRaw, sendPDFOrcamento } = require("./whatsappService");
 const { formatPhoneNumber } = require("../utils/utils");
+const formatCurrency = require("../utils/formatCurrency");
+const aplicarDesconto = require("../utils/aplicarDesconto");
+
+// ======================================================
+// 📊 RELATÓRIO DE ORÇAMENTOS
+// ======================================================
+
+function calcularTotalOrcamento(orcamento) {
+    const totalMateriais = (orcamento.materiais || []).reduce(
+        (sum, m) =>
+            sum +
+            (Number(m.qtd) || 0) *
+            (Number(m.valor) || 0),
+        0
+    );
+
+    const totalServicos = (orcamento.servicos || []).reduce(
+        (sum, s) =>
+            sum +
+            (Number(s.quantidade) || 0) *
+            (Number(s.valor) || 0),
+        0
+    );
+
+    const descontoMateriais = aplicarDesconto(
+        totalMateriais,
+        orcamento.desconto_materiais
+    );
+
+    const descontoServicos = aplicarDesconto(
+        totalServicos,
+        orcamento.desconto_servicos
+    );
+
+    return (
+        descontoMateriais.totalFinal +
+        descontoServicos.totalFinal
+    );
+}
+
+
+function formatRelatorioOrcamentos(orcamentos, periodoTexto) {
+
+    const grupos = {
+        negociacao: {
+            quantidade: 0,
+            valor: 0
+        },
+
+        aprovado: {
+            quantidade: 0,
+            valor: 0
+        },
+
+        perdido: {
+            quantidade: 0,
+            valor: 0
+        },
+
+        finalizado: {
+            quantidade: 0,
+            valor: 0
+        }
+    };
+
+
+    // ==========================================
+    // CLASSIFICAÇÃO DOS ORÇAMENTOS
+    // ==========================================
+
+    for (const orcamento of orcamentos) {
+
+        const etapa =
+            String(orcamento.etapa || "negociacao")
+                .trim()
+                .toLowerCase();
+
+        const valor =
+            calcularTotalOrcamento(orcamento);
+
+
+        // Negociação + andamento
+        // aparecem juntos como "Em negociação"
+        if (
+            etapa === "negociacao" ||
+            etapa === "andamento"
+        ) {
+
+            grupos.negociacao.quantidade++;
+            grupos.negociacao.valor += valor;
+
+        }
+
+        else if (etapa === "aprovado") {
+
+            grupos.aprovado.quantidade++;
+            grupos.aprovado.valor += valor;
+
+        }
+
+        else if (etapa === "perdido") {
+
+            grupos.perdido.quantidade++;
+            grupos.perdido.valor += valor;
+
+        }
+
+        else if (etapa === "finalizado") {
+
+            grupos.finalizado.quantidade++;
+            grupos.finalizado.valor += valor;
+
+        }
+    }
+
+
+    // ==========================================
+    // TOTAIS
+    // ==========================================
+
+    const quantidadeTotal =
+        grupos.negociacao.quantidade +
+        grupos.aprovado.quantidade +
+        grupos.perdido.quantidade +
+        grupos.finalizado.quantidade;
+
+
+    // IMPORTANTE:
+    // Perdidos NÃO entram no valor total.
+    const valorTotal =
+        grupos.negociacao.valor +
+        grupos.aprovado.valor +
+        grupos.finalizado.valor;
+
+
+    const linha = "────────────────────────────";
+
+
+    return [
+        `📊 Orçamentos${periodoTexto ? ` — ${periodoTexto}` : ""}`,
+        ``,
+
+        `🟡 Em negociação: ${String(grupos.negociacao.quantidade).padStart(5, " ")}  ${formatCurrency(grupos.negociacao.valor)}`,
+
+        `🟢 Aprovados:     ${String(grupos.aprovado.quantidade).padStart(5, " ")}  ${formatCurrency(grupos.aprovado.valor)}`,
+
+        `🔴 Recusados:     ${String(grupos.perdido.quantidade).padStart(5, " ")}  ${formatCurrency(grupos.perdido.valor)}`,
+
+        `⚪ Finalizados:    ${String(grupos.finalizado.quantidade).padStart(5, " ")}  ${formatCurrency(grupos.finalizado.valor)}`,
+
+        linha,
+
+        `📋 Total:         ${String(quantidadeTotal).padStart(5, " ")}`,
+
+        `💰 Valor total:   ${formatCurrency(valorTotal)}`
+    ].join("\n");
+}
 
 function formatFiltrosOrcamento(command) {
     const filtros = command.filtros || {};
@@ -368,6 +525,29 @@ ${formatFiltrosOrcamento(command)}`;
 
         return "📄 Nenhum orçamento encontrado.";
     }
+// ======================================================
+// 📊 RESUMO / RELATÓRIO
+// ======================================================
+
+if (command.resumo === true) {
+
+    const relatorio =
+        formatRelatorioOrcamentos(
+            orcamentos,
+            command.periodo_texto
+        );
+
+    let resposta = relatorio;
+
+    if (command.mostrar_filtros === true) {
+
+        resposta +=
+            `\n\n🔎 Filtros utilizados:\n` +
+            formatFiltrosOrcamento(command);
+    }
+
+    return resposta;
+}
 
     // ==================================================
     // ENVIA OS ORÇAMENTOS
