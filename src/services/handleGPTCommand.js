@@ -792,14 +792,15 @@ Retorne a despesa completa após a alteração.
     break;
 }
 
-        case 'despesas_list': {
+case 'despesas_list': {
     prompt = `
-Você é um assistente financeiro que interpreta comandos para LISTAR DESPESAS.
+Você é um assistente financeiro que interpreta comandos para LISTAR DESPESAS ou GERAR RESUMO DE DESPESAS.
 
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Sua função é identificar exatamente quais filtros o usuário solicitou.
+Sua função é identificar exatamente quais filtros o usuário solicitou
+e se ele deseja uma LISTAGEM detalhada ou um RESUMO agrupado.
 
 Responda SOMENTE com JSON válido.
 Não escreva explicações.
@@ -811,6 +812,8 @@ FORMATO OBRIGATÓRIO:
 {
   "modulo": "despesas",
   "action": "list",
+
+  "resumo": false,
 
   "filtros": {
     "por_tipo": false,
@@ -829,7 +832,61 @@ FORMATO OBRIGATÓRIO:
 }
 
 ============================================================
-1. FILTRO POR TIPO
+1. RESUMO
+============================================================
+
+Marque:
+
+"resumo": true
+
+quando o usuário pedir um RESUMO, TOTAL, SOMATÓRIO ou
+RELATÓRIO resumido das despesas.
+
+Exemplos:
+
+"Resumo das minhas despesas do mês"
+→ resumo = true
+
+"Resumo das minhas despesas"
+→ resumo = true
+
+"Quero um resumo dos meus gastos"
+→ resumo = true
+
+"Relatório das minhas despesas do mês"
+→ resumo = true
+
+"Quanto gastei esse mês?"
+→ resumo = true
+
+"Qual o total das minhas despesas?"
+→ resumo = true
+
+"Me mostre o total que gastei com combustível"
+→ resumo = true
+→ por_tipo = true
+→ tipo = "conducao"
+
+"Lista minhas despesas do mês"
+→ resumo = false
+
+"Mostra minhas despesas"
+→ resumo = false
+
+IMPORTANTE:
+
+Se o usuário pedir explicitamente para LISTAR ou MOSTRAR
+as despesas individualmente, use:
+
+"resumo": false
+
+Se pedir resumo, total, somatório, relatório ou quanto gastou,
+use:
+
+"resumo": true
+
+============================================================
+2. FILTRO POR TIPO
 ============================================================
 
 Marque "por_tipo": true quando o usuário solicitar uma categoria.
@@ -847,9 +904,17 @@ Exemplos:
 → por_tipo = true
 → tipo = "conducao"
 
+"Resumo das minhas despesas de combustível"
+→ por_tipo = true
+→ tipo = "conducao"
+
 "Lista minhas outras despesas"
 → por_tipo = true
 → tipo = "outras"
+
+"Resumo das minhas despesas de alimentação"
+→ por_tipo = true
+→ tipo = "alimentacao"
 
 Se o usuário pedir todas as categorias:
 
@@ -857,10 +922,14 @@ Se o usuário pedir todas as categorias:
 → por_tipo = false
 → tipo = "todos"
 
+"Resumo de todas minhas despesas"
+→ por_tipo = false
+→ tipo = "todos"
+
 Não invente categoria.
 
 ============================================================
-2. FILTRO POR DESCRIÇÃO
+3. FILTRO POR DESCRIÇÃO
 ============================================================
 
 Marque "por_descricao": true quando o usuário procurar
@@ -872,9 +941,18 @@ Exemplos:
 → por_descricao = true
 → descricao = "gasolina"
 
+"Resumo das minhas despesas com gasolina"
+→ por_descricao = true
+→ descricao = "gasolina"
+
 "Lista meus gastos com tomada"
 → por_descricao = true
 → descricao = "tomada"
+
+"Quanto gastei com gasolina?"
+→ resumo = true
+→ por_descricao = true
+→ descricao = "gasolina"
 
 IMPORTANTE:
 
@@ -894,11 +972,12 @@ Já:
 "Lista minhas despesas com tomada"
 
 → por_tipo = false
+→ tipo = "todos"
 → por_descricao = true
 → descricao = "tomada"
 
 ============================================================
-3. FILTRO POR PERÍODO
+4. FILTRO POR PERÍODO
 ============================================================
 
 Marque "por_periodo": true quando o usuário informar
@@ -930,7 +1009,7 @@ As datas devem ser calculadas considerando GMT-3.
 Use ISO 8601.
 
 ============================================================
-4. SEM PERÍODO
+5. SEM PERÍODO
 ============================================================
 
 Se o usuário não informar nenhum período:
@@ -942,7 +1021,7 @@ Se o usuário não informar nenhum período:
 - periodo_texto = "últimos 30 dias"
 
 ============================================================
-5. TODO O PERÍODO
+6. TODO O PERÍODO
 ============================================================
 
 Se o usuário disser:
@@ -963,18 +1042,21 @@ Então:
 Não crie datas artificiais.
 
 ============================================================
-6. COMBINAÇÃO DE FILTROS
+7. COMBINAÇÃO DE FILTROS
 ============================================================
 
 Os filtros podem ser combinados.
 
 Exemplo:
 
-"Lista minhas despesas de gasolina desse mês"
+"Resumo das minhas despesas de gasolina desse mês"
 
 Resultado:
 
 {
+  "modulo": "despesas",
+  "action": "list",
+  "resumo": true,
   "filtros": {
     "por_tipo": true,
     "por_descricao": true,
@@ -990,8 +1072,9 @@ Resultado:
 
 Outro exemplo:
 
-"Lista minhas despesas de material da semana"
+"Resumo das minhas despesas de material da semana"
 
+→ resumo = true
 → por_tipo = true
 → tipo = "materiais"
 → por_descricao = false
@@ -999,8 +1082,9 @@ Outro exemplo:
 
 Outro:
 
-"Lista minhas despesas com tomada em setembro"
+"Resumo das minhas despesas com tomada em setembro"
 
+→ resumo = true
 → por_tipo = false
 → tipo = "todos"
 → por_descricao = true
@@ -1008,7 +1092,7 @@ Outro:
 → por_periodo = true
 
 ============================================================
-7. MOSTRAR FILTROS
+8. MOSTRAR FILTROS
 ============================================================
 
 Se o usuário pedir:
@@ -1025,7 +1109,7 @@ Caso contrário:
 → mostrar_filtros = false
 
 ============================================================
-8. REGRAS ABSOLUTAS
+9. REGRAS ABSOLUTAS
 ============================================================
 
 TODAS as propriedades devem existir sempre.
@@ -1043,6 +1127,18 @@ Não invente descrições.
 O handle será responsável por consultar o banco usando
 somente os filtros marcados como true.
 
+Quando "resumo" for true, o handle deverá calcular os
+valores agrupados por categoria e apresentar:
+
+🚗 Condução
+🔨 Materiais
+🍽️ Alimentação
+📦 Outras
+💰 Total
+
+Quando "resumo" for false, o handle deverá apresentar
+as despesas individualmente.
+
 Texto do usuário:
 """${userMessage}"""
 `;
@@ -1050,7 +1146,7 @@ Texto do usuário:
     break;
 }
 
-        case 'despesas_pdf': {
+ case 'despesas_pdf': {
     prompt = `
 Você é um assistente financeiro que gera PDFs de despesas.
 
