@@ -22,30 +22,45 @@ async function scheduleEventAlerts() {
       const nowBRT = getNowBRT();
 
       for (const event of [...eventsCache]) {
-        const eventDateBRT = DateTime.fromISO(event.date, { zone: 'America/Sao_Paulo' });
+        const eventDateBRT = DateTime.fromISO(
+          event.date,
+          { zone: 'America/Sao_Paulo' }
+        );
+
         const diffMinutes = eventDateBRT.diff(nowBRT, 'minutes').minutes;
 
         if (diffMinutes <= (event.reminder_minutes || 30)) {
           const userPhone = event.user_telefone;
+
           if (!userPhone) continue;
 
+          const telefone = event.telefone
+            ? `\nTelefone ${event.telefone}`
+            : '';
+
           try {
-
-await sendWhatsAppRaw({
-  messaging_product: "whatsapp",
-  to: String(userPhone),
-  type: "text",
-  text: {
-    body: `⏰ Lembrete da Agenda: ${event.title}
+            await sendWhatsAppRaw({
+              messaging_product: "whatsapp",
+              to: String(userPhone),
+              type: "text",
+              text: {
+                body: `⏰ Lembrete da Agenda: ${event.title}
 ID ${event.event_numero}
-Dia ${formatLocal(event.date)}`
-  }
-});
+Dia ${formatLocal(event.date)}${telefone}`
+              }
+            });
 
-            await supabase.from('events').update({ notified: true }).eq('id', event.id);
+            await supabase
+              .from('events')
+              .update({ notified: true })
+              .eq('id', event.id);
+
             removeEventFromCache(event.id);
           } catch (err) {
-            console.error(`❌ Erro ao enviar lembrete para ${userPhone}:`, err);
+            console.error(
+              `❌ Erro ao enviar lembrete para ${userPhone}:`,
+              err
+            );
           }
         }
       }
