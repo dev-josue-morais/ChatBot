@@ -146,7 +146,7 @@ FORMATO OBRIGATÓRIO:
   "id": null,
   "nome_cliente": null,
   "telefone_cliente": null,
-  "etapa": null,
+  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado", // default "negociacao"
 
   "periodo_start": null,
   "periodo_end": null,
@@ -197,6 +197,11 @@ Não transforme número de orçamento em telefone.
 
 4. por_etapa
 ------------------------------------------------------------
+- "etapa" deve sempre ser preenchida.
+- Se o usuário informar uma etapa, use a etapa informada e marque "por_etapa": true.
+- Se o usuário não informar uma etapa, use "negociacao" como valor padrão, mas mantenha "por_etapa": false.
+- Nunca use "todos" em "etapa".
+
 Marque true SOMENTE quando o usuário informar explicitamente
 uma etapa/status.
 
@@ -210,9 +215,7 @@ Valores aceitos:
 
 Se não informar etapa:
 - por_etapa = false
-- etapa = null
-
-NÃO use "negociacao" como padrão.
+- etapa = "negociacao"
 
 ============================================================
 
