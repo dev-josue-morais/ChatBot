@@ -414,29 +414,48 @@ Se o usuário NÃO informar nenhum período:
 7. TODO O PERÍODO
 ============================================================
 
-Se o usuário disser:
+Quando o usuário disser:
 
-"todo o período"
-"todos os períodos"
-"desde o começo"
-"desde sempre"
-"sem limite de data"
-"não importa a data"
-"todos os orçamentos que tenho"
+- todo o período
+- todos os períodos
+- período completo
+- período inteiro
+- desde o começo
+- desde sempre
+- todos os meus orçamentos
+- todos os orçamentos
 
-Então:
+NÃO aplique filtro de data.
 
-- por_periodo = false
-- periodo_start = null
-- periodo_end = null
-- periodo_texto = "todo o período"
+Use:
 
-NÃO crie datas artificiais.
+"por_periodo": false
 
-"periodo_texto" é apenas uma descrição humana do período
-que será exibida ao usuário.
+e:
 
-Ele NÃO deve ser usado pelo handle para decidir o filtro.
+"periodo_start": null
+"periodo_end": null
+
+Porém, se a expressão "todo o período" aparecer junto
+com "relatório" ou "resumo", mantenha:
+
+"resumo": true
+
+Exemplo:
+
+"Lista meu relatório de orçamento todo o período"
+
+deve resultar em:
+
+{
+  "resumo": true,
+  "filtros": {
+    "por_periodo": false
+  },
+  "periodo_start": null,
+  "periodo_end": null,
+  "periodo_texto": "todo o período"
+}
 
 ============================================================
 8. MÚLTIPLOS FILTROS
