@@ -236,6 +236,9 @@ async function processCommand(userMessage, userPhone) {
         action,
         id
       );
+if (gptData?.error) {
+  return gptData.error;
+}
 
     gptData.modulo ??= modulo;
     gptData.action ??= action;
