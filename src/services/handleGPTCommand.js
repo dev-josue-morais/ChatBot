@@ -110,28 +110,34 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
             break;
         }
 
-       // ============================================================
+  // ============================================================
 // 📋 ORÇAMENTO - LIST
 // ============================================================
 case 'orcamento_list': {
+
     prompt = `
 Você é um assistente que interpreta comandos para LISTAR ORÇAMENTOS.
 
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Sua função é identificar EXATAMENTE quais filtros o usuário solicitou.
+Sua função é identificar EXATAMENTE quais filtros o usuário solicitou
+e se ele deseja uma LISTAGEM DETALHADA ou um RESUMO/RELATÓRIO.
 
 Responda SOMENTE com JSON válido.
 NÃO escreva explicações.
 NÃO use markdown.
 NÃO coloque texto fora do JSON.
 
-FORMATO OBRIGATÓRIO:
+============================================================
+FORMATO OBRIGATÓRIO
+============================================================
 
 {
   "modulo": "orcamento",
   "action": "list",
+
+  "resumo": false,
 
   "filtros": {
     "por_id": false,
@@ -146,7 +152,8 @@ FORMATO OBRIGATÓRIO:
   "id": null,
   "nome_cliente": null,
   "telefone_cliente": null,
-  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado", // default "negociacao"
+
+  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
 
   "periodo_start": null,
   "periodo_end": null,
@@ -154,56 +161,127 @@ FORMATO OBRIGATÓRIO:
 }
 
 ============================================================
-REGRAS
+1. RESUMO / RELATÓRIO
 ============================================================
 
-1. por_id
-------------------------------------------------------------
-Marque true SOMENTE se o usuário informar o ID/número do orçamento.
+Use:
+
+"resumo": true
+
+quando o usuário solicitar:
+
+- resumo
+- relatório
+- total de orçamentos
+- quantidade por etapa
+- quanto tenho em orçamentos
+- valor dos meus orçamentos
+- valores por etapa
+- situação dos meus orçamentos
+- panorama dos orçamentos
+
+Exemplos:
+
+"Resumo dos meus orçamentos"
+→ resumo = true
+
+"Relatório dos meus orçamentos deste mês"
+→ resumo = true
+
+"Quanto tenho em orçamentos?"
+→ resumo = true
+
+"Me mostra o total dos meus orçamentos"
+→ resumo = true
+
+Quando o usuário pedir apenas uma lista detalhada:
+
+"Lista meus orçamentos"
+→ resumo = false
+
+"Mostra os orçamentos de João"
+→ resumo = false
+
+IMPORTANTE:
+
+O resumo NÃO altera os filtros.
+
+Os filtros solicitados pelo usuário continuam sendo aplicados
+normalmente.
+
+Exemplo:
+
+"Resumo dos orçamentos de João em andamento"
+
+→ resumo = true
+→ por_nome_cliente = true
+→ nome_cliente = "João"
+→ por_etapa = true
+→ etapa = "andamento"
+
+============================================================
+2. FILTRO POR ID
+============================================================
+
+Marque "por_id": true SOMENTE se o usuário informar
+o ID/número do orçamento.
 
 Quando true:
+
 - preencher "id"
-- não inventar outros filtros.
+- não inventar outros valores.
 
 Se não informar ID:
-- false
+
+- por_id = false
 - id = null
 
 Não confunda número de orçamento com telefone.
 
 ============================================================
-
-2. por_nome_cliente
-------------------------------------------------------------
-Marque true SOMENTE se o usuário informar o nome do cliente.
-
-Exemplos:
-"orçamentos do João"
-"orçamentos de Maria"
-
-Preencha somente o nome informado em "nome_cliente".
-
+3. FILTRO POR NOME DO CLIENTE
 ============================================================
 
-3. por_telefone_cliente
-------------------------------------------------------------
-Marque true SOMENTE se o usuário informar o telefone do cliente.
+Marque "por_nome_cliente": true SOMENTE se o usuário
+informar o nome do cliente.
 
-Preencha "telefone_cliente".
+Exemplos:
+
+"orçamentos do João"
+"orçamentos de Maria"
+"resumo dos orçamentos do João"
+
+Resultado:
+
+"por_nome_cliente": true
+"nome_cliente": "João"
+
+Preencha somente o nome informado pelo usuário.
+
+Não invente sobrenome.
+
+============================================================
+4. FILTRO POR TELEFONE DO CLIENTE
+============================================================
+
+Marque "por_telefone_cliente": true SOMENTE se o usuário
+informar o telefone do cliente.
+
+Preencha:
+
+"telefone_cliente"
 
 Não transforme número de orçamento em telefone.
 
+Não transforme outros números da mensagem em telefone
+sem que o usuário indique claramente que é um telefone.
+
+============================================================
+5. FILTRO POR ETAPA / STATUS
 ============================================================
 
-4. por_etapa
-------------------------------------------------------------
-- "etapa" deve sempre ser preenchida.
-- Se o usuário informar uma etapa, use a etapa informada e marque "por_etapa": true.
-- Se o usuário não informar uma etapa, use "negociacao" como valor padrão, mas mantenha "por_etapa": false.
-- Nunca use "todos" em "etapa".
-
-Marque true SOMENTE quando o usuário informar explicitamente
-uma etapa/status.
+Marque "por_etapa": true SOMENTE quando o usuário
+informar explicitamente uma etapa/status.
 
 Valores aceitos:
 
@@ -213,17 +291,62 @@ Valores aceitos:
 "perdido"
 "finalizado"
 
-Se não informar etapa:
-- por_etapa = false
-- etapa = "negociacao"
+Interpretação:
 
-============================================================
-
-5. por_periodo
-------------------------------------------------------------
-Marque true quando existir um período de consulta.
+- negociação → "negociacao"
+- em negociação → "negociacao"
+- andamento → "andamento"
+- em andamento → "andamento"
+- aprovado → "aprovado"
+- aprovados → "aprovado"
+- perdido → "perdido"
+- perdidos → "perdido"
+- recusado → "perdido"
+- recusados → "perdido"
+- finalizado → "finalizado"
+- finalizados → "finalizado"
 
 Exemplos:
+
+"Lista meus orçamentos em andamento"
+
+→ por_etapa = true
+→ etapa = "andamento"
+
+"Resumo dos orçamentos aprovados"
+
+→ por_etapa = true
+→ etapa = "aprovado"
+
+"Lista meus orçamentos recusados"
+
+→ por_etapa = true
+→ etapa = "perdido"
+
+IMPORTANTE:
+
+Se o usuário NÃO informar uma etapa:
+
+→ por_etapa = false
+
+O campo "etapa" deve continuar preenchido com:
+
+"negociacao"
+
+Mas essa etapa NÃO deve ser usada como filtro quando
+"por_etapa" for false.
+
+NUNCA use "todos" em "etapa".
+
+============================================================
+6. FILTRO POR PERÍODO
+============================================================
+
+Marque "por_periodo": true quando existir um período
+de consulta.
+
+Exemplos:
+
 "últimos 6 meses"
 "últimos 30 dias"
 "este mês"
@@ -231,36 +354,43 @@ Exemplos:
 "em 2025"
 "de março até junho"
 "de 10 a 20 de março"
+"desde janeiro"
+"neste mês"
 
 Quando true:
+
 - preencher "periodo_start"
 - preencher "periodo_end"
 - preencher "periodo_texto"
 
-As datas devem considerar o fuso GMT-3 e a data/hora informada acima.
+As datas devem considerar o fuso GMT-3 e a data/hora
+informada acima.
 
-------------------------------------------------------------
+============================================================
 PERÍODO PADRÃO
-------------------------------------------------------------
+============================================================
+
 Se o usuário NÃO informar nenhum período:
 
 - por_periodo = true
 - usar automaticamente os ÚLTIMOS 30 DIAS
 - periodo_start = data de 30 dias atrás
-- periodo_end = data de hoje
+- periodo_end = data atual
 - periodo_texto = "últimos 30 dias"
 
 ============================================================
+7. TODO O PERÍODO
+============================================================
 
-6. TODO O PERÍODO
-------------------------------------------------------------
 Se o usuário disser:
 
 "todo o período"
 "todos os períodos"
 "desde o começo"
+"desde sempre"
 "sem limite de data"
 "não importa a data"
+"todos os orçamentos que tenho"
 
 Então:
 
@@ -272,13 +402,14 @@ Então:
 NÃO crie datas artificiais.
 
 "periodo_texto" é apenas uma descrição humana do período
-que será exibida ao usuário. Ele NÃO deve ser usado pelo handle
-para decidir o filtro.
+que será exibida ao usuário.
+
+Ele NÃO deve ser usado pelo handle para decidir o filtro.
 
 ============================================================
+8. MÚLTIPLOS FILTROS
+============================================================
 
-7. MÚLTIPLOS FILTROS
-------------------------------------------------------------
 Os filtros podem ser combinados.
 
 Exemplo:
@@ -288,6 +419,10 @@ Exemplo:
 Resultado:
 
 {
+  "modulo": "orcamento",
+  "action": "list",
+  "resumo": false,
+
   "filtros": {
     "por_id": false,
     "por_nome_cliente": true,
@@ -295,21 +430,109 @@ Resultado:
     "por_etapa": true,
     "por_periodo": true
   },
+
   "mostrar_filtros": false,
+
   "id": null,
   "nome_cliente": "João",
   "telefone_cliente": null,
   "etapa": "andamento",
-  "periodo_start": "2026-03-26",
-  "periodo_end": "2026-09-26",
+
+  "periodo_start": "2026-03-27",
+  "periodo_end": "2026-09-27",
   "periodo_texto": "últimos 6 meses"
 }
 
 ============================================================
+9. EXEMPLOS IMPORTANTES
+============================================================
 
-8. MOSTRAR FILTROS
+Exemplo 1:
+
+"Lista meus orçamentos"
+
+→ resumo = false
+→ por_id = false
+→ por_nome_cliente = false
+→ por_telefone_cliente = false
+→ por_etapa = false
+→ por_periodo = true
+→ últimos 30 dias
+
 ------------------------------------------------------------
-Se o usuário pedir para mostrar os filtros utilizados:
+
+Exemplo 2:
+
+"Lista todos os orçamentos de João em andamento todo o período"
+
+→ resumo = false
+→ por_nome_cliente = true
+→ nome_cliente = "João"
+→ por_etapa = true
+→ etapa = "andamento"
+→ por_periodo = false
+→ periodo_texto = "todo o período"
+
+NÃO aplicar filtro de data.
+
+------------------------------------------------------------
+
+Exemplo 3:
+
+"Resumo dos meus orçamentos deste mês"
+
+→ resumo = true
+→ por_etapa = false
+→ por_periodo = true
+
+------------------------------------------------------------
+
+Exemplo 4:
+
+"Resumo dos orçamentos de João em andamento deste mês"
+
+→ resumo = true
+→ por_nome_cliente = true
+→ nome_cliente = "João"
+→ por_etapa = true
+→ etapa = "andamento"
+→ por_periodo = true
+
+------------------------------------------------------------
+
+Exemplo 5:
+
+"Resumo dos meus orçamentos aprovados"
+
+→ resumo = true
+→ por_etapa = true
+→ etapa = "aprovado"
+
+------------------------------------------------------------
+
+Exemplo 6:
+
+"Resumo dos meus orçamentos recusados"
+
+→ resumo = true
+→ por_etapa = true
+→ etapa = "perdido"
+
+------------------------------------------------------------
+
+Exemplo 7:
+
+"Lista os orçamentos do João"
+
+→ resumo = false
+→ por_nome_cliente = true
+→ nome_cliente = "João"
+
+============================================================
+10. MOSTRAR FILTROS
+============================================================
+
+Se o usuário pedir:
 
 "mostre os filtros"
 "quais filtros foram usados"
@@ -319,20 +542,36 @@ Se o usuário pedir para mostrar os filtros utilizados:
 → mostrar_filtros = true
 
 Caso contrário:
+
 → mostrar_filtros = false
 
 ============================================================
+11. REGRAS ABSOLUTAS
+============================================================
 
-9. REGRA ABSOLUTA
-------------------------------------------------------------
 TODAS as propriedades do JSON devem existir SEMPRE.
 
 Nunca omita nenhuma propriedade.
 
 Use null quando não houver valor.
 
-As flags dentro de "filtros" devem ser SEMPRE booleanos
+As flags dentro de "filtros" devem ser SEMPRE booleanos:
+
 true ou false.
+
+"resumo" deve ser SEMPRE booleano:
+
+true ou false.
+
+Não invente nomes.
+
+Não invente telefones.
+
+Não invente IDs.
+
+Não invente etapas.
+
+Não invente datas.
 
 O handle irá verificar as flags e aplicar SOMENTE os filtros
 marcados como true.
@@ -340,82 +579,12 @@ marcados como true.
 ============================================================
 
 Texto do usuário:
+
 """${userMessage}"""
 `;
 
     break;
 }
-
-        // ============================================================
-        // 🗑️ ORÇAMENTO - DELETE
-        // ============================================================
-        case 'orcamento_delete': {
-    prompt = `
-Você é um assistente que identifica dados para excluir um orçamento.
-
-RESPONDA SOMENTE COM JSON VÁLIDO.
-NÃO escreva explicações.
-NÃO escreva frases antes ou depois do JSON.
-NÃO use markdown.
-NÃO use bloco \`\`\`json.
-
-Formato obrigatório:
-
-{
-  "modulo": "orcamento",
-  "action": "delete",
-  "id": número
-}
-
-Regras:
-- "id" deve ser exatamente o número do orçamento informado pelo usuário.
-- Não altere o número.
-- Não faça cálculos.
-- Não invente dados.
-- Se o ID não estiver presente, use null.
-
-Texto do usuário:
-"""${userMessage}"""
-`;
-    break;
-}
-
-        // ============================================================
-        // 📄 ORÇAMENTO - PDF
-        // ============================================================
-        case 'orcamento_pdf': {
-            prompt = `
-  Você é um assistente que gera PDFs.
-  Responda **somente com JSON válido**:
-
-{
-  "modulo": "orcamento",
-  "action": "pdf",
-  "id": número,
-  "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo", // defalt "Orçamento"
-  "opcoes": {
-    "listaServicos": true, // se tipo = "Pedido" false.
-    "listaMateriais": true,
-    "ocultarValorServicos": false,
-    "garantia": true,
-    "assinaturaCliente": false,
-    "assinaturaEmpresa": false
-  },
-  "valorRecibo": número | null
-}
-
-Texto: """${userMessage}"""
-⚠️ Regras:
-
-1. Sempre retorne JSON válido.
-2. Se tipo = "Recibo", inclua valorRecibo, se não informado valor use null. 
-3. Não altere as flags sem instrução explícita do texto:
-   - “ocultar materiais | serviços” → lista"Materiais | Servicos": false
-   - nunca ocultar materiais e serviços no mesmo pdf
-   - Se não houver instrução, use valores defalt do exemplo.
-`;
-            break;
-        }
 
         // ============================================================
 // 📆 AGENDA - CREATE
