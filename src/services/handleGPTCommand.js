@@ -889,7 +889,8 @@ use:
 2. FILTRO POR TIPO
 ============================================================
 
-Marque "por_tipo": true quando o usuário solicitar uma categoria.
+Marque "por_tipo": true quando o usuário solicitar
+explicitamente uma CATEGORIA de despesa.
 
 Categorias:
 
@@ -898,39 +899,101 @@ Categorias:
 "alimentacao"
 "outras"
 
+IMPORTANTE:
+
+A categoria "conducao" representa despesas relacionadas
+a deslocamento/transporte, incluindo:
+
+- combustível
+- gasolina
+- diesel
+- etanol
+- Uber
+- táxi
+- estacionamento
+- pedágio
+- transporte
+
+PORÉM, quando o usuário especificar uma despesa concreta,
+como "combustível", "gasolina", "diesel", "Uber",
+"estacionamento" ou "pedágio", isso deve ser tratado
+como FILTRO POR DESCRIÇÃO, e NÃO como filtro por tipo.
+
 Exemplos:
 
-"Lista minhas despesas de combustível"
+"Lista minhas despesas de condução"
 → por_tipo = true
 → tipo = "conducao"
+→ por_descricao = false
+→ descricao = null
 
 "Resumo das minhas despesas de combustível"
+→ por_tipo = false
+→ tipo = "todos"
+→ por_descricao = true
+→ descricao = "combustível"
+
+"Lista minhas despesas de gasolina"
+→ por_tipo = false
+→ tipo = "todos"
+→ por_descricao = true
+→ descricao = "gasolina"
+
+"Lista minhas despesas de Uber"
+→ por_tipo = false
+→ tipo = "todos"
+→ por_descricao = true
+→ descricao = "Uber"
+
+"Lista minhas despesas de estacionamento"
+→ por_tipo = false
+→ tipo = "todos"
+→ por_descricao = true
+→ descricao = "estacionamento"
+
+"Lista minhas despesas de material"
 → por_tipo = true
-→ tipo = "conducao"
+→ tipo = "materiais"
+→ por_descricao = false
+
+"Lista minhas despesas de alimentação"
+→ por_tipo = true
+→ tipo = "alimentacao"
+→ por_descricao = false
 
 "Lista minhas outras despesas"
 → por_tipo = true
 → tipo = "outras"
-
-"Resumo das minhas despesas de alimentação"
-→ por_tipo = true
-→ tipo = "alimentacao"
-
-Se o usuário pedir todas as categorias:
-
-"Lista todas minhas despesas"
-→ por_tipo = false
-→ tipo = "todos"
-
-"Resumo de todas minhas despesas"
-→ por_tipo = false
-→ tipo = "todos"
-
-Não invente categoria.
+→ por_descricao = false
 
 ============================================================
 3. FILTRO POR DESCRIÇÃO
 ============================================================
+TERMOS QUE DEVEM SER TRATADOS COMO DESCRIÇÃO:
+
+"combustível"
+"gasolina"
+"diesel"
+"etanol"
+"álcool"
+"Uber"
+"taxi"
+"táxi"
+"estacionamento"
+"pedágio"
+"mecânico"
+"oficina"
+
+Esses termos NÃO devem automaticamente definir:
+
+tipo = "conducao"
+
+Eles devem gerar:
+
+por_tipo = false
+tipo = "todos"
+por_descricao = true
+descricao = termo solicitado.
 
 Marque "por_descricao": true quando o usuário procurar
 uma despesa específica pelo nome/descrição.
