@@ -418,11 +418,11 @@ Texto: """${userMessage}"""
         }
 
         // ============================================================
-        // 📆 AGENDA - CREATE
-        // ============================================================
-        case 'agenda_create': {
+// 📆 AGENDA - CREATE
+// ============================================================
+case 'agenda_create': {
 
-            prompt = `
+    prompt = `
 Você é um assistente que cria compromissos de agenda.
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
@@ -432,57 +432,108 @@ Retorne apenas JSON válido.
 {
   "modulo": "agenda",
   "action": "create",
-  "title": "string", // nome ou local 
+  "title": "string",
   "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número (default 30) // lembrete em minutos 
+  "reminder_minutes": número,
+  "telefone": "string" ou null
 }
+
+Regras obrigatórias:
+
+1. "title"
+- Deve conter o nome do compromisso, pessoa, serviço ou local informado pelo usuário.
+
+2. "datetime"
+- Deve ser uma data/hora válida em ISO 8601 com fuso GMT-3.
+- Utilize o contexto de data e hora informado acima para interpretar expressões como "amanhã", "sexta", etc.
+
+3. "reminder_minutes"
+- Se o usuário informar um tempo de lembrete, utilize esse valor.
+- Se não informar, use 30.
+
+4. "telefone"
+- É um campo OPCIONAL.
+- Preencha SOMENTE se o usuário informar um número de telefone relacionado ao evento.
+- Se o usuário não informar telefone, retorne obrigatoriamente:
+  "telefone": null
+- Não confunda o telefone do usuário que está utilizando o sistema com o telefone do contato do evento.
+- Não invente ou complete números de telefone.
+- Preserve o número informado pelo usuário.
+- O telefone pode ser informado com ou sem formatação.
+
+5. Não invente informações que não estejam na mensagem do usuário.
 
 Texto: """${userMessage}"""
 `;
-            break;
-        }
+    break;
+}
 
         // ============================================================
-        // 📅 AGENDA - LIST (NOW atualizado)
-        // ============================================================
-case 'agenda_list': {
-  prompt = `
-Você é um assistente que lista eventos da agenda.
-O usuário está no fuso GMT-3 (Brasil).
+// ✏️ AGENDA - EDIT
+// ============================================================
+case 'agenda_edit': {
+
+    if (!id)
+        return { error: "⚠️ É necessário informar o ID do evento para editar." };
+
+    const { data: currentData, error: fetchError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('event_numero', id)
+        .single();
+
+    if (fetchError || !currentData)
+        return { error: `⚠️ Não encontrei o evento ID ${id}.` };
+
+    const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
+        .setZone('America/Sao_Paulo')
+        .toISO();
+
+    prompt = `
+Você é um assistente que edita eventos de uma agenda.
 ${nowWithWeekday()}
 
-Responda apenas com JSON válido:
+Retorne apenas JSON válido.
 
 {
   "modulo": "agenda",
-  "action": "list",
-  "title": "string" ou null,
-  "id": "number" ou null,
-  "start_date": "YYYY-MM-DD",
-  "end_date": "YYYY-MM-DD"
+  "action": "edit",
+  "title": "string",
+  "datetime": "Data/hora ISO 8601 no GMT-3",
+  "reminder_minutes": número,
+  "telefone": "string" ou null
 }
 
-Regras importantes:
+Regras obrigatórias:
 
-1. **ID sempre prevalece sobre título**
-   - preencher Se o usuário mencionar um ID (ex: "1171125001"),
-   - Quando "id" estiver preenchido, "title" deve ser null.
+1. Mantenha a estrutura original do evento.
 
-2. **Título**
-   - Só preencha "title" se o usuário citar (nome ou local)
-   - Não trate números como título.
+2. Atualize SOMENTE os campos que o usuário solicitar.
 
-3. **Datas**
-   - Sempre preencher "start_date" e "end_date".
-   - Se o usuário citar dias como "amanhã", "sábado", etc → usar exatamente esse dia.
-   - Se citar um período ("de segunda a sexta") → gerar um intervalo correspondente.
-   - Se não falar nada sobre data → usar a data de hoje para ambos.
+3. "telefone":
+- É opcional.
+- Se o usuário informar um novo telefone, atualize o campo.
+- Se o usuário pedir para remover/apagar o telefone, use null.
+- Se o usuário NÃO mencionar telefone, mantenha o telefone atual do evento.
+- Nunca invente ou altere o telefone sem solicitação.
+- Não confunda o telefone do usuário que está utilizando o sistema com o telefone do contato do evento.
 
-4. Não invente nada. Analise somente o texto fornecido.
+4. Todas as datas devem estar em GMT-3 com offset "-03:00".
 
-Texto: """${userMessage}"""
+5. Para "daqui X minutos/horas", "amanhã", "mais tarde":
+- SEMPRE use a hora atual como base da soma.
+
+6. Para horário exato ("às 14h" ou "7:40"):
+- Só substitua a hora quando apropriado.
+- Atualize a data conforme o dia solicitado.
+
+Evento atual:
+${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
+
+Mensagem do usuário:
+"${userMessage}"
 `;
-  break;
+    break;
 }
         // ============================================================
         // ✏️ AGENDA - EDIT  (NOW atualizado)
