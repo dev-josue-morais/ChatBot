@@ -592,92 +592,503 @@ Mensagem do usuário:
         // DESPESAS
         // ============================================================
         case 'despesas_create': {
-            prompt = `
-Você é um assistente financeiro que registra despesas.
-Retorne apenas JSON válido.
+    prompt = `
+Você é um assistente financeiro que registra uma nova despesa.
+
+O usuário está no fuso GMT-3 (Brasil).
+${nowWithWeekday()}
+
+Responda SOMENTE com JSON válido.
+Não escreva explicações.
+Não use markdown.
+Não coloque texto fora do JSON.
+
+FORMATO OBRIGATÓRIO:
 
 {
   "modulo": "despesas",
   "action": "create",
-  "tipo": "conducao" | "materiais" | "outras",
+  "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
   "valor": número,
   "descricao": "string"
 }
 
-Texto: """${userMessage}"""
+============================================================
+REGRAS
+============================================================
+
+1. TIPO
+------------------------------------------------------------
+
+Classifique automaticamente a despesa:
+
+"conducao":
+- gasolina
+- combustível
+- álcool combustível
+- diesel
+- estacionamento
+- pedágio
+- transporte
+- ônibus
+- Uber
+- manutenção relacionada ao veículo
+- outras despesas claramente relacionadas à condução
+
+"materiais":
+- tomada
+- interruptor
+- fio
+- cabo
+- disjuntor
+- eletroduto
+- eletrocalha
+- condulete
+- lâmpada
+- fita de LED
+- material elétrico
+- ferramentas
+- materiais utilizados na obra
+- qualquer outro material comprado para serviço
+
+"alimentacao":
+- marmita
+- almoço
+- jantar
+- café
+- lanche
+- comida
+- alimentação
+- bebida sem álcool
+- qualquer despesa claramente relacionada à alimentação
+
+"outras":
+- despesas que não se enquadrem nas categorias acima.
+
+2. DESCRIÇÃO
+------------------------------------------------------------
+
+A descrição deve registrar exatamente o que foi informado pelo usuário.
+
+Exemplos:
+
+"25 reais gasolina"
+→ tipo: "conducao"
+→ valor: 25
+→ descricao: "gasolina"
+
+"gastei 30 com marmita"
+→ tipo: "alimentacao"
+→ valor: 30
+→ descricao: "marmita"
+
+"adiciona gasto com tomada 15 reais"
+→ tipo: "materiais"
+→ valor: 15
+→ descricao: "tomada"
+
+Não invente detalhes.
+
+3. VALOR
+------------------------------------------------------------
+
+- Retorne somente número.
+- Use ponto como separador decimal.
+- Não inclua "R$".
+- Não faça cálculos.
+- Não invente o valor.
+- Se o valor não puder ser identificado, use 0,
+
+Texto do usuário:
+"""${userMessage}"""
 `;
-            break;
-        }
+    break;
+}
 
-        case 'despesas_edit': {
-            if (!id) return { error: "⚠️ Informe o ID da despesa." };
+case 'despesas_edit': {
+    if (!id) return { error: "⚠️ Informe o ID da despesa." };
 
-            const { data: currentData } = await supabase
-                .from('despesas')
-                .select('*')
-                .eq('despesa_numero', id)
-                .single();
+    const { data: currentData, error: fetchError } = await supabase
+        .from('despesas')
+        .select('*')
+        .eq('despesa_numero', id)
+        .single();
 
-            if (!currentData)
-                return { error: `⚠️ Despesa ID ${id} não encontrada.` };
+    if (fetchError || !currentData) {
+        return { error: `⚠️ Despesa ID ${id} não encontrada.` };
+    }
 
-            prompt = `
-Você é um assistente financeiro que edita despesas.
-Responda com JSON válido.
+    prompt = `
+Você é um assistente financeiro que edita uma despesa existente.
 
-Despesa atual:
+Responda SOMENTE com JSON válido.
+Não escreva explicações.
+Não use markdown.
+
+FORMATO OBRIGATÓRIO:
+
+{
+  "modulo": "despesas",
+  "action": "edit",
+  "despesa_numero": "${id}",
+  "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
+  "valor": número,
+  "descricao": "string"
+}
+
+============================================================
+DESPESA ATUAL
+============================================================
+
 ${JSON.stringify(currentData, null, 2)}
 
-Instruções do usuário:
+============================================================
+INSTRUÇÕES DO USUÁRIO
+============================================================
+
 "${userMessage}"
 
-Regras:
-- Atualize apenas campos mencionados.
-- tipo deve ser: "conducao", "materiais", "outras".
+============================================================
+REGRAS
+============================================================
+
+1. Mantenha os dados atuais.
+
+2. Altere SOMENTE o que o usuário solicitar.
+
+3. Se o usuário alterar a descrição e ficar evidente que a
+categoria também deve mudar, atualize o "tipo".
+
+Exemplo:
+
+"Altera para gasolina"
+→ descricao = "gasolina"
+→ tipo = "conducao"
+
+"Altera para marmita"
+→ descricao = "marmita"
+→ tipo = "alimentacao"
+
+"Altera para tomada"
+→ descricao = "tomada"
+→ tipo = "materiais"
+
+4. Tipos permitidos:
+
+"conducao"
+"materiais"
+"alimentacao"
+"outras"
+
+5. Não altere "despesa_numero".
+
+6. Não crie novas propriedades.
+
+7. Valores monetários devem ser números usando ponto como decimal.
+
+Retorne a despesa completa após a alteração.
+
 `;
-            break;
-        }
+    break;
+}
 
         case 'despesas_list': {
-            prompt = `
-Você é um assistente financeiro que lista despesas.
+    prompt = `
+Você é um assistente financeiro que interpreta comandos para LISTAR DESPESAS.
+
+O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Retorne apenas JSON válido:
+Sua função é identificar exatamente quais filtros o usuário solicitou.
+
+Responda SOMENTE com JSON válido.
+Não escreva explicações.
+Não use markdown.
+Não coloque texto fora do JSON.
+
+FORMATO OBRIGATÓRIO:
 
 {
   "modulo": "despesas",
   "action": "list",
-  "tipo": "conducao" | "materiais" | "outras" | "todos",
-  "start_date": "ISO GMT-3",
-  "end_date": "ISO GMT-3"
+
+  "filtros": {
+    "por_tipo": false,
+    "por_descricao": false,
+    "por_periodo": false
+  },
+
+  "mostrar_filtros": false,
+
+  "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
+  "descricao": null,
+
+  "periodo_start": null,
+  "periodo_end": null,
+  "periodo_texto": null
 }
 
-Texto: """${userMessage}"""
+============================================================
+1. FILTRO POR TIPO
+============================================================
+
+Marque "por_tipo": true quando o usuário solicitar uma categoria.
+
+Categorias:
+
+"conducao"
+"materiais"
+"alimentacao"
+"outras"
+
+Exemplos:
+
+"Lista minhas despesas de combustível"
+→ por_tipo = true
+→ tipo = "conducao"
+
+"Lista minhas outras despesas"
+→ por_tipo = true
+→ tipo = "outras"
+
+Se o usuário pedir todas as categorias:
+
+"Lista todas minhas despesas"
+→ por_tipo = false
+→ tipo = "todos"
+
+Não invente categoria.
+
+============================================================
+2. FILTRO POR DESCRIÇÃO
+============================================================
+
+Marque "por_descricao": true quando o usuário procurar
+uma despesa específica pelo nome/descrição.
+
+Exemplos:
+
+"Lista minhas despesas com gasolina"
+→ por_descricao = true
+→ descricao = "gasolina"
+
+"Lista meus gastos com tomada"
+→ por_descricao = true
+→ descricao = "tomada"
+
+IMPORTANTE:
+
+Uma palavra pode representar tanto uma categoria quanto
+uma descrição.
+
+Exemplo:
+
+"Lista minhas despesas de material"
+
+→ por_tipo = true
+→ tipo = "materiais"
+→ por_descricao = false
+
+Já:
+
+"Lista minhas despesas com tomada"
+
+→ por_tipo = false
+→ por_descricao = true
+→ descricao = "tomada"
+
+============================================================
+3. FILTRO POR PERÍODO
+============================================================
+
+Marque "por_periodo": true quando o usuário informar
+qualquer período.
+
+Exemplos:
+
+"hoje"
+"ontem"
+"essa semana"
+"semana passada"
+"este mês"
+"mês passado"
+"setembro"
+"em setembro de 2026"
+"últimos 30 dias"
+"últimos 6 meses"
+"de 1 a 15 de setembro"
+"desde o começo do mês"
+
+Quando houver período:
+
+- preencher "periodo_start"
+- preencher "periodo_end"
+- preencher "periodo_texto"
+
+As datas devem ser calculadas considerando GMT-3.
+
+Use ISO 8601.
+
+============================================================
+4. SEM PERÍODO
+============================================================
+
+Se o usuário não informar nenhum período:
+
+- por_periodo = true
+- usar os ÚLTIMOS 30 DIAS
+- periodo_start = data/hora de 30 dias atrás
+- periodo_end = data/hora atual
+- periodo_texto = "últimos 30 dias"
+
+============================================================
+5. TODO O PERÍODO
+============================================================
+
+Se o usuário disser:
+
+"todo o período"
+"desde o começo"
+"desde sempre"
+"sem limite de data"
+"todas as despesas que tenho"
+
+Então:
+
+- por_periodo = false
+- periodo_start = null
+- periodo_end = null
+- periodo_texto = "todo o período"
+
+Não crie datas artificiais.
+
+============================================================
+6. COMBINAÇÃO DE FILTROS
+============================================================
+
+Os filtros podem ser combinados.
+
+Exemplo:
+
+"Lista minhas despesas de gasolina desse mês"
+
+Resultado:
+
+{
+  "filtros": {
+    "por_tipo": true,
+    "por_descricao": true,
+    "por_periodo": true
+  },
+  "mostrar_filtros": false,
+  "tipo": "conducao",
+  "descricao": "gasolina",
+  "periodo_start": "2026-09-01T00:00:00-03:00",
+  "periodo_end": "2026-09-27T23:59:59-03:00",
+  "periodo_texto": "este mês"
+}
+
+Outro exemplo:
+
+"Lista minhas despesas de material da semana"
+
+→ por_tipo = true
+→ tipo = "materiais"
+→ por_descricao = false
+→ por_periodo = true
+
+Outro:
+
+"Lista minhas despesas com tomada em setembro"
+
+→ por_tipo = false
+→ tipo = "todos"
+→ por_descricao = true
+→ descricao = "tomada"
+→ por_periodo = true
+
+============================================================
+7. MOSTRAR FILTROS
+============================================================
+
+Se o usuário pedir:
+
+"mostre os filtros"
+"quais filtros foram usados"
+"me diga os filtros"
+"mostrar filtros"
+
+→ mostrar_filtros = true
+
+Caso contrário:
+
+→ mostrar_filtros = false
+
+============================================================
+8. REGRAS ABSOLUTAS
+============================================================
+
+TODAS as propriedades devem existir sempre.
+
+Nunca omita propriedades.
+
+As flags devem ser sempre booleanos true ou false.
+
+Não invente datas.
+
+Não invente categorias.
+
+Não invente descrições.
+
+O handle será responsável por consultar o banco usando
+somente os filtros marcados como true.
+
+Texto do usuário:
+"""${userMessage}"""
 `;
-            break;
-        }
+
+    break;
+}
 
         case 'despesas_pdf': {
-            prompt = `
+    prompt = `
 Você é um assistente financeiro que gera PDFs de despesas.
+
+O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Retorne JSON válido:
+Retorne SOMENTE JSON válido.
 
 {
   "modulo": "despesas",
   "action": "pdf",
-  "tipo": "conducao" | "materiais" | "outras" | "alimentacao" | "todos",
+  "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
   "start_date": "ISO GMT-3",
   "end_date": "ISO GMT-3"
 }
 
-Texto: """${userMessage}"""
-`;
-            break;
-        }
+REGRAS:
 
+- "conducao" = combustível, gasolina, transporte etc.
+- "materiais" = materiais e ferramentas.
+- "alimentacao" = marmita, almoço, jantar, café etc.
+- "outras" = outras despesas.
+- "todos" = todas as categorias.
+
+Se o usuário não informar categoria:
+→ tipo = "todos"
+
+Se o usuário não informar período:
+→ utilizar os últimos 30 dias.
+
+Todas as datas devem estar em ISO 8601 com GMT-3.
+
+Texto do usuário:
+"""${userMessage}"""
+`;
+
+    break;
+}
         default:
             return { erro: 'Prompt não definido', modulo, action };
     }
