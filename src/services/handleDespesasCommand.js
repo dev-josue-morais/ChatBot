@@ -637,30 +637,6 @@ async function handleDespesasCommand(command, userPhone) {
         ].join('\n');
       }
 
-
-      // ======================================================
-      // 📄 PDF
-      // ======================================================
-
-      case 'pdf': {
-
-        const {
-          tipo,
-          start_date,
-          end_date
-        } = command;
-
-        // Futuramente ligaremos ao gerador de PDF.
-
-        return [
-          "🧾 Gerando PDF de despesas...",
-          `📂 Tipo: ${tipo || 'todos'}`,
-          `📅 Início: ${start_date || '-'}`,
-          `📅 Fim: ${end_date || '-'}`
-        ].join('\n');
-      }
-
-
       // ======================================================
       // ❓ DEFAULT
       // ======================================================
