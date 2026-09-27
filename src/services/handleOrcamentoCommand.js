@@ -3,6 +3,39 @@ const formatOrcamento = require("../utils/formatOrcamento");
 const { sendWhatsAppRaw, sendPDFOrcamento } = require("./whatsappService");
 const { formatPhoneNumber } = require("../utils/utils");
 
+function formatFiltrosOrcamento(command) {
+    const filtros = command.filtros || {};
+    const usados = [];
+
+    if (filtros.por_id === true) {
+        usados.push(`🆔 ID: ${command.id}`);
+    }
+
+    if (filtros.por_nome_cliente === true) {
+        usados.push(`👤 Cliente: ${command.nome_cliente}`);
+    }
+
+    if (filtros.por_telefone_cliente === true) {
+        usados.push(`📞 Telefone: ${command.telefone_cliente}`);
+    }
+
+    if (filtros.por_etapa === true) {
+        usados.push(`📌 Etapa: ${command.etapa}`);
+    }
+
+    if (filtros.por_periodo === true) {
+        usados.push(`📅 Período: ${command.periodo_texto || `${command.periodo_start} até ${command.periodo_end}`}`);
+    } else if (command.periodo_texto === "todo o período") {
+        usados.push(`📅 Período: todo o período (sem limite de data)`);
+    }
+
+    if (usados.length === 0) {
+        return "Nenhum filtro específico.";
+    }
+
+    return usados.join("\n");
+}
+
 async function handleOrcamentoCommand(command, userPhone) {
     try {
 
@@ -169,78 +202,245 @@ const servicos = Array.isArray(command.servicos)
             }
 
 // ------------------- LIST -------------------
-            case 'list': {
- // console.log('🧠 JSON recebido do GPT para lista:', JSON.stringify(command, null, 2));
+case 'list': {
+
+    console.log(
+        '🧠 JSON recebido do GPT para lista:',
+        JSON.stringify(command, null, 2)
+    );
+
+    const filtros = command.filtros || {};
+
     let query = supabase
         .from('orcamentos')
         .select('*')
         .eq('user_telefone', userPhone);
 
-    if (command.id) {
-        query = query.eq('orcamento_numero', command.id);
-    } else {
-        const etapa = (command.etapa || 'negociacao').trim().toLowerCase();
-        if (etapa !== 'todos') {
-            query = query.eq('etapa', etapa);
+    // ==================================================
+    // FILTRO POR ID
+    // ==================================================
+    if (filtros.por_id === true) {
+
+        if (!command.id) {
+            return '⚠️ O filtro por ID foi identificado, mas nenhum ID foi informado.';
         }
+
+        query = query.eq(
+            'orcamento_numero',
+            command.id
+        );
     }
-    if (command.telefone_cliente) {
-        query = query.eq('telefone_cliente', command.telefone_cliente);
+
+    // ==================================================
+    // FILTRO POR NOME DO CLIENTE
+    // ==================================================
+    if (filtros.por_nome_cliente === true) {
+
+        if (!command.nome_cliente) {
+            return '⚠️ O filtro por cliente foi identificado, mas nenhum nome foi informado.';
+        }
+
+        const nome = String(command.nome_cliente).trim();
+
+        query = query.ilike(
+            'nome_cliente',
+            `%${nome}%`
+        );
     }
-    if (command.nome_cliente) {
-        const nome = command.nome_cliente.trim();
-        query = query.ilike('nome_cliente', `%${nome}%`);
+
+    // ==================================================
+    // FILTRO POR TELEFONE
+    // ==================================================
+    if (filtros.por_telefone_cliente === true) {
+
+        if (!command.telefone_cliente) {
+            return '⚠️ O filtro por telefone foi identificado, mas nenhum telefone foi informado.';
+        }
+
+        const telefone = formatPhoneNumber(
+            command.telefone_cliente
+        );
+
+        query = query.eq(
+            'telefone_cliente',
+            telefone
+        );
     }
-    if (command.periodo_start && command.periodo_end) {
 
-    // Monta datas completas com fuso GMT-3
-    const startLocal = `${command.periodo_start}T00:00:00-03:00`;
-    const endLocal   = `${command.periodo_end}T23:59:59-03:00`;
+    // ==================================================
+    // FILTRO POR ETAPA
+    // ==================================================
+    if (filtros.por_etapa === true) {
 
-    // Converte para ISO UTC corretamente
-    const startIso = new Date(startLocal).toISOString();
-    const endIso   = new Date(endLocal).toISOString();
+        if (!command.etapa) {
+            return '⚠️ O filtro por etapa foi identificado, mas nenhuma etapa foi informada.';
+        }
 
-    const campoData =
-        command.etapa === "finalizado"
-            ? "finalizado_em"
-            : "criado_em";
+        const etapa = String(command.etapa)
+            .trim()
+            .toLowerCase();
 
-    query = query
-        .gte(campoData, startIso)
-        .lte(campoData, endIso);
-}
-    query = query.order('criado_em', { ascending: false });
+        const etapasValidas = [
+            'negociacao',
+            'andamento',
+            'aprovado',
+            'perdido',
+            'finalizado'
+        ];
 
-    function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        if (!etapasValidas.includes(etapa)) {
+            return `⚠️ Etapa inválida: ${etapa}`;
+        }
+
+        query = query.eq(
+            'etapa',
+            etapa
+        );
     }
-    const { data: orcamentos, error } = await query;
 
+    // ==================================================
+    // FILTRO POR PERÍODO
+    // ==================================================
+    if (filtros.por_periodo === true) {
+
+        if (
+            !command.periodo_start ||
+            !command.periodo_end
+        ) {
+            return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
+        }
+
+        // Data inicial no horário de Brasília
+        const startLocal =
+            `${command.periodo_start}T00:00:00-03:00`;
+
+        // Data final no horário de Brasília
+        const endLocal =
+            `${command.periodo_end}T23:59:59-03:00`;
+
+        // Converte corretamente para UTC
+        const startIso =
+            new Date(startLocal).toISOString();
+
+        const endIso =
+            new Date(endLocal).toISOString();
+
+        /*
+         * Quando o usuário está filtrando por
+         * "finalizado", usamos finalizado_em.
+         *
+         * Nos demais casos usamos criado_em.
+         */
+        const etapaFinalizado =
+            filtros.por_etapa === true &&
+            String(command.etapa || '')
+                .trim()
+                .toLowerCase() === 'finalizado';
+
+        const campoData =
+            etapaFinalizado
+                ? 'finalizado_em'
+                : 'criado_em';
+
+        query = query
+            .gte(campoData, startIso)
+            .lte(campoData, endIso);
+    }
+
+    // ==================================================
+    // ORDENAÇÃO
+    // ==================================================
+    query = query.order(
+        'criado_em',
+        { ascending: false }
+    );
+
+    const {
+        data: orcamentos,
+        error
+    } = await query;
+
+    // ==================================================
+    // ERRO SUPABASE
+    // ==================================================
     if (error) {
-        console.error("Erro ao listar orcamentos:", error);
+
+        console.error(
+            "Erro ao listar orcamentos:",
+            error
+        );
+
         return "⚠️ Não foi possível listar os orçamentos.";
     }
 
+    // ==================================================
+    // NENHUM RESULTADO
+    // ==================================================
     if (!orcamentos || orcamentos.length === 0) {
+
+        if (command.mostrar_filtros === true) {
+
+            return `📄 Nenhum orçamento encontrado.
+
+🔎 Filtros utilizados:
+${formatFiltrosOrcamento(command)}`;
+        }
+
         return "📄 Nenhum orçamento encontrado.";
     }
+
+    // ==================================================
+    // ENVIA OS ORÇAMENTOS
+    // ==================================================
+    function wait(ms) {
+        return new Promise(resolve =>
+            setTimeout(resolve, ms)
+        );
+    }
+
     for (let i = 0; i < orcamentos.length; i++) {
+
         const o = orcamentos[i];
 
         await sendWhatsAppRaw({
             messaging_product: "whatsapp",
             to: userPhone,
             type: "text",
-            text: { body: formatOrcamento(o) },
+            text: {
+                body: formatOrcamento(o)
+            },
         });
 
         if (i < orcamentos.length - 1) {
-            const delay = 1200 + Math.floor(Math.random() * 900);
+
+            const delay =
+                1200 +
+                Math.floor(Math.random() * 900);
+
             await wait(delay);
         }
     }
-    return `✅ ${orcamentos.length} orçamento(s) enviado(s).\n📅 Período: ${command.periodo_texto}`;
+
+    // ==================================================
+    // RESPOSTA FINAL
+    // ==================================================
+    let resposta =
+        `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
+
+    if (command.periodo_texto) {
+
+        resposta +=
+            `\n📅 Período: ${command.periodo_texto}`;
+    }
+
+    if (command.mostrar_filtros === true) {
+
+        resposta +=
+            `\n\n🔎 Filtros utilizados:\n` +
+            formatFiltrosOrcamento(command);
+    }
+
+    return resposta;
 }
 
 // ------------------- PDF -------------------
