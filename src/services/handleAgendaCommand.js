@@ -1,53 +1,32 @@
 const supabase = require('./supabase');
 const { DateTime } = require('luxon');
 const { formatLocal } = require('../utils/utils');
-
-// 🔹 Função auxiliar para limpar eventos antigos
-async function deleteOldEvents(userPhone) {
-  try {
-    const twoDaysAgo = DateTime.now()
-      .setZone('America/Sao_Paulo')
-      .minus({ days: 2 })
-      .startOf('day')
-      .toISO({ includeOffset: false });
-
-    const { error } = await supabase
-      .from('events')
-      .delete()
-      .lt('date', twoDaysAgo);
-
-    if (error) {
-      console.error('❌ Erro ao deletar eventos antigos:', error);
-    }
-  } catch (err) {
-    console.error('❌ Erro interno ao deletar eventos antigos:', err);
-  }
-}
+const { deleteOldEvents } = require('../utils/handlersFunctions');
 
 async function handleAgendaCommand(command, userPhone) {
-  try {
-    let date = null;
+    try {
+        let date = null;
 
-    if (command.datetime) {
-      date = DateTime
-        .fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
-        .toUTC()
-        .toISO();
-    }
+        if (command.datetime) {
+            date = DateTime
+                .fromISO(command.datetime, { zone: 'America/Sao_Paulo' })
+                .toUTC()
+                .toISO();
+        }
 
-    if (command.start_date) {
-      command.start_date = DateTime
-        .fromISO(command.start_date, { zone: 'America/Sao_Paulo' })
-        .toISO({ includeOffset: false });
-    }
+        if (command.start_date) {
+            command.start_date = DateTime
+                .fromISO(command.start_date, { zone: 'America/Sao_Paulo' })
+                .toISO({ includeOffset: false });
+        }
 
-    if (command.end_date) {
-      command.end_date = DateTime
-        .fromISO(command.end_date, { zone: 'America/Sao_Paulo' })
-        .toISO({ includeOffset: false });
-    }
+        if (command.end_date) {
+            command.end_date = DateTime
+                .fromISO(command.end_date, { zone: 'America/Sao_Paulo' })
+                .toISO({ includeOffset: false });
+        }
 
-    switch (command.action) {
+        switch (command.action) {
 
       // 🔹 Criar evento
       case 'create': {
