@@ -21,133 +21,64 @@ function getContextWords(text) {
 async function processCommand(userMessage, userPhone) {
   try {
 
-    // ======================================================
     // 1️⃣ CLASSIFICAÇÃO RÁPIDA
-    // ======================================================
 
     const contextWords = getContextWords(userMessage);
 
     const classificationPrompt = `
-      Analise a mensagem e responda APENAS com JSON VÁLIDO,
-      sem texto fora do JSON.
+Analise a mensagem e responda apenas com JSON válido, sem texto fora do JSON.
 
-      FORMATO OBRIGATÓRIO:
+{
+  "modulo": "orcamento" | "agenda" | "despesas" | "outro",
+  "action": "create" | "edit" | "delete" | "list" | "pdf",
+  "id": número | null
+}
 
-      {
-        "modulo": "orcamento" | "agenda" | "despesas" | "outro",
-        "action": "create" | "edit" | "delete" | "list" | "pdf",
-        "id": número | null
-      }
+Identifique primeiro o módulo:
 
-      ======================================================
-      REGRAS DE CLASSIFICAÇÃO
-      ======================================================
+- "orcamento": orçamento, proposta, cotação, cliente, materiais, serviços, orçamento em negociação, orçamento finalizado etc.
+- "agenda": atendimento, evento, compromisso, visita, reunião, horário, agendamento etc.
+- "despesas": gasto, despesa, gasolina, combustível, material comprado, alimentação, condução, estacionamento, Uber, pedágio, pagamento de despesa etc.
+- atendimento/evento/agendamento = agenda.
+- Se a mensagem não fizer sentido ou não pertencer a nenhum módulo, use "outro".
 
-      1. IDENTIFIQUE PRIMEIRO O MÓDULO:
+Identifique a ação:
 
-      - "orcamento":
-        orçamento, proposta, cotação, cliente, materiais,
-        serviços, orçamento em negociação,
-        orçamento finalizado etc.
+- create = criar, adicionar, cadastrar, marcar, lançar novo.
+- edit = alterar, editar, corrigir, mudar, atualizar.
+- delete = excluir, apagar, remover, cancelar.
+- list = listar, mostrar, consultar, buscar, ver, resumo, relatório, total, quanto gastei etc.
+- pdf = gerar, enviar, imprimir ou criar PDF.
 
-      - "agenda":
-        atendimento, evento, compromisso, visita,
-        reunião, horário, agendamento etc.
+Regras do PDF:
+- PDF é disponível somente para "orcamento".
+- Se o usuário solicitar PDF de orçamento, action = "pdf".
+- Despesas não possuem geração de PDF.
+- Agenda não possui geração de PDF.
+- Se pedir resumo, relatório, total ou quanto gastou em despesas, action = "list".
 
-      - "despesas":
-        gasto, despesa, gasolina, combustível,
-        material comprado, alimentação, condução,
-        estacionamento, Uber, pedágio, pagamento de despesa etc.
+Identificador:
+- Se houver um número que claramente identifica um registro existente, coloque-o em "id".
+- Os identificadores normalmente são números longos, por exemplo: 1060626002.
+- Conforme o módulo:
+  * orçamento → orcamento_numero
+  * agenda → event_numero
+  * despesas → despesa_numero
+- Use sempre "id" para transportar o identificador, independentemente do nome da coluna no banco.
+- Não transforme o número, não remova zeros internos e não faça cálculos.
+- Se não houver identificador de registro, use "id": null.
+- Não confunda telefone, valor, quantidade, data ou horário com identificador.
+- Quando houver mais de um número, analise o contexto para identificar qual é o número do registro.
+- Não invente identificadores.
 
-      - atendimento/evento/agendamento = agenda.
+O campo "id" representa o identificador do registro relacionado ao comando.
+- orçamento → id ou orcamento_numero
+- agenda → event_numero
+- despesas → despesa_numero
 
-      - Se a mensagem não fizer sentido ou não pertencer
-        a nenhum módulo, use "outro".
-
-      ======================================================
-      2. IDENTIFIQUE A AÇÃO
-      ======================================================
-
-      - create = criar, adicionar, cadastrar, marcar, lançar novo.
-      - edit = alterar, editar, corrigir, mudar, atualizar.
-      - delete = excluir, apagar, remover, cancelar.
-      - list = listar, mostrar, consultar, buscar, ver,
-        resumo, relatório, total, quanto gastei etc.
-      - pdf = gerar, enviar, imprimir ou criar PDF.
-
-      IMPORTANTE:
-
-      - PDF é uma ação disponível SOMENTE para o módulo
-        "orcamento".
-
-      - Se o usuário solicitar PDF de orçamento:
-        action = "pdf"
-
-      - Despesas NÃO possuem geração de PDF.
-
-      - Agenda NÃO possui geração de PDF.
-
-      - Se o usuário pedir resumo, relatório, total ou
-        quanto gastou em despesas:
-        action = "list"
-
-      ======================================================
-      3. IDENTIFICADOR
-      ======================================================
-
-      - Se houver um número que claramente identifica
-        um registro existente, coloque esse número no campo "id".
-
-      - Os identificadores normalmente são números longos,
-        por exemplo: 1060626002.
-
-      - O número pode representar registros diferentes
-        conforme o módulo:
-
-        * orçamento → orcamento_numero
-        * agenda → event_numero
-        * despesas → despesa_numero
-
-      - Nesta etapa, use SEMPRE o campo "id" para transportar
-        o identificador, independentemente do nome real da
-        coluna no banco.
-
-      - NÃO transforme o número.
-      - NÃO remova zeros internos.
-      - NÃO faça cálculos.
-
-      - Se não houver identificador de registro:
-        "id": null
-
-      - Não confunda telefone, valor, quantidade, data ou
-        horário com identificador de registro.
-
-      - Quando houver mais de um número na mensagem,
-        analise o contexto para identificar qual é o número
-        do registro.
-
-      ======================================================
-      4. IMPORTANTE
-      ======================================================
-
-      - O campo "id" representa o identificador do registro
-        relacionado ao comando.
-
-      - Para orçamento, dependendo da ação, o processamento
-        posterior poderá utilizar esse mesmo valor como
-        "id" ou "orcamento_numero".
-
-      - Para agenda, o "id" corresponde ao "event_numero".
-
-      - Para despesas, o "id" corresponde ao
-        "despesa_numero".
-
-      - Não invente identificadores.
-
-      Mensagem:
-      "${contextWords}"
-    `;
-
+Mensagem:
+"${contextWords}"
+`;
     const quickResponse =
       await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -225,17 +156,16 @@ async function processCommand(userMessage, userPhone) {
     }
 
 
-    // ======================================================
     // 🧠 GPT COMPLETO
-    // ======================================================
 
     const gptData =
-      await handleGPTCommand(
-        userMessage,
-        modulo,
-        action,
-        id
-      );
+  await handleGPTCommand(
+    userMessage,
+    modulo,
+    action,
+    id,
+    userPhone
+  );
 if (gptData?.error) {
   return gptData.error;
 }
