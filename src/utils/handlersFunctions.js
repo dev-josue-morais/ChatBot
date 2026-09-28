@@ -257,6 +257,26 @@ function normalizeMoney(value) {
 
     return isNaN(parsed) ? 0 : parsed;
 }
+async function deleteOldEvents(supabase, userPhone) {
+    try {
+        const twoDaysAgo = DateTime.now()
+            .setZone('America/Sao_Paulo')
+            .minus({ days: 2 })
+            .startOf('day')
+            .toISO({ includeOffset: false });
+
+        const { error } = await supabase
+            .from('events')
+            .delete()
+            .lt('date', twoDaysAgo);
+
+        if (error) {
+            console.error('❌ Erro ao deletar eventos antigos:', error);
+        }
+    } catch (err) {
+        console.error('❌ Erro interno ao deletar eventos antigos:', err);
+    }
+}
 
 // ======================================================
 // EXPORTS
@@ -274,5 +294,7 @@ module.exports = {
     calcularTotalOrcamento,
     formatRelatorioOrcamentos,
     formatFiltrosOrcamento,
-    normalizeMoney
+    normalizeMoney,
+
+    deleteOldEvents
 };
