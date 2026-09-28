@@ -3,7 +3,7 @@ const openai = require('./openai');
 const supabase = require("./supabase");
 const { DateTime } = require('luxon');
 
-async function handleGPTCommand(rawMessage, modulo, action, id) {
+async function handleGPTCommand(userMessage, modulo, action, id, userPhone) {
     const userMessage = (rawMessage || "").trim();
     let prompt = '';
 
