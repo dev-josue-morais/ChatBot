@@ -58,6 +58,7 @@ Texto: """${userMessage}"""
                 .from('orcamentos')
                 .select('*')
                 .eq('orcamento_numero', id)
+                .eq('user_telefone', userPhone)
                 .single();
 
             if (fetchError || !currentData) {
@@ -418,6 +419,7 @@ Texto:
                 .from('despesas')
                 .select('*')
                 .eq('despesa_numero', id)
+                .eq('user_telefone', userPhone)
                 .single();
 
             if (fetchError || !currentData) {
