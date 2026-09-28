@@ -551,28 +551,30 @@ Texto: """${userMessage}"""
     break;
 }
 
-        // ============================================================
-        // ✏️ AGENDA - EDIT  (NOW atualizado)
-        // ============================================================
-        case 'agenda_edit': {
-// console.log('hoje enviado ao gpt:', nowWithWeekday());
-            if (!id)
-                return { error: "⚠️ É necessário informar o ID do evento para editar." };
+      // ============================================================
+// ✏️ AGENDA - EDIT
+// ============================================================
+case 'agenda_edit': {
 
-            const { data: currentData, error: fetchError } = await supabase
-                .from('events')
-                .select('*')
-                .eq('event_numero', id)
-                .single();
+    if (!id)
+        return { error: "⚠️ É necessário informar o ID do evento para editar." };
 
-            if (fetchError || !currentData)
-                return { error: `⚠️ Não encontrei o evento ID ${id}.` };
+    const { data: currentData, error: fetchError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('event_numero', id)
+        .eq('user_telefone', userPhone)
+        .single();
 
-            const dateBRT = DateTime.fromISO(currentData.date, { zone: 'utc' })
-                .setZone('America/Sao_Paulo')
-                .toISO();
+    if (fetchError || !currentData)
+        return { error: `⚠️ Não encontrei o evento ID ${id}.` };
 
-            prompt = `
+    const dateBRT = DateTime
+        .fromISO(currentData.date, { zone: 'utc' })
+        .setZone('America/Sao_Paulo')
+        .toISO();
+
+    prompt = `
 Você é um assistente que edita eventos de uma agenda.
 ${nowWithWeekday()}
 
@@ -581,28 +583,39 @@ Retorne apenas JSON válido.
 {
   "modulo": "agenda",
   "action": "edit",
-  "title": "string", // nome ou local 
+  "title": "string",
   "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número (default 30) // lembrete em minutos.
+  "reminder_minutes": número,
+  "telefone": "string"
 }
 
 Regras obrigatórias:
- Todas as datas em GMT-3 com offset "-03:00".
- Para "daqui X minutos/horas", "amanhã", "mais tarde":
-    • SEMPRE use a hora atual como base da soma.
- Para horário exato ("às 14h" ou "7:40"): Só substitua a hora.
- atualizar a data solicitada conforme semana ou dia.
- Mantenha a estrutura original.
 
+1. Mantenha a estrutura original do evento.
+2. Só altere os campos que o usuário solicitar.
+3. Se o usuário NÃO informar telefone, mantenha o telefone atual exatamente como está.
+4. Se o usuário informar um novo telefone, retorne o telefone informado.
+5. O campo "telefone" deve ser retornado sempre, usando o telefone atual quando não houver alteração.
+6. Todas as datas devem estar em GMT-3 com offset "-03:00".
+7. Para "daqui X minutos/horas", "amanhã", "mais tarde":
+   • SEMPRE use a hora atual como base da soma.
+8. Para horário exato ("às 14h" ou "7:40"):
+   • Só substitua a hora.
+9. Atualize a data solicitada conforme semana ou dia.
+10. reminder_minutes deve permanecer o atual caso o usuário não solicite alteração.
 
 Evento atual:
-${JSON.stringify({ ...currentData, date: dateBRT }, null, 2)}
+${JSON.stringify({
+    ...currentData,
+    date: dateBRT
+}, null, 2)}
 
 Mensagem do usuário:
 "${userMessage}"
 `;
-            break;
-        }
+
+    break;
+}
 
         // ============================================================
         // DESPESAS
