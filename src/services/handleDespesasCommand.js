@@ -1,82 +1,13 @@
-// handleDespesasCommand.js
 const supabase = require('./supabase');
-const { DateTime } = require('luxon');
 
-// ======================================================
-// CONFIGURAÇÕES
-// ======================================================
-
-const TIMEZONE = 'America/Sao_Paulo';
-
-const TIPOS_DESPESA = [
-  'conducao',
-  'materiais',
-  'alimentacao',
-  'outras'
-];
-
-// ======================================================
-// FUNÇÕES AUXILIARES
-// ======================================================
-function emojiTipo(tipo) {
-
-  const emojis = {
-    conducao: '🚗',
-    materiais: '🔨',
-    alimentacao: '🍽️',
-    outras: '📦'
-  };
-
-  return emojis[tipo] || '📂';
-}
-
-
-function formatPeriodoTitulo(periodo) {
-
-  if (!periodo) {
-    return '';
-  }
-
-  const textos = {
-    'este mês': 'Setembro/2026',
-    'mês passado': 'Mês passado',
-    'esta semana': 'Esta semana',
-    'semana passada': 'Semana passada',
-    'hoje': 'Hoje',
-    'ontem': 'Ontem',
-    'últimos 30 dias': 'Últimos 30 dias',
-    'últimos 6 meses': 'Últimos 6 meses',
-    'todo o período': 'Todo o período'
-  };
-
-  return textos[periodo] || periodo;
-}
-function formatCurrency(value) {
-  return Number(value || 0).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  });
-}
-
-function formatDateBR(date) {
-  if (!date) return '';
-
-  return DateTime
-    .fromISO(date, { zone: TIMEZONE })
-    .setZone(TIMEZONE)
-    .toFormat('dd/MM/yyyy HH:mm');
-}
-
-function nomeTipo(tipo) {
-  const nomes = {
-    conducao: 'Condução',
-    materiais: 'Materiais',
-    alimentacao: 'Alimentação',
-    outras: 'Outras'
-  };
-
-  return nomes[tipo] || tipo;
-}
+const {
+    TIMEZONE,
+    TIPOS_DESPESA,
+    emojiTipo,
+    formatPeriodoTitulo,
+    formatDateBR,
+    nomeTipo
+} = require('../utils/handlersFunctions');
 
 // ======================================================
 // 🧾 FUNÇÃO PRINCIPAL
@@ -96,10 +27,8 @@ async function handleDespesasCommand(command, userPhone) {
 
     switch (action) {
 
-      // ======================================================
       // ➕ CREATE
-      // ======================================================
-
+ 
       case 'create': {
 
         const {
@@ -129,12 +58,7 @@ async function handleDespesasCommand(command, userPhone) {
         // ------------------------------
         // INSERT
         // ------------------------------
-        //
-        // NÃO enviamos:
-        // - despesa_numero
-        // - data
-        //
-        // O Supabase/trigger gera esses campos.
+  
 
         const { data, error } = await supabase
           .from('despesas')
