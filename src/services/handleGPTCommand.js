@@ -7,7 +7,6 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
     const userMessage = (rawMessage || "").trim();
     let prompt = '';
 
-    // 🆕 Função NOW com dia da semana
     function nowWithWeekday() {
         const now = getNowBRT();
         const weekday = now.setLocale('pt').toFormat('cccc');
@@ -16,49 +15,44 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
 
     switch (`${modulo}_${action}`) {
 
-        // ============================================================
-        // 🧾 ORÇAMENTO - CREATE
-        // ============================================================
         case 'orcamento_create': {
             prompt = `
-  Você é um assistente comercial. O usuário está criando um novo orçamento.
-  Sempre responda **apenas com JSON válido**, sem texto fora do JSON.
+Você é um assistente comercial. O usuário está criando um novo orçamento.
+Retorne somente JSON válido, sem texto adicional.
 
-  Exemplo:
-  {
-    "modulo": "orcamento",
-    "action": "create",
-    "nome_cliente": "string",
-    "descricoes": ["texto1", "texto2"] | [],
-    "telefone_cliente": "string",
-    "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado", // defalt "negociacao"
-    "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
-    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }] | [],
-    "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }] | [],
-    "desconto_materiais": number | "10%" | null,
-    "desconto_servicos": number | "10%" | null
-  }
+{
+  "modulo": "orcamento",
+  "action": "create",
+  "nome_cliente": "string",
+  "descricoes": ["texto1", "texto2"] | [],
+  "telefone_cliente": "string",
+  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
+  "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
+  "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }] | [],
+  "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }] | [],
+  "desconto_materiais": number | "10%" | null,
+  "desconto_servicos": number | "10%" | null
+}
 
-  Regras
-  - Não inclua expressões matemáticas, apenas números.
-  - Campo "und" pode ser: "und", "m", "cm", "kit", "caixa", etc.
-  - se o valor não for informado use 0.
-  - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
-  - sempre separe os itens (ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
-  - Valores monetários devem ser números usando ponto como decimal (ex: 10.20).
-  - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos" usando valores como "40" ou "4.5%""10%" etc, não modifique valores dos serviços ou materiais.
+Regras:
+- Etapa padrão: "negociacao".
+- Não inclua expressões matemáticas, apenas números.
+- "und" pode ser "und", "m", "cm", "kit", "caixa", etc.
+- Se o valor não for informado, use 0.
+- Utilize os nomes completos dos itens fornecidos no texto.
+- Separe itens diferentes. Ex.: 25m de fio 4mm azul e verde → 25m fio 4mm azul e 25m fio 4mm verde.
+- Valores monetários devem ser números com ponto decimal.
+- Ao adicionar desconto, altere somente "desconto_materiais" e/ou "desconto_servicos". Não altere os valores dos materiais ou serviços.
 
-  Texto: """${userMessage}"""
-  `;
+Texto: """${userMessage}"""
+`;
             break;
         }
 
-        // ============================================================
-        // ✏️ ORÇAMENTO - EDIT
-        // ============================================================
         case 'orcamento_edit': {
-  // console.log(rawMessage, modulo, action, id)
-            if (!id) return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
+            if (!id) {
+                return { error: "⚠️ É necessário informar o ID do orçamento para editar." };
+            }
 
             const { data: currentData, error: fetchError } = await supabase
                 .from('orcamentos')
@@ -66,75 +60,64 @@ async function handleGPTCommand(rawMessage, modulo, action, id) {
                 .eq('orcamento_numero', id)
                 .single();
 
-            if (fetchError || !currentData)
+            if (fetchError || !currentData) {
                 return { error: `⚠️ Não encontrei o orçamento ID ${id}.` };
+            }
 
             prompt = `
-  Você é um assistente comercial que edita JSONs existentes de orçamentos.
-  Responda **somente com JSON válido**, sem texto fora do JSON.
-  Exemplo:
-  {
-    "modulo": "orcamento",
-    "action": "edit",
-    "orcamento_numero": número, // ex = 1051225001
-    "nome_cliente": "string",
-    "descricoes": ["texto1", "texto2"] ou [],
-    "telefone_cliente": "string",
-    "etapa": "negociacao" ou "finalizado" ou "andamento" ou "perdido" ou "aprovado",
-    "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] ou [],
-    "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }],
-    "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }],
-    "desconto_materiais": number | "10%" | null,
-    "desconto_servicos": number | "10%" | null
-  }
+Você é um assistente comercial que edita um orçamento existente.
+Retorne somente JSON válido, sem texto adicional.
 
-  Orçamento atual:
-  ${JSON.stringify(currentData, null, 2)}
+{
+  "modulo": "orcamento",
+  "action": "edit",
+  "orcamento_numero": número,
+  "nome_cliente": "string",
+  "descricoes": ["texto1", "texto2"] | [],
+  "telefone_cliente": "string",
+  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
+  "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
+  "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }],
+  "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }],
+  "desconto_materiais": number | "10%" | null,
+  "desconto_servicos": number | "10%" | null
+}
 
-  Instruções do usuário:
-  "${userMessage}"
+Orçamento atual:
+${JSON.stringify(currentData, null, 2)}
 
-  Regras:
-  - Mantenha toda a estrutura original Atualize apenas o que o usuário pediu.
-  - Campos vazios podem ser null.
-  - caso seja solicitado adicionar desconto modifique apenas: "desconto_materiais", "desconto_servicos" usando valores como "40" ou "4.5%""10%" etc, não modifique valores dos serviços ou materiais.
-  - sempre utilize os nomes dos itens (serviço , materiais) completos fornecidos no texto.
-  - Campo "und" pode ser: "und", "m", "cm", "kit", "caixa", etc.
-  - se o valor não for informado use 0.
-  - Não crie novas colunas.
-  - sempre separe os itens(ex: 25m cada fio 4mm sendo azul e verde = 25m fio 4mm azul, 25m fio 4mm verde)
-  - Valores monetários devem ser números usando ponto como decimal (ex: 10.20).
+Instruções do usuário:
+"${userMessage}"
 
-  Retorne o orçamento atualizado.
-  `;
+Regras:
+- Mantenha toda a estrutura original e altere somente o que o usuário pedir.
+- Campos vazios podem ser null.
+- Ao adicionar desconto, altere somente "desconto_materiais" e/ou "desconto_servicos". Não altere os valores dos materiais ou serviços.
+- Utilize os nomes completos dos itens fornecidos no texto.
+- "und" pode ser "und", "m", "cm", "kit", "caixa", etc.
+- Se o valor não for informado, use 0.
+- Não crie novas propriedades.
+- Separe itens diferentes. Ex.: 25m de fio 4mm azul e verde → 25m fio 4mm azul e 25m fio 4mm verde.
+- Valores monetários devem ser números com ponto decimal.
+
+Retorne o orçamento completo atualizado.
+`;
             break;
         }
-// ============================================================
-// 📋 ORÇAMENTO - LIST
-// ============================================================
-case 'orcamento_list': {
 
-    prompt = `
-Você interpreta comandos para CONSULTAR ORÇAMENTOS.
+        case 'orcamento_list': {
+            prompt = `
+Você interpreta comandos para consultar orçamentos.
 
-Fuso horário: GMT-3 (Brasil).
+Fuso horário: GMT-3.
 ${nowWithWeekday()}
 
-Responda SOMENTE com JSON válido.
-Não escreva explicações.
-Não use markdown.
-Não escreva nada fora do JSON.
-
-============================================================
-FORMATO
-============================================================
+Retorne somente JSON válido.
 
 {
   "modulo": "orcamento",
   "action": "list",
-
   "resumo": false,
-
   "filtros": {
     "por_id": false,
     "por_nome_cliente": false,
@@ -142,31 +125,20 @@ FORMATO
     "por_etapa": false,
     "por_periodo": false
   },
-
   "mostrar_filtros": false,
-
   "id": null,
   "nome_cliente": null,
   "telefone_cliente": null,
-
   "etapa": "negociacao",
-
   "periodo_start": null,
   "periodo_end": null,
   "periodo_texto": null
 }
 
-============================================================
-1. LISTA OU RELATÓRIO
-============================================================
+RESUMO:
+Use "resumo": true somente para RESUMO ou RELATÓRIO consolidado.
 
-Esta é a regra MAIS IMPORTANTE.
-
-"resumo": true SOMENTE quando o usuário pedir
-explicitamente um RESUMO ou RELATÓRIO consolidado.
-
-Ative resumo=true para expressões como:
-
+Ative para:
 - relatório
 - resumo
 - panorama
@@ -178,339 +150,127 @@ Ative resumo=true para expressões como:
 - valor total dos orçamentos
 - situação geral dos orçamentos
 
-Caso contrário:
-
-"resumo": false
-
-IMPORTANTE:
-
-As palavras abaixo NÃO significam relatório:
-
-- lista
-- listar
-- mostrar
-- mostra
-- consultar
-- consultar meus orçamentos
-- ver meus orçamentos
+"lista", "listar", "mostrar", "mostra", "consultar" e "ver meus orçamentos" significam "resumo": false, mesmo com filtros.
 
 Exemplos:
+"Lista meus orçamentos" → resumo=false
+"Lista meus orçamentos aprovados" → resumo=false
+"Lista meus orçamentos de João todo o período" → resumo=false
+"lista relatório dos meus orçamentos" → resumo=true
+"lista resumo dos meus orçamentos aprovados" → resumo=true
+"lista resumo dos orçamentos de João em andamento" → resumo=true
 
-"Lista meus orçamentos"
-→ resumo=false
+Nunca transforme uma LISTA em resumo=true apenas por possuir filtros.
 
-"Lista meus orçamentos aprovados"
-→ resumo=false
+FILTRO POR ID:
+Use "por_id": true somente quando o usuário informar claramente o ID do orçamento.
+Ex.: "Lista o orçamento 1060926001" → por_id=true, id="1060926001".
+Caso contrário: por_id=false, id=null.
 
-"Lista meus orçamentos em andamento"
-→ resumo=false
+FILTRO POR CLIENTE:
+Se informar o nome do cliente, use por_nome_cliente=true e coloque somente o nome em "nome_cliente".
+Caso contrário: por_nome_cliente=false, nome_cliente=null.
 
-"Lista meus orçamentos de João todo o período"
-→ resumo=false
+FILTRO POR TELEFONE:
+Use por_telefone_cliente=true somente quando o usuário informar claramente um telefone de cliente.
+Nunca confunda telefone com ID.
 
-"lista Relatório dos meus orçamentos"
-→ resumo=true
-
-"lista Resumo dos meus orçamentos"
-→ resumo=true
-
-"lista Relatório dos meus orçamentos aprovados"
-→ resumo=true
-
-"lista resumo dos orçamentos de João em andamento"
-→ resumo=true
-
-NUNCA transforme uma solicitação de LISTA em resumo=true
-somente porque existem filtros de etapa, cliente ou período.
-
-============================================================
-2. FILTRO POR ID
-============================================================
-
-Use:
-
-"por_id": true
-
-SOMENTE quando o usuário informar claramente o número/ID
-de um orçamento.
-
-Exemplo:
-
-"Lista o orçamento 1060926001"
-
-→ por_id=true
-→ id="1060926001"
-
-Caso contrário:
-
-→ por_id=false
-→ id=null
-
-============================================================
-3. FILTRO POR CLIENTE
-============================================================
-
-Se o usuário informar o nome do cliente:
-
-"orçamentos do João"
-"orçamentos de Maria"
-
-Use:
-
-"por_nome_cliente": true
-
-e coloque somente o nome informado em:
-
-"nome_cliente"
-
-Caso contrário:
-
-por_nome_cliente=false
-nome_cliente=null
-
-============================================================
-4. FILTRO POR TELEFONE
-============================================================
-
-Use por_telefone_cliente=true SOMENTE quando o usuário
-informar claramente um telefone de cliente.
-
-Não confunda telefone com ID de orçamento.
-
-============================================================
-5. FILTRO POR ETAPA / STATUS
-============================================================
-
-Use por_etapa=true SOMENTE quando o usuário informar
-explicitamente uma etapa ou status.
+FILTRO POR ETAPA:
+Use por_etapa=true somente quando informar explicitamente uma etapa/status.
 
 Valores:
-
-negociacao
-andamento
-aprovado
-perdido
-finalizado
-
-Conversões:
-
-negociação → negociacao
-em negociação → negociacao
-
-andamento → andamento
-em andamento → andamento
-
-aprovado → aprovado
-aprovados → aprovado
-
-perdido → perdido
-perdidos → perdido
-
-recusado → perdido
-recusados → perdido
-
-finalizado → finalizado
-finalizados → finalizado
+- negociação / em negociação → negociacao
+- andamento / em andamento → andamento
+- aprovado / aprovados → aprovado
+- perdido / perdidos / recusado / recusados → perdido
+- finalizado / finalizados → finalizado
 
 Exemplos:
+"Lista meus orçamentos aprovados" →
+resumo=false, por_etapa=true, etapa="aprovado"
 
-"Lista meus orçamentos aprovados"
+"Lista meus orçamentos em negociação" →
+resumo=false, por_etapa=true, etapa="negociacao"
 
-→ resumo=false
-→ por_etapa=true
-→ etapa="aprovado"
-
-"Lista meus orçamentos em negociação"
-
-→ resumo=false
-→ por_etapa=true
-→ etapa="negociacao"
-
-"lista meu relatório dos orçamentos aprovados"
-
-→ resumo=true
-→ por_etapa=true
-→ etapa="aprovado"
+"lista relatório dos orçamentos aprovados" →
+resumo=true, por_etapa=true, etapa="aprovado"
 
 Se nenhuma etapa for informada:
+por_etapa=false, etapa="negociacao".
+Quando por_etapa=false, "etapa" não deve ser usada como filtro.
 
-→ por_etapa=false
-→ etapa="negociacao"
+FILTRO POR PERÍODO:
+Se o usuário informar um período, use por_periodo=true e preencha:
+periodo_start, periodo_end e periodo_texto.
 
-Quando por_etapa=false, o valor de etapa NÃO deve ser
-usado como filtro.
+Exemplos: "este mês", "últimos 30 dias", "últimos 6 meses", "este ano", "em 2025", "de março até junho".
 
-============================================================
-6. FILTRO POR PERÍODO
-============================================================
+TODO O PERÍODO:
+"todo o período", "período completo", "período inteiro", "desde o começo", "desde sempre" ou "todos os orçamentos" →
+por_periodo=false,
+periodo_start=null,
+periodo_end=null,
+periodo_texto="todo o período".
 
-Se o usuário informar um período, use:
+Isso não altera "resumo".
 
-por_periodo=true
+Ex.:
+"Lista meus orçamentos aprovados todo o período" →
+resumo=false, por_etapa=true, etapa="aprovado", por_periodo=false.
 
-e preencha:
+"lista relatório dos meus orçamentos aprovados todo o período" →
+resumo=true, por_etapa=true, etapa="aprovado", por_periodo=false.
 
-periodo_start
-periodo_end
-periodo_texto
+PERÍODO PADRÃO:
+Se nenhum período for informado:
+por_periodo=true,
+use os últimos 30 dias,
+preencha periodo_start, periodo_end e periodo_texto="últimos 30 dias".
 
-Exemplos:
+MÚLTIPLOS FILTROS:
+Podem ser combinados.
 
-"este mês"
-"últimos 30 dias"
-"últimos 6 meses"
-"este ano"
-"em 2025"
-"de março até junho"
+"Lista todos os orçamentos de João aprovados dos últimos 6 meses" →
+resumo=false,
+por_nome_cliente=true,
+nome_cliente="João",
+por_etapa=true,
+etapa="aprovado",
+por_periodo=true.
 
-============================================================
-7. TODO O PERÍODO
-============================================================
+"lista relatório dos orçamentos de João aprovados dos últimos 6 meses" →
+resumo=true,
+por_nome_cliente=true,
+nome_cliente="João",
+por_etapa=true,
+etapa="aprovado",
+por_periodo=true.
 
-Se o usuário disser:
+MOSTRAR FILTROS:
+Use "mostrar_filtros": true somente se o usuário pedir explicitamente para mostrar os filtros utilizados. Caso contrário, false.
 
-- todo o período
-- período completo
-- período inteiro
-- desde o começo
-- desde sempre
-- todos os orçamentos
+REGRAS FINAIS:
+- Todas as propriedades devem existir.
+- Use null quando não houver valor.
+- Flags devem ser true ou false.
+- Não invente IDs, nomes, telefones, etapas ou datas.
+- LISTA = resumo=false.
+- RELATÓRIO/RESUMO = resumo=true.
+- Filtros de cliente, etapa e período não transformam uma lista em relatório.
 
-Use:
-
-por_periodo=false
-
-periodo_start=null
-periodo_end=null
-periodo_texto="todo o período"
-
-IMPORTANTE:
-
-"todo o período" NÃO altera o campo resumo.
-
-Exemplo:
-
-"Lista meus orçamentos aprovados todo o período"
-
-→ resumo=false
-→ por_etapa=true
-→ etapa="aprovado"
-→ por_periodo=false
-
-Enquanto:
-
-"lista relatório dos meus orçamentos aprovados todo o período"
-
-→ resumo=true
-→ por_etapa=true
-→ etapa="aprovado"
-→ por_periodo=false
-
-============================================================
-8. PERÍODO PADRÃO
-============================================================
-
-Se o usuário NÃO informar nenhum período:
-
-→ por_periodo=true
-
-Use os últimos 30 dias.
-
-Preencha:
-
-periodo_start
-periodo_end
-periodo_texto="últimos 30 dias"
-
-============================================================
-9. MÚLTIPLOS FILTROS
-============================================================
-
-Os filtros podem ser combinados.
-
-Exemplo:
-
-"Lista todos os orçamentos de João aprovados dos últimos 6 meses"
-
-→ resumo=false
-→ por_nome_cliente=true
-→ nome_cliente="João"
-→ por_etapa=true
-→ etapa="aprovado"
-→ por_periodo=true
-
-Exemplo:
-
-"lista relatório dos orçamentos de João aprovados dos últimos 6 meses"
-
-→ resumo=true
-→ por_nome_cliente=true
-→ nome_cliente="João"
-→ por_etapa=true
-→ etapa="aprovado"
-→ por_periodo=true
-
-============================================================
-10. MOSTRAR FILTROS
-============================================================
-
-Somente use:
-
-"mostrar_filtros": true
-
-se o usuário pedir explicitamente para mostrar os filtros
-utilizados.
-
-Caso contrário:
-
-"mostrar_filtros": false
-
-============================================================
-11. REGRAS FINAIS
-============================================================
-
-Todas as propriedades devem existir.
-
-Use null quando não houver valor.
-
-Flags devem ser true ou false.
-
-Não invente IDs.
-Não invente nomes.
-Não invente telefones.
-Não invente etapas.
-Não invente datas.
-
-REGRA PRINCIPAL:
-
-LISTA = resumo=false
-
-RELATÓRIO/RESUMO = resumo=true
-
-Filtros de cliente, etapa e período NÃO transformam uma
-lista em relatório.
-
-============================================================
-
-Mensagem do usuário:
-
+Mensagem:
 """${userMessage}"""
 `;
+            break;
+        }
 
-    break;
-}
-
-        // ============================================================
-// 📆 AGENDA - CREATE
-// ============================================================
-case 'agenda_create': {
-
-    prompt = `
+        case 'agenda_create': {
+            prompt = `
 Você é um assistente que cria compromissos de agenda.
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Retorne apenas JSON válido.
+Retorne somente JSON válido.
 
 {
   "modulo": "agenda",
@@ -521,64 +281,46 @@ Retorne apenas JSON válido.
   "telefone": "string" ou null
 }
 
-Regras obrigatórias:
-
-1. "title"
-- Deve conter o nome do compromisso, pessoa, serviço ou local informado pelo usuário.
-
-2. "datetime"
-- Deve ser uma data/hora válida em ISO 8601 com fuso GMT-3.
-- Utilize o contexto de data e hora informado acima para interpretar expressões como "amanhã", "sexta", etc.
-
-3. "reminder_minutes"
-- Se o usuário informar um tempo de lembrete, utilize esse valor.
-- Se não informar, use 30.
-
-4. "telefone"
-- É um campo OPCIONAL.
-- Preencha SOMENTE se o usuário informar um número de telefone relacionado ao evento.
-- Se o usuário não informar telefone, retorne obrigatoriamente:
-  "telefone": null
-- Não confunda o telefone do usuário que está utilizando o sistema com o telefone do contato do evento.
-- Não invente ou complete números de telefone.
-- Preserve o número informado pelo usuário.
-- O telefone pode ser informado com ou sem formatação.
-
-5. Não invente informações que não estejam na mensagem do usuário.
+Regras:
+- "title" deve conter o nome do compromisso, pessoa, serviço ou local informado.
+- "datetime" deve ser ISO 8601 com fuso GMT-3. Use o contexto de data/hora para interpretar "amanhã", "sexta", etc.
+- "reminder_minutes": use o informado pelo usuário; se não informar, use 30.
+- "telefone": preencha somente se o usuário informar um telefone relacionado ao evento. Se não informar, use null.
+- Não confunda o telefone do usuário com o telefone do contato do evento.
+- Não invente ou complete números. Preserve o número informado, com ou sem formatação.
+- Não invente informações ausentes da mensagem.
 
 Texto: """${userMessage}"""
 `;
-    break;
-}
+            break;
+        }
 
-      // ============================================================
-// ✏️ AGENDA - EDIT
-// ============================================================
-case 'agenda_edit': {
+        case 'agenda_edit': {
+            if (!id) {
+                return { error: "⚠️ É necessário informar o ID do evento para editar." };
+            }
 
-    if (!id)
-        return { error: "⚠️ É necessário informar o ID do evento para editar." };
+            const { data: currentData, error: fetchError } = await supabase
+                .from('events')
+                .select('*')
+                .eq('event_numero', id)
+                .eq('user_telefone', userPhone)
+                .single();
 
-    const { data: currentData, error: fetchError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('event_numero', id)
-        .eq('user_telefone', userPhone)
-        .single();
+            if (fetchError || !currentData) {
+                return { error: `⚠️ Não encontrei o evento ID ${id}.` };
+            }
 
-    if (fetchError || !currentData)
-        return { error: `⚠️ Não encontrei o evento ID ${id}.` };
+            const dateBRT = DateTime
+                .fromISO(currentData.date, { zone: 'utc' })
+                .setZone('America/Sao_Paulo')
+                .toISO();
 
-    const dateBRT = DateTime
-        .fromISO(currentData.date, { zone: 'utc' })
-        .setZone('America/Sao_Paulo')
-        .toISO();
-
-    prompt = `
+            prompt = `
 Você é um assistente que edita eventos de uma agenda.
 ${nowWithWeekday()}
 
-Retorne apenas JSON válido.
+Retorne somente JSON válido.
 
 {
   "modulo": "agenda",
@@ -589,20 +331,16 @@ Retorne apenas JSON válido.
   "telefone": "string"
 }
 
-Regras obrigatórias:
-
-1. Mantenha a estrutura original do evento.
-2. Só altere os campos que o usuário solicitar.
-3. Se o usuário NÃO informar telefone, mantenha o telefone atual exatamente como está.
-4. Se o usuário informar um novo telefone, retorne o telefone informado.
-5. O campo "telefone" deve ser retornado sempre, usando o telefone atual quando não houver alteração.
-6. Todas as datas devem estar em GMT-3 com offset "-03:00".
-7. Para "daqui X minutos/horas", "amanhã", "mais tarde":
-   • SEMPRE use a hora atual como base da soma.
-8. Para horário exato ("às 14h" ou "7:40"):
-   • Só substitua a hora.
-9. Atualize a data solicitada conforme semana ou dia.
-10. reminder_minutes deve permanecer o atual caso o usuário não solicite alteração.
+Regras:
+- Mantenha a estrutura original e altere somente o que o usuário solicitar.
+- Se o usuário não informar telefone, mantenha o telefone atual.
+- Se informar novo telefone, retorne o telefone informado.
+- "telefone" deve ser retornado sempre, usando o atual quando não houver alteração.
+- Todas as datas devem estar em GMT-3 com offset "-03:00".
+- Para "daqui X minutos/horas", "amanhã" e "mais tarde", sempre use a hora atual como base da soma.
+- Para horário exato ("às 14h", "7:40"), substitua somente a hora.
+- Atualize a data conforme o dia ou semana solicitado.
+- "reminder_minutes" permanece o atual se não houver alteração.
 
 Evento atual:
 ${JSON.stringify({
@@ -610,29 +348,19 @@ ${JSON.stringify({
     date: dateBRT
 }, null, 2)}
 
-Mensagem do usuário:
+Mensagem:
 "${userMessage}"
 `;
+            break;
+        }
 
-    break;
-}
-
-        // ============================================================
-        // DESPESAS
-        // ============================================================
         case 'despesas_create': {
-    prompt = `
+            prompt = `
 Você é um assistente financeiro que registra uma nova despesa.
-
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Responda SOMENTE com JSON válido.
-Não escreva explicações.
-Não use markdown.
-Não coloque texto fora do JSON.
-
-FORMATO OBRIGATÓRIO:
+Retorne somente JSON válido.
 
 {
   "modulo": "despesas",
@@ -642,119 +370,63 @@ FORMATO OBRIGATÓRIO:
   "descricao": "string"
 }
 
-============================================================
-REGRAS
-============================================================
-
-1. TIPO
-------------------------------------------------------------
-
-Classifique automaticamente a despesa:
+Classifique automaticamente:
 
 "conducao":
-- gasolina
-- combustível
-- álcool combustível
-- diesel
-- estacionamento
-- pedágio
-- transporte
-- ônibus
-- Uber
-- manutenção relacionada ao veículo
-- outras despesas claramente relacionadas à condução
+gasolina, combustível, álcool combustível, diesel, estacionamento, pedágio,
+transporte, ônibus, Uber, manutenção relacionada ao veículo e outras despesas
+claramente relacionadas à condução.
 
 "materiais":
-- tomada
-- interruptor
-- fio
-- cabo
-- disjuntor
-- eletroduto
-- eletrocalha
-- condulete
-- lâmpada
-- fita de LED
-- material elétrico
-- ferramentas
-- materiais utilizados na obra
-- qualquer outro material comprado para serviço
+tomada, interruptor, fio, cabo, disjuntor, eletroduto, eletrocalha, condulete,
+lâmpada, fita de LED, material elétrico, ferramentas, materiais utilizados na
+obra e qualquer material comprado para serviço.
 
 "alimentacao":
-- marmita
-- almoço
-- jantar
-- café
-- lanche
-- comida
-- alimentação
-- bebida sem álcool
-- qualquer despesa claramente relacionada à alimentação
+marmita, almoço, jantar, café, lanche, comida, alimentação, bebida sem álcool
+e qualquer despesa claramente relacionada à alimentação.
 
 "outras":
-- despesas que não se enquadrem nas categorias acima.
+despesas que não se enquadrem nas categorias acima.
 
-2. DESCRIÇÃO
-------------------------------------------------------------
-
-A descrição deve registrar exatamente o que foi informado pelo usuário.
+DESCRIÇÃO:
+Registre exatamente o que o usuário informou, sem inventar detalhes.
 
 Exemplos:
+"25 reais gasolina" → tipo="conducao", valor=25, descricao="gasolina"
+"gastei 30 com marmita" → tipo="alimentacao", valor=30, descricao="marmita"
+"adiciona gasto com tomada 15 reais" → tipo="materiais", valor=15, descricao="tomada"
 
-"25 reais gasolina"
-→ tipo: "conducao"
-→ valor: 25
-→ descricao: "gasolina"
-
-"gastei 30 com marmita"
-→ tipo: "alimentacao"
-→ valor: 30
-→ descricao: "marmita"
-
-"adiciona gasto com tomada 15 reais"
-→ tipo: "materiais"
-→ valor: 15
-→ descricao: "tomada"
-
-Não invente detalhes.
-
-3. VALOR
-------------------------------------------------------------
-
-- Retorne somente número.
-- Use ponto como separador decimal.
+VALOR:
+- Retorne somente número, usando ponto como decimal.
 - Não inclua "R$".
-- Não faça cálculos.
-- Não invente o valor.
-- Se o valor não puder ser identificado, use 0,
+- Não faça cálculos nem invente valores.
+- Se o valor não puder ser identificado, use 0.
 
-Texto do usuário:
+Texto:
 """${userMessage}"""
 `;
-    break;
-}
+            break;
+        }
 
-case 'despesas_edit': {
-    if (!id) return { error: "⚠️ Informe o ID da despesa." };
+        case 'despesas_edit': {
+            if (!id) {
+                return { error: "⚠️ Informe o ID da despesa." };
+            }
 
-    const { data: currentData, error: fetchError } = await supabase
-        .from('despesas')
-        .select('*')
-        .eq('despesa_numero', id)
-        .single();
+            const { data: currentData, error: fetchError } = await supabase
+                .from('despesas')
+                .select('*')
+                .eq('despesa_numero', id)
+                .single();
 
-    if (fetchError || !currentData) {
-        return { error: `⚠️ Despesa ID ${id} não encontrada.` };
-    }
+            if (fetchError || !currentData) {
+                return { error: `⚠️ Despesa ID ${id} não encontrada.` };
+            }
 
-    prompt = `
+            prompt = `
 Você é um assistente financeiro que edita uma despesa existente.
-
-Responda SOMENTE com JSON válido.
-Não escreva explicações.
-Não use markdown.
-
-FORMATO OBRIGATÓRIO:
+Retorne somente JSON válido, sem explicações ou markdown.
 
 {
   "modulo": "despesas",
@@ -765,492 +437,229 @@ FORMATO OBRIGATÓRIO:
   "descricao": "string"
 }
 
-============================================================
-DESPESA ATUAL
-============================================================
-
+Despesa atual:
 ${JSON.stringify(currentData, null, 2)}
 
-============================================================
-INSTRUÇÕES DO USUÁRIO
-============================================================
-
+Instruções:
 "${userMessage}"
 
-============================================================
-REGRAS
-============================================================
-
-1. Mantenha os dados atuais.
-
-2. Altere SOMENTE o que o usuário solicitar.
-
-3. Se o usuário alterar a descrição e ficar evidente que a
-categoria também deve mudar, atualize o "tipo".
-
-Exemplo:
-
-"Altera para gasolina"
-→ descricao = "gasolina"
-→ tipo = "conducao"
-
-"Altera para marmita"
-→ descricao = "marmita"
-→ tipo = "alimentacao"
-
-"Altera para tomada"
-→ descricao = "tomada"
-→ tipo = "materiais"
-
-4. Tipos permitidos:
-
-"conducao"
-"materiais"
-"alimentacao"
-"outras"
-
-5. Não altere "despesa_numero".
-
-6. Não crie novas propriedades.
-
-7. Valores monetários devem ser números usando ponto como decimal.
+Regras:
+- Mantenha os dados atuais e altere somente o que o usuário solicitar.
+- Se a descrição mudar e ficar evidente que a categoria também mudou, atualize "tipo".
+- "Altera para gasolina" → descricao="gasolina", tipo="conducao"
+- "Altera para marmita" → descricao="marmita", tipo="alimentacao"
+- "Altera para tomada" → descricao="tomada", tipo="materiais"
+- Tipos permitidos: "conducao", "materiais", "alimentacao", "outras".
+- Não altere "despesa_numero".
+- Não crie novas propriedades.
+- Valores monetários devem ser números usando ponto como decimal.
 
 Retorne a despesa completa após a alteração.
-
 `;
-    break;
-}
+            break;
+        }
 
-case 'despesas_list': {
-    prompt = `
-Você é um assistente financeiro que interpreta comandos para LISTAR DESPESAS ou GERAR RESUMO DE DESPESAS.
-
+        case 'despesas_list': {
+            prompt = `
+Você interpreta comandos para listar despesas ou gerar resumo de despesas.
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
 
-Sua função é identificar exatamente quais filtros o usuário solicitou
-e se ele deseja uma LISTAGEM detalhada ou um RESUMO agrupado.
+Identifique os filtros solicitados e se o usuário deseja LISTAGEM detalhada ou RESUMO agrupado.
 
-Responda SOMENTE com JSON válido.
-Não escreva explicações.
-Não use markdown.
-Não coloque texto fora do JSON.
-
-FORMATO OBRIGATÓRIO:
+Retorne somente JSON válido.
 
 {
   "modulo": "despesas",
   "action": "list",
-
   "resumo": false,
-
   "filtros": {
     "por_tipo": false,
     "por_descricao": false,
     "por_periodo": false
   },
-
   "mostrar_filtros": false,
-
   "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
   "descricao": null,
-
   "periodo_start": null,
   "periodo_end": null,
   "periodo_texto": null
 }
 
-============================================================
-1. RESUMO
-============================================================
-
-Marque:
-
-"resumo": true
-
-quando o usuário pedir um RESUMO, TOTAL, SOMATÓRIO ou
-RELATÓRIO resumido das despesas.
+RESUMO:
+Use resumo=true quando o usuário pedir RESUMO, TOTAL, SOMATÓRIO ou RELATÓRIO resumido.
 
 Exemplos:
+"Resumo das minhas despesas do mês" → true
+"Resumo das minhas despesas" → true
+"Quero um resumo dos meus gastos" → true
+"Relatório das minhas despesas do mês" → true
+"Quanto gastei esse mês?" → true
+"Qual o total das minhas despesas?" → true
+"Me mostre o total que gastei com combustível" → true, por_descricao=true, descricao="combustível"
 
-"Resumo das minhas despesas do mês"
-→ resumo = true
-
-"Resumo das minhas despesas"
-→ resumo = true
-
-"Quero um resumo dos meus gastos"
-→ resumo = true
-
-"Relatório das minhas despesas do mês"
-→ resumo = true
-
-"Quanto gastei esse mês?"
-→ resumo = true
-
-"Qual o total das minhas despesas?"
-→ resumo = true
-
-"Me mostre o total que gastei com combustível"
-→ resumo = true
-→ por_tipo = true
-→ tipo = "conducao"
-
-"Lista minhas despesas do mês"
-→ resumo = false
-
-"Mostra minhas despesas"
-→ resumo = false
-
-IMPORTANTE:
-
-Se o usuário pedir explicitamente para LISTAR ou MOSTRAR
-as despesas individualmente, use:
-
-"resumo": false
-
-Se pedir resumo, total, somatório, relatório ou quanto gastou,
-use:
-
-"resumo": true
-
-============================================================
-2. FILTRO POR TIPO
-============================================================
-
-Marque "por_tipo": true quando o usuário solicitar
-explicitamente uma CATEGORIA de despesa.
-
-Categorias:
-
-"conducao"
-"materiais"
-"alimentacao"
-"outras"
-
-IMPORTANTE:
-
-A categoria "conducao" representa despesas relacionadas
-a deslocamento/transporte, incluindo:
-
-- combustível
-- gasolina
-- diesel
-- etanol
-- Uber
-- táxi
-- estacionamento
-- pedágio
-- transporte
-
-PORÉM, quando o usuário especificar uma despesa concreta,
-como "combustível", "gasolina", "diesel", "Uber",
-"estacionamento" ou "pedágio", isso deve ser tratado
-como FILTRO POR DESCRIÇÃO, e NÃO como filtro por tipo.
+Se pedir para LISTAR ou MOSTRAR as despesas individualmente:
+resumo=false.
 
 Exemplos:
+"Lista minhas despesas do mês" → false
+"Mostra minhas despesas" → false
 
-"Lista minhas despesas de condução"
-→ por_tipo = true
-→ tipo = "conducao"
-→ por_descricao = false
-→ descricao = null
+FILTRO POR TIPO:
+Use por_tipo=true quando o usuário solicitar explicitamente uma categoria:
+"conducao", "materiais", "alimentacao" ou "outras".
 
-"Resumo das minhas despesas de combustível"
-→ por_tipo = false
-→ tipo = "todos"
-→ por_descricao = true
-→ descricao = "combustível"
+"conducao" inclui deslocamento/transporte, como combustível, gasolina, diesel,
+etanol, Uber, táxi, estacionamento, pedágio e transporte.
 
-"Lista minhas despesas de gasolina"
-→ por_tipo = false
-→ tipo = "todos"
-→ por_descricao = true
-→ descricao = "gasolina"
-
-"Lista minhas despesas de Uber"
-→ por_tipo = false
-→ tipo = "todos"
-→ por_descricao = true
-→ descricao = "Uber"
-
-"Lista minhas despesas de estacionamento"
-→ por_tipo = false
-→ tipo = "todos"
-→ por_descricao = true
-→ descricao = "estacionamento"
-
-"Lista minhas despesas de material"
-→ por_tipo = true
-→ tipo = "materiais"
-→ por_descricao = false
-
-"Lista minhas despesas de alimentação"
-→ por_tipo = true
-→ tipo = "alimentacao"
-→ por_descricao = false
-
-"Lista minhas outras despesas"
-→ por_tipo = true
-→ tipo = "outras"
-→ por_descricao = false
-
-============================================================
-3. FILTRO POR DESCRIÇÃO
-============================================================
-TERMOS QUE DEVEM SER TRATADOS COMO DESCRIÇÃO:
-
-"combustível"
-"gasolina"
-"diesel"
-"etanol"
-"álcool"
-"Uber"
-"taxi"
-"táxi"
-"estacionamento"
-"pedágio"
-"mecânico"
-"oficina"
-
-Esses termos NÃO devem automaticamente definir:
-
-tipo = "conducao"
-
-Eles devem gerar:
-
-por_tipo = false
-tipo = "todos"
-por_descricao = true
-descricao = termo solicitado.
-
-Marque "por_descricao": true quando o usuário procurar
-uma despesa específica pelo nome/descrição.
+Porém, quando o usuário especificar uma despesa concreta, como combustível,
+gasolina, diesel, Uber, estacionamento ou pedágio, trate como FILTRO POR
+DESCRIÇÃO, não como filtro por tipo.
 
 Exemplos:
+"Lista minhas despesas de condução" →
+por_tipo=true, tipo="conducao", por_descricao=false, descricao=null
 
-"Lista minhas despesas com gasolina"
-→ por_descricao = true
-→ descricao = "gasolina"
+"Resumo das minhas despesas de combustível" →
+por_tipo=false, tipo="todos", por_descricao=true, descricao="combustível"
 
-"Resumo das minhas despesas com gasolina"
-→ por_descricao = true
-→ descricao = "gasolina"
+"Lista minhas despesas de gasolina" →
+por_tipo=false, tipo="todos", por_descricao=true, descricao="gasolina"
 
-"Lista meus gastos com tomada"
-→ por_descricao = true
-→ descricao = "tomada"
+"Lista minhas despesas de Uber" →
+por_tipo=false, tipo="todos", por_descricao=true, descricao="Uber"
 
-"Quanto gastei com gasolina?"
-→ resumo = true
-→ por_descricao = true
-→ descricao = "gasolina"
+"Lista minhas despesas de estacionamento" →
+por_tipo=false, tipo="todos", por_descricao=true, descricao="estacionamento"
 
-IMPORTANTE:
+"Lista minhas despesas de material" →
+por_tipo=true, tipo="materiais", por_descricao=false
 
-Uma palavra pode representar tanto uma categoria quanto
-uma descrição.
+"Lista minhas despesas de alimentação" →
+por_tipo=true, tipo="alimentacao", por_descricao=false
 
-Exemplo:
+"Lista minhas outras despesas" →
+por_tipo=true, tipo="outras", por_descricao=false
 
-"Lista minhas despesas de material"
+FILTRO POR DESCRIÇÃO:
+Os termos abaixo devem ser tratados como descrição:
+combustível, gasolina, diesel, etanol, álcool, Uber, taxi, táxi,
+estacionamento, pedágio, mecânico, oficina.
 
-→ por_tipo = true
-→ tipo = "materiais"
-→ por_descricao = false
+Esses termos não devem automaticamente definir tipo="conducao".
 
-Já:
-
-"Lista minhas despesas com tomada"
-
-→ por_tipo = false
-→ tipo = "todos"
-→ por_descricao = true
-→ descricao = "tomada"
-
-============================================================
-4. FILTRO POR PERÍODO
-============================================================
-
-Marque "por_periodo": true quando o usuário informar
-qualquer período.
+Use por_descricao=true quando o usuário procurar uma despesa específica pelo nome.
 
 Exemplos:
+"Lista minhas despesas com gasolina" →
+por_descricao=true, descricao="gasolina"
 
-"hoje"
-"ontem"
-"essa semana"
-"semana passada"
-"este mês"
-"mês passado"
-"setembro"
-"em setembro de 2026"
-"últimos 30 dias"
-"últimos 6 meses"
-"de 1 a 15 de setembro"
-"desde o começo do mês"
+"Resumo das minhas despesas com gasolina" →
+por_descricao=true, descricao="gasolina"
 
-Quando houver período:
+"Lista meus gastos com tomada" →
+por_descricao=true, descricao="tomada"
 
-- preencher "periodo_start"
-- preencher "periodo_end"
-- preencher "periodo_texto"
+"Quanto gastei com gasolina?" →
+resumo=true, por_descricao=true, descricao="gasolina"
 
-As datas devem ser calculadas considerando GMT-3.
+Uma palavra pode representar categoria ou descrição:
+"Lista minhas despesas de material" →
+por_tipo=true, tipo="materiais", por_descricao=false
 
-Use ISO 8601.
+"Lista minhas despesas com tomada" →
+por_tipo=false, tipo="todos", por_descricao=true, descricao="tomada"
 
-============================================================
-5. SEM PERÍODO
-============================================================
+FILTRO POR PERÍODO:
+Use por_periodo=true quando o usuário informar qualquer período.
 
-Se o usuário não informar nenhum período:
+Exemplos:
+hoje, ontem, essa semana, semana passada, este mês, mês passado,
+setembro, em setembro de 2026, últimos 30 dias, últimos 6 meses,
+de 1 a 15 de setembro, desde o começo do mês.
 
-- por_periodo = true
-- usar os ÚLTIMOS 30 DIAS
-- periodo_start = data/hora de 30 dias atrás
-- periodo_end = data/hora atual
-- periodo_texto = "últimos 30 dias"
+Quando houver período, preencha:
+periodo_start, periodo_end e periodo_texto.
 
-============================================================
-6. TODO O PERÍODO
-============================================================
+As datas devem considerar GMT-3 e usar ISO 8601.
 
-Se o usuário disser:
+SEM PERÍODO:
+Se nenhum período for informado:
+por_periodo=true,
+use os últimos 30 dias,
+periodo_start=data/hora de 30 dias atrás,
+periodo_end=data/hora atual,
+periodo_texto="últimos 30 dias".
 
-"todo o período"
-"desde o começo"
-"desde sempre"
-"sem limite de data"
-"todas as despesas que tenho"
-
-Então:
-
-- por_periodo = false
-- periodo_start = null
-- periodo_end = null
-- periodo_texto = "todo o período"
+TODO O PERÍODO:
+"todo o período", "desde o começo", "desde sempre", "sem limite de data"
+ou "todas as despesas que tenho" →
+por_periodo=false,
+periodo_start=null,
+periodo_end=null,
+periodo_texto="todo o período".
 
 Não crie datas artificiais.
 
-============================================================
-7. COMBINAÇÃO DE FILTROS
-============================================================
-
+COMBINAÇÃO:
 Os filtros podem ser combinados.
 
-Exemplo:
+"Resumo das minhas despesas de gasolina desse mês" →
+resumo=true,
+por_tipo=false,
+tipo="todos",
+por_descricao=true,
+descricao="gasolina",
+por_periodo=true.
 
-"Resumo das minhas despesas de gasolina desse mês"
+"Resumo das minhas despesas de material da semana" →
+resumo=true,
+por_tipo=true,
+tipo="materiais",
+por_descricao=false,
+por_periodo=true.
 
-Resultado:
+"Resumo das minhas despesas com tomada em setembro" →
+resumo=true,
+por_tipo=false,
+tipo="todos",
+por_descricao=true,
+descricao="tomada",
+por_periodo=true.
 
-{
-  "modulo": "despesas",
-  "action": "list",
-  "resumo": true,
-  "filtros": {
-    "por_tipo": true,
-    "por_descricao": true,
-    "por_periodo": true
-  },
-  "mostrar_filtros": false,
-  "tipo": "conducao",
-  "descricao": "gasolina",
-  "periodo_start": "2026-09-01T00:00:00-03:00",
-  "periodo_end": "2026-09-27T23:59:59-03:00",
-  "periodo_texto": "este mês"
-}
+MOSTRAR FILTROS:
+Use mostrar_filtros=true somente se o usuário pedir:
+"mostre os filtros", "quais filtros foram usados",
+"me diga os filtros" ou "mostrar filtros".
+Caso contrário, false.
 
-Outro exemplo:
+REGRAS:
+- Todas as propriedades devem existir.
+- Flags devem ser true ou false.
+- Não invente datas, categorias ou descrições.
+- O handle consultará o banco usando somente os filtros marcados como true.
+- Quando resumo=true, o handle calcula os valores agrupados por categoria:
+  Condução, Materiais, Alimentação, Outras e Total.
+- Quando resumo=false, o handle apresenta as despesas individualmente.
 
-"Resumo das minhas despesas de material da semana"
-
-→ resumo = true
-→ por_tipo = true
-→ tipo = "materiais"
-→ por_descricao = false
-→ por_periodo = true
-
-Outro:
-
-"Resumo das minhas despesas com tomada em setembro"
-
-→ resumo = true
-→ por_tipo = false
-→ tipo = "todos"
-→ por_descricao = true
-→ descricao = "tomada"
-→ por_periodo = true
-
-============================================================
-8. MOSTRAR FILTROS
-============================================================
-
-Se o usuário pedir:
-
-"mostre os filtros"
-"quais filtros foram usados"
-"me diga os filtros"
-"mostrar filtros"
-
-→ mostrar_filtros = true
-
-Caso contrário:
-
-→ mostrar_filtros = false
-
-============================================================
-9. REGRAS ABSOLUTAS
-============================================================
-
-TODAS as propriedades devem existir sempre.
-
-Nunca omita propriedades.
-
-As flags devem ser sempre booleanos true ou false.
-
-Não invente datas.
-
-Não invente categorias.
-
-Não invente descrições.
-
-O handle será responsável por consultar o banco usando
-somente os filtros marcados como true.
-
-Quando "resumo" for true, o handle deverá calcular os
-valores agrupados por categoria e apresentar:
-
-🚗 Condução
-🔨 Materiais
-🍽️ Alimentação
-📦 Outras
-💰 Total
-
-Quando "resumo" for false, o handle deverá apresentar
-as despesas individualmente.
-
-Texto do usuário:
+Texto:
 """${userMessage}"""
 `;
-
-    break;
-}
+            break;
+        }
 
         default:
             return { erro: 'Prompt não definido', modulo, action };
     }
 
-        try {
-
+    try {
         const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    response_format: {
-        type: 'json_object'
-    }
-});
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            response_format: {
+                type: 'json_object'
+            }
+        });
 
         let content = completion.choices[0].message.content.trim();
 
@@ -1258,11 +667,9 @@ Texto do usuário:
 
         try {
             const parsedContent = JSON.parse(content);
-
             return parsedContent;
 
         } catch (parseErr) {
-
             console.error('\n======================================================');
             console.error('❌ [GPT] ERRO AO FAZER JSON.parse()');
             console.error('======================================================');
@@ -1291,7 +698,6 @@ Texto do usuário:
         }
 
     } catch (err) {
-
         console.error('\n======================================================');
         console.error('🔥 [GPT] ERRO AO CHAMAR OPENAI');
         console.error('======================================================');
