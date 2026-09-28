@@ -1,43 +1,32 @@
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
 
-const { formatLocal } = require('../utils/utils');
+const formatOrcamento = require('../utils/formatOrcamento');
+const formatCurrency = require('../utils/formatCurrency');
+
 const {
     TIPOS_DESPESA,
     formatDateBR,
     nomeTipo,
-    normalizeMoney
+    normalizeMoney,
+    deleteOldEvents
 } = require('../utils/handlersFunctions');
 
-const formatCurrency = require('../utils/formatCurrency');
-const formatOrcamento = require('../utils/formatOrcamento');
-
-const TIMEZONE = 'America/Sao_Paulo';
-
+const { formatLocal } = require('../utils/utils');
 
 // ======================================================
-// PROMPTS DE EDIT
+// PROMPTS DE EDIÇÃO
 // ======================================================
-
-function nowWithWeekday() {
-    const now = DateTime.now().setZone(TIMEZONE);
-    const weekday = now.setLocale('pt').toFormat('cccc');
-
-    return `Hoje é ${weekday}, ${now.toFormat('yyyy-MM-dd HH:mm:ss')}`;
-}
-
 
 async function getEditPrompt(modulo, userMessage, id, userPhone) {
 
-    let prompt = '';
-
-    switch (`${modulo}_edit`) {
+    switch (modulo) {
 
         // ==================================================
         // ORÇAMENTO
         // ==================================================
 
-        case 'orcamento_edit': {
+        case 'orcamento': {
 
             if (!id) {
                 return {
@@ -45,10 +34,7 @@ async function getEditPrompt(modulo, userMessage, id, userPhone) {
                 };
             }
 
-            const {
-                data: currentData,
-                error: fetchError
-            } = await supabase
+            const { data: currentData, error: fetchError } = await supabase
                 .from('orcamentos')
                 .select('*')
                 .eq('orcamento_numero', id)
@@ -61,7 +47,7 @@ async function getEditPrompt(modulo, userMessage, id, userPhone) {
                 };
             }
 
-            prompt = `
+            return `
 Você é um assistente comercial que edita um orçamento existente.
 Retorne somente JSON válido, sem texto adicional.
 
@@ -94,21 +80,18 @@ Regras:
 - "und" pode ser "und", "m", "cm", "kit", "caixa", etc.
 - Se o valor não for informado, use 0.
 - Não crie novas propriedades.
-- Separe itens diferentes. Ex.: 25m de fio 4mm azul e verde → 25m fio 4mm azul e 25m fio 4mm verde.
+- Separe itens diferentes.
 - Valores monetários devem ser números com ponto decimal.
 
 Retorne o orçamento completo atualizado.
 `;
-
-            break;
         }
-
 
         // ==================================================
         // AGENDA
         // ==================================================
 
-        case 'agenda_edit': {
+        case 'agenda': {
 
             if (!id) {
                 return {
@@ -116,10 +99,7 @@ Retorne o orçamento completo atualizado.
                 };
             }
 
-            const {
-                data: currentData,
-                error: fetchError
-            } = await supabase
+            const { data: currentData, error: fetchError } = await supabase
                 .from('events')
                 .select('*')
                 .eq('event_numero', id)
@@ -134,12 +114,23 @@ Retorne o orçamento completo atualizado.
 
             const dateBRT = DateTime
                 .fromISO(currentData.date, { zone: 'utc' })
-                .setZone(TIMEZONE)
+                .setZone('America/Sao_Paulo')
                 .toISO();
 
-            prompt = `
+            const now = DateTime
+                .now()
+                .setZone('America/Sao_Paulo');
+
+            const weekday = now
+                .setLocale('pt')
+                .toFormat('cccc');
+
+            const nowWithWeekday =
+                `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
+
+            return `
 Você é um assistente que edita eventos de uma agenda.
-${nowWithWeekday()}
+${nowWithWeekday}
 
 Retorne somente JSON válido.
 
@@ -172,16 +163,13 @@ ${JSON.stringify({
 Mensagem:
 "${userMessage}"
 `;
-
-            break;
         }
-
 
         // ==================================================
         // DESPESAS
         // ==================================================
 
-        case 'despesas_edit': {
+        case 'despesas': {
 
             if (!id) {
                 return {
@@ -189,10 +177,7 @@ Mensagem:
                 };
             }
 
-            const {
-                data: currentData,
-                error: fetchError
-            } = await supabase
+            const { data: currentData, error: fetchError } = await supabase
                 .from('despesas')
                 .select('*')
                 .eq('despesa_numero', String(id))
@@ -205,7 +190,7 @@ Mensagem:
                 };
             }
 
-            prompt = `
+            return `
 Você é um assistente financeiro que edita uma despesa existente.
 Retorne somente JSON válido, sem explicações ou markdown.
 
@@ -237,20 +222,13 @@ Regras:
 
 Retorne a despesa completa após a alteração.
 `;
-
-            break;
         }
-
 
         default:
             return {
-                error: `❌ Módulo "${modulo}" não possui edição configurada.`
+                error: `⚠️ Módulo de edição não suportado: ${modulo}`
             };
     }
-
-    return {
-        prompt
-    };
 }
 
 
@@ -260,11 +238,9 @@ Retorne a despesa completa após a alteração.
 
 async function executeEdit(command, userPhone) {
 
-    if (!command || !command.action) {
-        return "⚠️ Comando de edição inválido.";
-    }
+    const { modulo } = command || {};
 
-    switch (command.modulo) {
+    switch (modulo) {
 
         // ==================================================
         // AGENDA
@@ -281,7 +257,7 @@ async function executeEdit(command, userPhone) {
             if (command.datetime) {
                 date = DateTime
                     .fromISO(command.datetime, {
-                        zone: TIMEZONE
+                        zone: 'America/Sao_Paulo'
                     })
                     .toUTC()
                     .toISO();
@@ -305,31 +281,18 @@ async function executeEdit(command, userPhone) {
                 updates.telefone = command.telefone;
             }
 
-            const {
-                data,
-                error
-            } = await supabase
+            const { data, error } = await supabase
                 .from('events')
                 .update(updates)
                 .eq('event_numero', command.id)
                 .eq('user_telefone', userPhone)
-                .select(
-                    'event_numero, title, date, telefone'
-                );
+                .select('event_numero, title, date, telefone');
 
             if (error) {
-                console.error(
-                    '❌ Erro ao atualizar evento:',
-                    error
-                );
-
+                console.error('❌ Erro ao atualizar evento:', error);
                 console.error(
                     '📦 Updates enviados:',
-                    JSON.stringify(
-                        updates,
-                        null,
-                        2
-                    )
+                    JSON.stringify(updates, null, 2)
                 );
 
                 return '⚠️ Erro ao atualizar evento.';
@@ -338,10 +301,6 @@ async function executeEdit(command, userPhone) {
             if (!data?.length) {
                 return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
             }
-
-            const {
-                deleteOldEvents
-            } = require('../utils/handlersFunctions');
 
             await deleteOldEvents(userPhone);
 
@@ -464,91 +423,77 @@ dia ${formatLocal(data[0].date)}${telefone}`;
 
         case 'orcamento': {
 
-            if (!command.id) {
-                return "⚠️ É necessário informar o ID do orçamento para editar.";
+            if (!command.orcamento_numero) {
+                return '⚠️ É necessário informar o ID do orçamento para editar.';
             }
 
-            const {
-                data: current,
-                error: fetchError
-            } = await supabase
-                .from('orcamentos')
-                .select('*')
-                .eq('orcamento_numero', command.id)
-                .eq('user_telefone', userPhone)
-                .single();
+            const descricoes = Array.isArray(command.descricoes)
+                ? command.descricoes
+                    .map(d => String(d).replace(/\n/g, '').trim())
+                    .filter(Boolean)
+                : null;
 
-            if (fetchError || !current) {
-                return `⚠️ Não encontrei o orçamento ID ${command.id}.`;
-            }
+            const materiais = Array.isArray(command.materiais)
+                ? command.materiais.map(m => ({
+                    ...m,
+                    qtd: normalizeMoney(m.qtd),
+                    valor: normalizeMoney(m.valor),
+                    unidade: m.und
+                }))
+                : undefined;
 
-            const updates = {
+            const servicos = Array.isArray(command.servicos)
+                ? command.servicos.map(s => ({
+                    ...s,
+                    quantidade: normalizeMoney(s.qtd),
+                    valor: normalizeMoney(s.valor)
+                }))
+                : undefined;
+
+            const validFields = {
                 nome_cliente: command.nome_cliente,
                 telefone_cliente: command.telefone_cliente,
-                etapa: command.etapa,
-                observacoes: Array.isArray(command.observacoes)
-                    ? command.observacoes
-                    : [],
-                descricoes: Array.isArray(command.descricoes)
-                    ? command.descricoes
-                        .map(d =>
-                            String(d)
-                                .replace(/\n/g, '')
-                                .trim()
-                        )
-                        .filter(Boolean)
-                    : [],
-                materiais: Array.isArray(command.materiais)
-                    ? command.materiais.map(m => ({
-                        ...m,
-                        qtd: normalizeMoney(m.qtd),
-                        valor: normalizeMoney(m.valor),
-                        unidade: m.und
-                    }))
-                    : [],
-                servicos: Array.isArray(command.servicos)
-                    ? command.servicos.map(s => ({
-                        ...s,
-                        quantidade: normalizeMoney(s.qtd),
-                        valor: normalizeMoney(s.valor)
-                    }))
-                    : [],
+                etapa: command.etapa || undefined,
+                observacoes: command.observacoes,
+                materiais,
+                servicos,
+
                 desconto_materiais:
-                    normalizeMoney(
-                        command.desconto_materiais
-                    ),
+                    command.desconto_materiais !== undefined
+                        ? normalizeMoney(command.desconto_materiais)
+                        : undefined,
+
                 desconto_servicos:
-                    normalizeMoney(
-                        command.desconto_servicos
-                    )
+                    command.desconto_servicos !== undefined
+                        ? normalizeMoney(command.desconto_servicos)
+                        : undefined,
+
+                descricoes
             };
 
-            const {
-                data,
-                error
-            } = await supabase
+            const { data, error } = await supabase
                 .from('orcamentos')
-                .update(updates)
-                .eq('orcamento_numero', command.id)
+                .update(validFields)
+                .eq('orcamento_numero', command.orcamento_numero)
                 .eq('user_telefone', userPhone)
-                .select('*')
-                .single();
+                .select();
 
             if (error) {
-                console.error(
-                    'Erro ao atualizar orçamento:',
-                    error
-                );
+                console.error("Erro ao editar orçamento:", error);
 
-                return "⚠️ Não consegui atualizar o orçamento.";
+                return `⚠️ Não consegui editar o orçamento ${command.orcamento_numero}.`;
             }
 
-            return formatOrcamento(data);
+            if (!data || data.length === 0) {
+                return `⚠️ Nenhum orçamento encontrado com o número ${command.orcamento_numero}.`;
+            }
+
+            return `${formatOrcamento(data[0])}`;
         }
 
 
         default:
-            return "⚠️ Módulo não suportado para edição.";
+            return `⚠️ Módulo de edição não suportado: ${modulo}`;
     }
 }
 
