@@ -1,25 +1,11 @@
 const { DateTime } = require('luxon');
 const openai = require('./openai');
 
-// ==========================================
-// 🧠 PROMPTS
-// ==========================================
-
-const { getCreatePrompt } = require('../cases/create');
-const { getEditPrompt } = require('../cases/edit');
-const { getListPrompt } = require('../cases/list');
-const { getPdfPrompt } = require('../cases/pdf');
-
-// ==========================================
-// ⚙️ EXECUÇÃO DOS CASES
-// ==========================================
-
-const { executeCreate } = require('../cases/create');
-const { executeEdit } = require('../cases/edit');
-const { executeList } = require('../cases/list');
+const { getCreatePrompt, executeCreate } = require('../cases/create');
+const { getEditPrompt, executeEdit } = require('../cases/edit');
+const { getListPrompt, executeList } = require('../cases/list');
+const { getPdfPrompt, executePdf } = require('../cases/pdf');
 const { executeDelete } = require('../cases/delete');
-const { executePdf } = require('../cases/pdf');
-
 
 // ======================================================
 // 🧠 LIMITA CONTEXTO DA MENSAGEM
