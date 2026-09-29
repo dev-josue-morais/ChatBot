@@ -1,11 +1,10 @@
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
-
+const { formatCurrency } = require('../utils');
 const {
     getNowBRT,
     formatLocal,
     formatarData,
-    formatCurrency,
     formatPhoneNumber
 } = require('../utils/utils');
 
@@ -359,7 +358,7 @@ dia ${formatLocal(data[0].date)}${telefonetext}`;
                 "✅ Despesa registrada com sucesso!",
                 "",
                 `🆔 ${data.despesa_numero}`,
-                `📅 ${formatDateBR(data.data)}`,
+                `📅 ${formatarData(data.data)}`,
                 `📂 ${nomeTipo(data.tipo)}`,
                 `📘 ${data.descricao}`,
                 `💰 ${formatCurrency(data.valor)}`
