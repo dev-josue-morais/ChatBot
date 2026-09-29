@@ -7,20 +7,6 @@ const { getPdfPrompt, executePdf } = require('../cases/pdf');
 const { executeDelete } = require('../cases/delete');
 const { getContextWords } = require('../utils/processFunctions');
 
-function getContextWords(text) {
-
-  const words = text.trim().split(/\s+/);
-
-  if (words.length <= 30) {
-    return words.join(' ');
-  }
-
-  const first = words.slice(0, 20);
-  const last = words.slice(-10);
-
-  return [...first, ...last].join(' ');
-}
-
 async function processCommand(userMessage, userPhone) {
 
   try {
