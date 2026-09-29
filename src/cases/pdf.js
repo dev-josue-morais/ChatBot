@@ -47,7 +47,10 @@ Texto: """${userMessage}"""
 
 6. Nunca oculte materiais e serviços ao mesmo tempo no mesmo PDF.
 
-7. Se não houver instrução específica, utilize os valores padrão:
+7. Se o usuário pedir para ocultar materiais e serviços ao mesmo tempo,
+   mantenha pelo menos um deles como true.
+
+8. Se não houver instrução específica, utilize os valores padrão:
 
 "listaServicos": true
 "listaMateriais": true
@@ -125,7 +128,7 @@ async function executePdf(command, userPhone) {
         listaMateriais: true,
         ocultarValorServicos: false,
         garantia: true,
-        assinaturaEmpresa: false,
+        assinaturaCliente: false,
         assinaturaEmpresa: false
       }
     };
@@ -170,6 +173,8 @@ async function executePdf(command, userPhone) {
           'Erro ao finalizar orçamento:',
           updateError
         );
+      } else {
+        o.etapa = 'finalizado';
       }
     }
 
