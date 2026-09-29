@@ -1,5 +1,4 @@
 const supabase = require('../services/supabase');
-
 const {
     TIPOS_DESPESA,
     emojiTipo,
@@ -10,21 +9,16 @@ const {
     formatFiltrosOrcamento,
     getDateRange
 } = require('../utils/processFunctions');
-
 const {
     getNowBRT,
     formatLocal,
     formatPhoneNumber
 } = require('../utils/utils');
-
 const formatOrcamento = require('../utils/formatOrcamento');
 const formatCurrency = require('../utils/formatCurrency');
 const {
     sendWhatsAppRaw
 } = require('../services/whatsappService');
-
-
-// PROMPTS DE LISTAGEM
 
 function nowWithWeekday() {
 
@@ -38,13 +32,9 @@ function nowWithWeekday() {
     return `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
 }
 
-
 async function getListPrompt(modulo, userMessage) {
 
     switch (modulo) {
-
-
-        // ORÇAMENTO
 
         case 'orcamento': {
 
@@ -199,44 +189,19 @@ FORMATO DE "periodo_texto":
 
 Exemplos:
 
-"hoje" →
-periodo_texto="hoje"
-
-"ontem" →
-periodo_texto="ontem"
-
-"esta semana" →
-periodo_texto="esta semana"
-
-"semana passada" →
-periodo_texto="semana passada"
-
-"este mês" →
-periodo_texto="este mês"
-
-"mês passado" →
-periodo_texto="mês passado"
-
-"últimos 15 dias" →
-periodo_texto="últimos 15 dias"
-
-"últimos 30 dias" →
-periodo_texto="últimos 30 dias"
-
-"últimos 6 meses" →
-periodo_texto="últimos 6 meses"
-
-"este ano" →
-periodo_texto="este ano"
-
-"em 2025" →
-periodo_texto="ano de 2025"
-
-"de março até junho" →
-periodo_texto="março a junho"
-
-"de 1 a 15 de setembro" →
-periodo_texto="01/09 a 15/09"
+"hoje" → periodo_texto="hoje"
+"ontem" → periodo_texto="ontem"
+"esta semana" → periodo_texto="esta semana"
+"semana passada" → periodo_texto="semana passada"
+"este mês" → periodo_texto="este mês"
+"mês passado" → periodo_texto="mês passado"
+"últimos 15 dias" → periodo_texto="últimos 15 dias"
+"últimos 30 dias" → periodo_texto="últimos 30 dias"
+"últimos 6 meses" → periodo_texto="últimos 6 meses"
+"este ano" → periodo_texto="este ano"
+"em 2025" → periodo_texto="ano de 2025"
+"de março até junho" → periodo_texto="março a junho"
+"de 1 a 15 de setembro" → periodo_texto="01/09 a 15/09"
 
 Não coloque as datas em "periodo_texto".
 
@@ -334,9 +299,6 @@ Mensagem:
 """${userMessage}"""
 `;
         }
-
-
-        // DESPESAS
 
         case 'despesas': {
 
@@ -454,9 +416,6 @@ por_tipo=false, tipo="todos", por_descricao=true, descricao="tomada"
 FILTRO POR PERÍODO:
 O filtro por período é SEMPRE obrigatório.
 
-Sempre use:
-por_periodo=true
-
 Nunca use:
 por_periodo=false
 
@@ -496,41 +455,13 @@ do período utilizado.
 
 Exemplos:
 
-"hoje" →
-periodo_texto="hoje"
-
-"ontem" →
-periodo_texto="ontem"
-
-"essa semana" →
-periodo_texto="esta semana"
-
-"semana passada" →
-periodo_texto="semana passada"
-
-"este mês" →
-periodo_texto="este mês"
-
-"mês passado" →
-periodo_texto="mês passado"
-
-"setembro" →
-periodo_texto="setembro"
-
-"últimos 30 dias" →
-periodo_texto="últimos 30 dias"
-
-"últimos 6 meses" →
-periodo_texto="últimos 6 meses"
-
-"este ano" →
-periodo_texto="este ano"
-
-"em 2025" →
-periodo_texto="ano de 2025"
-
-"de 1 a 15 de setembro" →
-periodo_texto="01/09 a 15/09"
+"hoje" → periodo_texto="hoje"
+"ontem" → periodo_texto="ontem"
+"essa semana" → periodo_texto="esta semana"
+"últimos 30 dias" → periodo_texto="últimos 30 dias"
+"este ano" → periodo_texto="este ano"
+"em 2025" → periodo_texto="ano de 2025"
+"de 1 a 15 de setembro" → periodo_texto="01/09 a 15/09"
 
 Não coloque as datas em "periodo_texto".
 
@@ -634,9 +565,6 @@ Texto:
 `;
         }
 
-
-        // AGENDA
-
         case 'agenda': {
 
             return `
@@ -678,23 +606,16 @@ Texto: """${userMessage}"""
 `;
         }
 
-
         default:
             return null;
     }
 }
-
-// EXECUÇÃO DAS LISTAGENS
-
 
 async function executeList(command, userPhone) {
 
     const { modulo } = command || {};
 
     switch (modulo) {
-
-
-        // AGENDA
 
         case 'agenda': {
 
@@ -829,9 +750,6 @@ Dia ${formatLocal(e.date)}${telefone}`;
 
             return `📅 Eventos encontrados no período ${periodo}:\n${list}`;
         }
-
-
-        // DESPESAS
 
         case 'despesas': {
 
@@ -1071,9 +989,6 @@ Dia ${formatLocal(e.date)}${telefone}`;
                 `💰 Total: ${formatCurrency(total)}`
             ].join('\n');
         }
-
-
-        // ORÇAMENTO
 
         case 'orcamento': {
 
