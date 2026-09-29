@@ -137,6 +137,15 @@ async function handleGPTCommand(
 
 
     // ==================================================
+    // 📦 GARANTE RESPOSTA EM JSON
+    // ==================================================
+
+    prompt = `${prompt}
+
+Retorne a resposta exclusivamente em JSON válido.`;
+
+
+    // ==================================================
     // 🤖 OPENAI
     // ==================================================
 
@@ -302,12 +311,12 @@ async function handleGPTCommand(
 
 
         return {
-    erro: 'Falha ao chamar GPT',
-    detalhe: err?.message || String(err),
-    modulo,
-    action
-};
-}
+            erro: 'Falha ao chamar GPT',
+            detalhe: err?.message || String(err),
+            modulo,
+            action
+        };
+    }
 }
 
 
