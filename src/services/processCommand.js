@@ -7,10 +7,6 @@ const { getListPrompt, executeList } = require('../cases/list');
 const { getPdfPrompt, executePdf } = require('../cases/pdf');
 const { executeDelete } = require('../cases/delete');
 
-// ======================================================
-// 🧠 LIMITA CONTEXTO DA MENSAGEM
-// ======================================================
-
 function getContextWords(text) {
 
   const words = text.trim().split(/\s+/);
@@ -26,20 +22,11 @@ function getContextWords(text) {
 }
 
 
-// ======================================================
-// 🚀 PROCESS COMMAND
-// ======================================================
-
 async function processCommand(userMessage, userPhone) {
 
   try {
 
     userMessage = (userMessage || '').trim();
-
-
-    // ==================================================
-    // 1️⃣ CLASSIFICAÇÃO RÁPIDA
-    // ==================================================
 
     const contextWords =
       getContextWords(userMessage);
@@ -103,7 +90,6 @@ Mensagem:
 "${contextWords}"
 `;
 
-
     const quickResponse =
       await openai.chat.completions.create({
 
@@ -121,19 +107,15 @@ Mensagem:
         }
       });
 
-
     let quickJSON =
       quickResponse.choices[0].message.content;
-
 
     quickJSON =
       quickJSON
         .replace(/```json\s*|```/g, '')
         .trim();
 
-
     let classification;
-
 
     try {
 
@@ -150,17 +132,11 @@ Mensagem:
       return '⚠️ Não consegui identificar o tipo de comando.';
     }
 
-
     const {
       modulo,
       action,
       id
     } = classification;
-
-
-    // ==================================================
-    // ❌ MÓDULO INVÁLIDO
-    // ==================================================
 
     if (
       modulo !== 'agenda' &&
@@ -170,15 +146,6 @@ Mensagem:
 
       return '⚠️ Não entendi se é AGENDA, ORÇAMENTO ou DESPESAS.';
     }
-
-
-    // ==================================================
-    // 🗑️ DELETE
-    // ==================================================
-
-    // Delete não precisa de GPT completo.
-    // A classificação rápida já identificou
-    // módulo, ação e ID.
 
     if (action === 'delete') {
 
@@ -198,18 +165,10 @@ Mensagem:
     }
 
 
-    // ==================================================
-    // 🧠 GPT COMPLETO
-    // ==================================================
-
     let prompt = '';
 
 
     switch (action) {
-
-      // ==================================================
-      // ➕ CREATE
-      // ==================================================
 
       case 'create':
 
@@ -219,11 +178,6 @@ Mensagem:
         );
 
         break;
-
-
-      // ==================================================
-      // ✏️ EDIT
-      // ==================================================
 
       case 'edit': {
 
@@ -253,11 +207,6 @@ Mensagem:
         break;
       }
 
-
-      // ==================================================
-      // 📋 LIST
-      // ==================================================
-
       case 'list':
 
         prompt = await getListPrompt(
@@ -266,11 +215,6 @@ Mensagem:
         );
 
         break;
-
-
-      // ==================================================
-      // 📄 PDF
-      // ==================================================
 
       case 'pdf':
 
@@ -281,20 +225,10 @@ Mensagem:
 
         break;
 
-
-      // ==================================================
-      // ⚠️ AÇÃO DESCONHECIDA
-      // ==================================================
-
       default:
 
         return '⚠️ Ação não reconhecida.';
     }
-
-
-    // ==================================================
-    // ⚠️ PROMPT NÃO GERADO
-    // ==================================================
 
     if (!prompt) {
 
@@ -305,19 +239,9 @@ Mensagem:
       };
     }
 
-
-    // ==================================================
-    // 📦 GARANTE JSON
-    // ==================================================
-
     prompt = `${prompt}
 
 Retorne a resposta exclusivamente em JSON válido.`;
-
-
-    // ==================================================
-    // 🤖 OPENAI
-    // ==================================================
 
     let completion;
 
@@ -352,44 +276,14 @@ Retorne a resposta exclusivamente em JSON válido.`;
         '🔥 [GPT] ERRO AO CHAMAR OPENAI'
       );
 
-      console.error(
-        '======================================================'
-      );
-
-      console.error(
-        '📩 Mensagem original:',
-        userMessage
-      );
-
-      console.error(
-        '📦 Módulo:',
-        modulo
-      );
-
-      console.error(
-        '⚙️ Action:',
-        action
-      );
-
-      console.error(
-        '🆔 ID:',
-        id
-      );
-
-      console.error(
-        '\n💥 Erro:',
-        err
-      );
-
-      console.error(
-        '\n📚 Stack:',
-        err.stack
-      );
-
-      console.error(
-        '======================================================\n'
-      );
-
+      console.error( '======================================================' );
+      console.error( '📩 Mensagem original:', userMessage );
+      console.error( '📦 Módulo:', modulo );
+      console.error( '⚙️ Action:', action );
+      console.error( '🆔 ID:', id );
+      console.error( '\n💥 Erro:', err );
+      console.error( '\n📚 Stack:', err.stack );
+      console.error( '======================================================\n' );
 
       return {
         erro: 'Falha ao chamar GPT',
@@ -399,86 +293,38 @@ Retorne a resposta exclusivamente em JSON válido.`;
       };
     }
 
-
-    // ==================================================
-    // 📦 EXTRAI JSON
-    // ==================================================
-
     let content =
       completion.choices[0].message.content.trim();
-
 
     content =
       content
         .replace(/```json\s*|```/g, '')
         .trim();
 
-
     let gptData;
 
-
     try {
-
       gptData =
         JSON.parse(content);
 
     } catch (parseErr) {
 
-      console.error(
-        '\n======================================================'
-      );
-
+      console.error( '\n======================================================' );
       console.error(
         '❌ [GPT] ERRO AO FAZER JSON.parse()'
-      );
-
-      console.error(
-        '======================================================'
-      );
-
-      console.error(
-        '📩 Mensagem original:'
-      );
-
+      ); console.error( '======================================================' );
+      console.error( '📩 Mensagem original:' );
       console.error(userMessage);
-
-      console.error(
-        '\n📦 Módulo:',
-        modulo
-      );
-
-      console.error(
-        '⚙️ Action:',
-        action
-      );
-
-      console.error(
-        '🆔 ID:',
-        id
-      );
-
-      console.error(
-        '\n📥 JSON QUE O GPT DEVOLVEU:'
-      );
-
+      console.error( '\n📦 Módulo:', modulo );
+      console.error( '⚙️ Action:', action );
+      console.error( '🆔 ID:', id );
+      console.error( '\n📥 JSON QUE O GPT DEVOLVEU:' );
       console.error(content);
-
-      console.error(
-        '\n💥 ERRO DO JSON.parse:'
-      );
-
+      console.error( '\n💥 ERRO DO JSON.parse:' );
       console.error(parseErr.message);
-
-      console.error(
-        '\n📚 STACK DO ERRO:'
-      );
-
+      console.error( '\n📚 STACK DO ERRO:' );
       console.error(parseErr.stack);
-
-      console.error(
-        '======================================================\n'
-      );
-
+      console.error( '======================================================\n' );
 
       return {
         erro: 'JSON inválido retornado pelo GPT',
@@ -486,23 +332,12 @@ Retorne a resposta exclusivamente em JSON válido.`;
       };
     }
 
-
-    // ==================================================
-    // 🔗 GARANTE DADOS DA CLASSIFICAÇÃO
-    // ==================================================
-
     gptData.modulo ??= modulo;
     gptData.action ??= action;
-
 
     if (!gptData.id && id) {
       gptData.id = id;
     }
-
-
-    // ==================================================
-    // 📅 NORMALIZAÇÃO DAS DATAS DA AGENDA
-    // ==================================================
 
     if (gptData.modulo === 'agenda') {
 
@@ -520,7 +355,6 @@ Retorne a resposta exclusivamente em JSON válido.`;
             .toISO();
       }
 
-
       if (gptData.start_date) {
 
         gptData.start_date =
@@ -535,7 +369,6 @@ Retorne a resposta exclusivamente em JSON válido.`;
               includeOffset: false
             });
       }
-
 
       if (gptData.end_date) {
 
@@ -553,17 +386,7 @@ Retorne a resposta exclusivamente em JSON válido.`;
       }
     }
 
-
-    // ==================================================
-    // 🚦 EXECUÇÃO DIRETA DOS CASES
-    // ==================================================
-
     switch (gptData.modulo) {
-
-
-      // ==================================================
-      // 📅 AGENDA
-      // ==================================================
 
       case 'agenda':
 
@@ -576,14 +399,12 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           case 'edit':
 
             return await executeEdit(
               gptData,
               userPhone
             );
-
 
           case 'list':
 
@@ -592,7 +413,6 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           case 'delete':
 
             return await executeDelete(
@@ -600,16 +420,10 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           default:
 
             return '⚠️ Ação de agenda não reconhecida.';
         }
-
-
-      // ==================================================
-      // 💰 ORÇAMENTO
-      // ==================================================
 
       case 'orcamento':
 
@@ -622,14 +436,12 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           case 'edit':
 
             return await executeEdit(
               gptData,
               userPhone
             );
-
 
           case 'list':
 
@@ -638,14 +450,12 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           case 'delete':
 
             return await executeDelete(
               gptData,
               userPhone
             );
-
 
           case 'pdf':
 
@@ -654,16 +464,10 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           default:
 
             return '⚠️ Ação de orçamento não reconhecida.';
         }
-
-
-      // ==================================================
-      // 💸 DESPESAS
-      // ==================================================
 
       case 'despesas':
 
@@ -676,7 +480,6 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           case 'edit':
 
             return await executeEdit(
@@ -684,14 +487,12 @@ Retorne a resposta exclusivamente em JSON válido.`;
               userPhone
             );
 
-
           case 'list':
 
             return await executeList(
               gptData,
               userPhone
             );
-
 
           case 'delete':
 
@@ -706,28 +507,18 @@ Retorne a resposta exclusivamente em JSON válido.`;
             return '⚠️ Ação de despesa não reconhecida.';
         }
 
-
-      // ==================================================
-      // ⚠️ OUTRO
-      // ==================================================
-
       default:
 
         return '⚠️ Não entendi se é AGENDA, ORÇAMENTO ou DESPESAS.';
     }
 
-
   } catch (err) {
 
-    console.error(
-      '💥 Erro em processCommand:',
-      err
-    );
+    console.error( '💥 Erro em processCommand:', err );
 
     return '⚠️ Erro interno ao processar comando.';
   }
 }
-
 
 module.exports = {
   processCommand
