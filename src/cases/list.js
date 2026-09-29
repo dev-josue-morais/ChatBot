@@ -9,7 +9,7 @@ const {
     formatRelatorioOrcamentos,
     formatFiltrosOrcamento,
     getDateRange
-} = require('../utils/handlersFunctions');
+} = require('../utils/processFunctions');
 
 const {
     getNowBRT,
