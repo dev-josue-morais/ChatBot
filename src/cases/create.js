@@ -6,7 +6,8 @@ const {
     getNowBRT,
     formatLocal,
     formatDateBR,
-    formatCurrency
+    formatCurrency,
+    formatPhoneNumber
 } = require('../utils/utils');
 
 const formatOrcamento = require('../utils/formatOrcamento');
@@ -212,29 +213,28 @@ async function executeCreate(command, userPhone) {
                     .filter(Boolean)
                 : [];
 
-            const telefone =
-                formatPhoneNumber(command.telefone_cliente);
+            const telefone_cliente =
+    formatPhoneNumber(command.telefone_cliente);
 
-
-            const { data, error } = await supabase
-                .from('orcamentos')
-                .insert([{
-                    nome_cliente: command.nome_cliente,
-                    telefone_cliente,
-                    etapa: command.etapa || "negociacao",
-                    observacoes,
-                    descricoes,
-                    materiais,
-                    servicos,
-                    desconto_materiais: normalizeMoney(
-                        command.desconto_materiais
-                    ),
-                    desconto_servicos: normalizeMoney(
-                        command.desconto_servicos
-                    ),
-                    user_telefone: userPhone
-                }])
-                .select();
+const { data, error } = await supabase
+    .from('orcamentos')
+    .insert([{
+        nome_cliente: command.nome_cliente,
+        telefone_cliente,
+        etapa: command.etapa || "negociacao",
+        observacoes,
+        descricoes,
+        materiais,
+        servicos,
+        desconto_materiais: normalizeMoney(
+            command.desconto_materiais
+        ),
+        desconto_servicos: normalizeMoney(
+            command.desconto_servicos
+        ),
+        user_telefone: userPhone
+    }])
+    .select();
 
             if (error) {
                 console.error("Erro ao criar orçamento:", error);
@@ -297,13 +297,13 @@ async function executeCreate(command, userPhone) {
 
             await deleteOldEvents(userPhone);
 
-            const telefone = data[0].telefone
+            const telefonetext = data[0].telefone
                 ? `\ntelefone ${data[0].telefone}`
                 : '';
 
             return `✅ Evento criado: ${data[0].title}
 ID ${data[0].event_numero}
-dia ${formatLocal(data[0].date)}${telefone}`;
+dia ${formatLocal(data[0].date)}${telefonetext}`;
         }
 
 
