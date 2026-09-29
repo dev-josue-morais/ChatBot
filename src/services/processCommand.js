@@ -1,6 +1,5 @@
 const { DateTime } = require('luxon');
 const openai = require('./openai');
-
 const { getCreatePrompt, executeCreate } = require('../cases/create');
 const { getEditPrompt, executeEdit } = require('../cases/edit');
 const { getListPrompt, executeList } = require('../cases/list');
@@ -21,7 +20,6 @@ function getContextWords(text) {
   return [...first, ...last].join(' ');
 }
 
-
 async function processCommand(userMessage, userPhone) {
 
   try {
@@ -30,7 +28,6 @@ async function processCommand(userMessage, userPhone) {
 
     const contextWords =
       getContextWords(userMessage);
-
 
     const classificationPrompt = `
 Analise a mensagem e responda apenas com JSON válido, sem texto fora do JSON.
@@ -164,9 +161,7 @@ Mensagem:
       );
     }
 
-
     let prompt = '';
-
 
     switch (action) {
 
@@ -189,10 +184,6 @@ Mensagem:
             userPhone
           );
 
-
-        // getEditPrompt pode retornar
-        // diretamente um objeto de erro.
-
         if (
           result &&
           typeof result === 'object'
@@ -200,7 +191,6 @@ Mensagem:
 
           return result;
         }
-
 
         prompt = result;
 
@@ -245,7 +235,6 @@ Retorne a resposta exclusivamente em JSON válido.`;
 
     let completion;
 
-
     try {
 
       completion =
@@ -265,18 +254,11 @@ Retorne a resposta exclusivamente em JSON válido.`;
           }
         });
 
-
     } catch (err) {
-
+      console.error( '\n======================================================' );
       console.error(
-        '\n======================================================'
-      );
-
-      console.error(
-        '🔥 [GPT] ERRO AO CHAMAR OPENAI'
-      );
-
-      console.error( '======================================================' );
+        '🔥 [GPT] ERRO AO CHAMAR OPENAI' );
+       console.error( '======================================================' );
       console.error( '📩 Mensagem original:', userMessage );
       console.error( '📦 Módulo:', modulo );
       console.error( '⚙️ Action:', action );
