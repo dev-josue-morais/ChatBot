@@ -320,8 +320,8 @@ Use por_periodo=true quando o usuário informar qualquer período.
 
 Exemplos:
 hoje, ontem, essa semana, semana passada, este mês, mês passado,
-setembro, em setembro de 2026, últimos 30 dias, últimos 6 meses,
-de 1 a 15 de setembro, desde o começo do mês.
+setembro, mês de janeiro, últimos 30 dias, últimos 6 meses,
+de 1 a 15 de setembro, desde o começo do mês, etc.
 
 Quando houver período, preencha:
 periodo_start, periodo_end e periodo_texto.
