@@ -19,11 +19,6 @@ async function handleGPTCommand(
 
     let prompt = '';
 
-    function nowWithWeekday() {
-        const now = getNowBRT();
-        const weekday = now.setLocale('pt').toFormat('cccc');
-
-        return `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
     }
 
 
