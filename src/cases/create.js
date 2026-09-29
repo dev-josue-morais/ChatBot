@@ -11,21 +11,12 @@ const {
 
 const formatOrcamento = require('../utils/formatOrcamento');
 
-// Temporariamente vêm dos handlers.
-// Depois vamos mover essas funções para utils.
 const {
-    normalizeMoney
-} = require('../services/handleOrcamentoCommand');
-
-const {
-    deleteOldEvents
-} = require('../services/handleAgendaCommand');
-
-const {
+    normalizeMoney,
+    deleteOldEvents,
     TIPOS_DESPESA,
     nomeTipo
-} = require('../services/handleDespesasCommand');
-
+} = require('../utils/handlersFunctions');
 
 // ======================================================
 // DATA / HORA
