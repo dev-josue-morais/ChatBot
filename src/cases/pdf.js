@@ -45,18 +45,17 @@ Texto do usuário:
    "listaServicos": true
    "listaMateriais": true
 
-5. Para tipo = "Pedido", existe uma regra diferente:
+5. para tipo = "Pedido":
 
-   Se o usuário pedir apenas "pedido", "gere um pedido", "faça o pedido" ou equivalente, SEM mencionar materiais ou serviços:
+   "listaMateriais" DEVE SER SEMPRE true.
 
-   "listaServicos": false
-   "listaMateriais": false
+   Um Pedido sempre deve mostrar a lista de materiais,
+   mesmo que o usuário não mencione materiais no comando.
 
-   Ou seja, no Pedido NÃO mostre automaticamente materiais ou serviços.
+   "listaServicos" deve ser false por padrão.
 
-6. Para tipo = "Pedido", se o usuário mencionar ou solicitar materiais, use:
-
-   "listaMateriais": true
+   Somente coloque "listaServicos": true se o usuário
+   mencionar ou solicitar serviços.
 
 7. Para tipo = "Pedido", se o usuário mencionar ou solicitar serviços, use:
 
@@ -67,15 +66,10 @@ Texto do usuário:
    "listaMateriais": true
    "listaServicos": true
 
-9. Para tipo = "Pedido", se o usuário mencionar SOMENTE materiais:
+9. Para tipo = "Pedido", se o usuário não mencionou serviços SOMENTE materiais:
 
    "listaMateriais": true
    "listaServicos": false
-
-10. Para tipo = "Pedido", se o usuário mencionar SOMENTE serviços:
-
-   "listaMateriais": false
-   "listaServicos": true
 
 11. Se o usuário pedir explicitamente para ocultar materiais:
 
