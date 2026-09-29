@@ -4,7 +4,7 @@ const { DateTime } = require('luxon');
 const {
     getNowBRT,
     formatLocal,
-    formatDateBR,
+    formatarData,
     formatCurrency,
     formatPhoneNumber
 } = require('../utils/utils');
