@@ -221,11 +221,15 @@ async function executeCreate(command, userPhone) {
                     .filter(Boolean)
                 : [];
 
+            const telefone =
+                formatPhoneNumber(command.telefone_cliente);
+
+
             const { data, error } = await supabase
                 .from('orcamentos')
                 .insert([{
                     nome_cliente: command.nome_cliente,
-                    telefone_cliente: command.telefone_cliente,
+                    telefone_cliente,
                     etapa: command.etapa || "negociacao",
                     observacoes,
                     descricoes,
