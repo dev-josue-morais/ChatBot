@@ -1,11 +1,18 @@
-const { handleGPTCommand } = require('./handleGPTCommand');
-const handleOrcamentoCommand = require('./handleOrcamentoCommand');
-const handleAgendaCommand = require('./handleAgendaCommand');
-const handleDespesasCommand = require('./handleDespesasCommand');
+const { DateTime } = require('luxon');
 const openai = require('./openai');
 
-// 🧠 Função para limitar contexto: 20 primeiras + 10 últimas palavras
+const { getCreatePrompt, executeCreate } = require('../cases/create');
+const { getEditPrompt, executeEdit } = require('../cases/edit');
+const { getListPrompt, executeList } = require('../cases/list');
+const { getPdfPrompt, executePdf } = require('../cases/pdf');
+const { executeDelete } = require('../cases/delete');
+
+// ======================================================
+// 🧠 LIMITA CONTEXTO DA MENSAGEM
+// ======================================================
+
 function getContextWords(text) {
+
   const words = text.trim().split(/\s+/);
 
   if (words.length <= 30) {
@@ -18,12 +25,25 @@ function getContextWords(text) {
   return [...first, ...last].join(' ');
 }
 
+
+// ======================================================
+// 🚀 PROCESS COMMAND
+// ======================================================
+
 async function processCommand(userMessage, userPhone) {
+
   try {
 
-    // 1️⃣ CLASSIFICAÇÃO RÁPIDA
+    userMessage = (userMessage || '').trim();
 
-    const contextWords = getContextWords(userMessage);
+
+    // ==================================================
+    // 1️⃣ CLASSIFICAÇÃO RÁPIDA
+    // ==================================================
+
+    const contextWords =
+      getContextWords(userMessage);
+
 
     const classificationPrompt = `
 Analise a mensagem e responda apenas com JSON válido, sem texto fora do JSON.
@@ -51,6 +71,7 @@ Identifique a ação:
 - pdf = gerar, enviar, imprimir ou criar PDF.
 
 Regras do PDF:
+
 - PDF é disponível somente para "orcamento".
 - Se o usuário solicitar PDF de orçamento, action = "pdf".
 - Despesas não possuem geração de PDF.
@@ -58,6 +79,7 @@ Regras do PDF:
 - Se pedir resumo, relatório, total ou quanto gastou em despesas, action = "list".
 
 Identificador:
+
 - Se houver um número que claramente identifica um registro existente, coloque-o em "id".
 - Os identificadores normalmente são números longos, por exemplo: 1060626002.
 - Conforme o módulo:
@@ -72,6 +94,7 @@ Identificador:
 - Não invente identificadores.
 
 O campo "id" representa o identificador do registro relacionado ao comando.
+
 - orçamento → id ou orcamento_numero
 - agenda → event_numero
 - despesas → despesa_numero
@@ -79,29 +102,38 @@ O campo "id" representa o identificador do registro relacionado ao comando.
 Mensagem:
 "${contextWords}"
 `;
+
+
     const quickResponse =
       await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+
+        model: 'gpt-4o-mini',
+
         messages: [
           {
             role: 'user',
             content: classificationPrompt
           }
         ],
+
         response_format: {
           type: 'json_object'
         }
       });
 
+
     let quickJSON =
       quickResponse.choices[0].message.content;
 
+
     quickJSON =
       quickJSON
-        .replace(/```json\s*|```/g, "")
+        .replace(/```json\s*|```/g, '')
         .trim();
 
+
     let classification;
+
 
     try {
 
@@ -111,12 +143,13 @@ Mensagem:
     } catch (err) {
 
       console.error(
-        "Erro ao parsear classificação GPT:",
+        '❌ Erro ao parsear classificação GPT:',
         quickJSON
       );
 
-      return "⚠️ Não consegui identificar o tipo de comando.";
+      return '⚠️ Não consegui identificar o tipo de comando.';
     }
+
 
     const {
       modulo,
@@ -125,101 +158,576 @@ Mensagem:
     } = classification;
 
 
-    // ======================================================
-    // 🗑️ DELETE DIRETO
-    // ======================================================
-
-    // Para DELETE de agenda ou despesas,
-    // vamos direto para os handlers.
+    // ==================================================
+    // ❌ MÓDULO INVÁLIDO
+    // ==================================================
 
     if (
-      (modulo === 'agenda' ||
-       modulo === 'despesas') &&
-      action === 'delete' &&
-      id
+      modulo !== 'agenda' &&
+      modulo !== 'orcamento' &&
+      modulo !== 'despesas'
     ) {
 
-      if (modulo === 'agenda') {
-
-        return await handleAgendaCommand(
-          { modulo, action, id },
-          userPhone
-        );
-
-      } else if (modulo === 'despesas') {
-
-        return await handleDespesasCommand(
-          { modulo, action, id },
-          userPhone
-        );
-      }
+      return '⚠️ Não entendi se é AGENDA, ORÇAMENTO ou DESPESAS.';
     }
 
 
-    // 🧠 GPT COMPLETO
+    // ==================================================
+    // 🗑️ DELETE
+    // ==================================================
 
-    const gptData =
-  await handleGPTCommand(
-    userMessage,
-    modulo,
-    action,
-    id,
-    userPhone
-  );
-if (gptData?.error) {
-  return gptData.error;
-}
+    // Delete não precisa de GPT completo.
+    // A classificação rápida já identificou
+    // módulo, ação e ID.
+
+    if (action === 'delete') {
+
+      if (!id) {
+
+        return '⚠️ Informe o número do registro que deseja excluir.';
+      }
+
+      return await executeDelete(
+        {
+          modulo,
+          action,
+          id
+        },
+        userPhone
+      );
+    }
+
+
+    // ==================================================
+    // 🧠 GPT COMPLETO
+    // ==================================================
+
+    let prompt = '';
+
+
+    switch (action) {
+
+      // ==================================================
+      // ➕ CREATE
+      // ==================================================
+
+      case 'create':
+
+        prompt = await getCreatePrompt(
+          modulo,
+          userMessage
+        );
+
+        break;
+
+
+      // ==================================================
+      // ✏️ EDIT
+      // ==================================================
+
+      case 'edit': {
+
+        const result =
+          await getEditPrompt(
+            modulo,
+            userMessage,
+            id,
+            userPhone
+          );
+
+
+        // getEditPrompt pode retornar
+        // diretamente um objeto de erro.
+
+        if (
+          result &&
+          typeof result === 'object'
+        ) {
+
+          return result;
+        }
+
+
+        prompt = result;
+
+        break;
+      }
+
+
+      // ==================================================
+      // 📋 LIST
+      // ==================================================
+
+      case 'list':
+
+        prompt = await getListPrompt(
+          modulo,
+          userMessage
+        );
+
+        break;
+
+
+      // ==================================================
+      // 📄 PDF
+      // ==================================================
+
+      case 'pdf':
+
+        prompt = await getPdfPrompt(
+          modulo,
+          userMessage
+        );
+
+        break;
+
+
+      // ==================================================
+      // ⚠️ AÇÃO DESCONHECIDA
+      // ==================================================
+
+      default:
+
+        return '⚠️ Ação não reconhecida.';
+    }
+
+
+    // ==================================================
+    // ⚠️ PROMPT NÃO GERADO
+    // ==================================================
+
+    if (!prompt) {
+
+      return {
+        erro: 'Prompt não definido',
+        modulo,
+        action
+      };
+    }
+
+
+    // ==================================================
+    // 📦 GARANTE JSON
+    // ==================================================
+
+    prompt = `${prompt}
+
+Retorne a resposta exclusivamente em JSON válido.`;
+
+
+    // ==================================================
+    // 🤖 OPENAI
+    // ==================================================
+
+    let completion;
+
+
+    try {
+
+      completion =
+        await openai.chat.completions.create({
+
+          model: 'gpt-4o-mini',
+
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+
+          response_format: {
+            type: 'json_object'
+          }
+        });
+
+
+    } catch (err) {
+
+      console.error(
+        '\n======================================================'
+      );
+
+      console.error(
+        '🔥 [GPT] ERRO AO CHAMAR OPENAI'
+      );
+
+      console.error(
+        '======================================================'
+      );
+
+      console.error(
+        '📩 Mensagem original:',
+        userMessage
+      );
+
+      console.error(
+        '📦 Módulo:',
+        modulo
+      );
+
+      console.error(
+        '⚙️ Action:',
+        action
+      );
+
+      console.error(
+        '🆔 ID:',
+        id
+      );
+
+      console.error(
+        '\n💥 Erro:',
+        err
+      );
+
+      console.error(
+        '\n📚 Stack:',
+        err.stack
+      );
+
+      console.error(
+        '======================================================\n'
+      );
+
+
+      return {
+        erro: 'Falha ao chamar GPT',
+        detalhe: err?.message || String(err),
+        modulo,
+        action
+      };
+    }
+
+
+    // ==================================================
+    // 📦 EXTRAI JSON
+    // ==================================================
+
+    let content =
+      completion.choices[0].message.content.trim();
+
+
+    content =
+      content
+        .replace(/```json\s*|```/g, '')
+        .trim();
+
+
+    let gptData;
+
+
+    try {
+
+      gptData =
+        JSON.parse(content);
+
+    } catch (parseErr) {
+
+      console.error(
+        '\n======================================================'
+      );
+
+      console.error(
+        '❌ [GPT] ERRO AO FAZER JSON.parse()'
+      );
+
+      console.error(
+        '======================================================'
+      );
+
+      console.error(
+        '📩 Mensagem original:'
+      );
+
+      console.error(userMessage);
+
+      console.error(
+        '\n📦 Módulo:',
+        modulo
+      );
+
+      console.error(
+        '⚙️ Action:',
+        action
+      );
+
+      console.error(
+        '🆔 ID:',
+        id
+      );
+
+      console.error(
+        '\n📥 JSON QUE O GPT DEVOLVEU:'
+      );
+
+      console.error(content);
+
+      console.error(
+        '\n💥 ERRO DO JSON.parse:'
+      );
+
+      console.error(parseErr.message);
+
+      console.error(
+        '\n📚 STACK DO ERRO:'
+      );
+
+      console.error(parseErr.stack);
+
+      console.error(
+        '======================================================\n'
+      );
+
+
+      return {
+        erro: 'JSON inválido retornado pelo GPT',
+        raw: content
+      };
+    }
+
+
+    // ==================================================
+    // 🔗 GARANTE DADOS DA CLASSIFICAÇÃO
+    // ==================================================
 
     gptData.modulo ??= modulo;
     gptData.action ??= action;
+
 
     if (!gptData.id && id) {
       gptData.id = id;
     }
 
 
-    // ======================================================
-    // 🚦 DIRECIONAMENTO
-    // ======================================================
+    // ==================================================
+    // 📅 NORMALIZAÇÃO DAS DATAS DA AGENDA
+    // ==================================================
+
+    if (gptData.modulo === 'agenda') {
+
+      if (gptData.datetime) {
+
+        gptData.datetime =
+          DateTime
+            .fromISO(
+              gptData.datetime,
+              {
+                zone: 'America/Sao_Paulo'
+              }
+            )
+            .toUTC()
+            .toISO();
+      }
+
+
+      if (gptData.start_date) {
+
+        gptData.start_date =
+          DateTime
+            .fromISO(
+              gptData.start_date,
+              {
+                zone: 'America/Sao_Paulo'
+              }
+            )
+            .toISO({
+              includeOffset: false
+            });
+      }
+
+
+      if (gptData.end_date) {
+
+        gptData.end_date =
+          DateTime
+            .fromISO(
+              gptData.end_date,
+              {
+                zone: 'America/Sao_Paulo'
+              }
+            )
+            .toISO({
+              includeOffset: false
+            });
+      }
+    }
+
+
+    // ==================================================
+    // 🚦 EXECUÇÃO DIRETA DOS CASES
+    // ==================================================
 
     switch (gptData.modulo) {
 
-      case "agenda":
 
-        return await handleAgendaCommand(
-          gptData,
-          userPhone
-        );
+      // ==================================================
+      // 📅 AGENDA
+      // ==================================================
 
-      case "orcamento":
+      case 'agenda':
 
-        return await handleOrcamentoCommand(
-          gptData,
-          userPhone
-        );
+        switch (gptData.action) {
 
-      case "despesas":
+          case 'create':
 
-        return await handleDespesasCommand(
-          gptData,
-          userPhone
-        );
+            return await executeCreate(
+              gptData,
+              userPhone
+            );
+
+
+          case 'edit':
+
+            return await executeEdit(
+              gptData,
+              userPhone
+            );
+
+
+          case 'list':
+
+            return await executeList(
+              gptData,
+              userPhone
+            );
+
+
+          case 'delete':
+
+            return await executeDelete(
+              gptData,
+              userPhone
+            );
+
+
+          default:
+
+            return '⚠️ Ação de agenda não reconhecida.';
+        }
+
+
+      // ==================================================
+      // 💰 ORÇAMENTO
+      // ==================================================
+
+      case 'orcamento':
+
+        switch (gptData.action) {
+
+          case 'create':
+
+            return await executeCreate(
+              gptData,
+              userPhone
+            );
+
+
+          case 'edit':
+
+            return await executeEdit(
+              gptData,
+              userPhone
+            );
+
+
+          case 'list':
+
+            return await executeList(
+              gptData,
+              userPhone
+            );
+
+
+          case 'delete':
+
+            return await executeDelete(
+              gptData,
+              userPhone
+            );
+
+
+          case 'pdf':
+
+            return await executePdf(
+              gptData,
+              userPhone
+            );
+
+
+          default:
+
+            return '⚠️ Ação de orçamento não reconhecida.';
+        }
+
+
+      // ==================================================
+      // 💸 DESPESAS
+      // ==================================================
+
+      case 'despesas':
+
+        switch (gptData.action) {
+
+          case 'create':
+
+            return await executeCreate(
+              gptData,
+              userPhone
+            );
+
+
+          case 'edit':
+
+            return await executeEdit(
+              gptData,
+              userPhone
+            );
+
+
+          case 'list':
+
+            return await executeList(
+              gptData,
+              userPhone
+            );
+
+
+          case 'delete':
+
+            return await executeDelete(
+              gptData,
+              userPhone
+            );
+
+
+          default:
+
+            return '⚠️ Ação de despesa não reconhecida.';
+        }
+
+
+      // ==================================================
+      // ⚠️ OUTRO
+      // ==================================================
 
       default:
 
-        return "⚠️ Não entendi se é AGENDA, ORÇAMENTO ou DESPESAS.";
+        return '⚠️ Não entendi se é AGENDA, ORÇAMENTO ou DESPESAS.';
     }
+
 
   } catch (err) {
 
     console.error(
-      "Erro em processCommand:",
+      '💥 Erro em processCommand:',
       err
     );
 
-    return "⚠️ Erro interno ao processar comando.";
+    return '⚠️ Erro interno ao processar comando.';
   }
 }
+
 
 module.exports = {
   processCommand
