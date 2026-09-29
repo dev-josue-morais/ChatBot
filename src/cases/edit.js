@@ -1,9 +1,7 @@
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
-
 const formatOrcamento = require('../utils/formatOrcamento');
 const formatCurrency = require('../utils/formatCurrency');
-
 const {
     TIPOS_DESPESA,
     formatDateBR,
@@ -11,16 +9,11 @@ const {
     normalizeMoney,
     deleteOldEvents
 } = require('../utils/processFunctions');
-
 const { formatLocal } = require('../utils/utils');
 
 async function getEditPrompt(modulo, userMessage, id, userPhone) {
 
     switch (modulo) {
-
-        // ==================================================
-        // ORÇAMENTO
-        // ==================================================
 
         case 'orcamento': {
 
@@ -82,10 +75,6 @@ Regras:
 Retorne o orçamento completo atualizado.
 `;
         }
-
-        // ==================================================
-        // AGENDA
-        // ==================================================
 
         case 'agenda': {
 
@@ -162,10 +151,6 @@ Mensagem:
 `;
         }
 
-        // ==================================================
-        // DESPESAS
-        // ==================================================
-
         case 'despesas': {
 
             if (!id) {
@@ -228,20 +213,11 @@ Retorne a despesa completa após a alteração.
     }
 }
 
-
-// ======================================================
-// EXECUÇÃO DOS EDITS
-// ======================================================
-
 async function executeEdit(command, userPhone) {
 
     const { modulo } = command || {};
 
     switch (modulo) {
-
-        // ==================================================
-        // AGENDA
-        // ==================================================
 
         case 'agenda': {
 
@@ -309,11 +285,6 @@ async function executeEdit(command, userPhone) {
 ID ${data[0].event_numero}
 dia ${formatLocal(data[0].date)}${telefone}`;
         }
-
-
-        // ==================================================
-        // DESPESAS
-        // ==================================================
 
         case 'despesas': {
 
@@ -412,11 +383,6 @@ dia ${formatLocal(data[0].date)}${telefone}`;
                 `💰 ${formatCurrency(data.valor)}`
             ].join('\n');
         }
-
-
-        // ==================================================
-        // ORÇAMENTO
-        // ==================================================
 
         case 'orcamento': {
 
