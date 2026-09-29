@@ -10,13 +10,9 @@ const {
     nomeTipo,
     normalizeMoney,
     deleteOldEvents
-} = require('../utils/handlersFunctions');
+} = require('../utils/processFunctions');
 
 const { formatLocal } = require('../utils/utils');
-
-// ======================================================
-// PROMPTS DE EDIÇÃO
-// ======================================================
 
 async function getEditPrompt(modulo, userMessage, id, userPhone) {
 
