@@ -1,8 +1,3 @@
-
-                .toLowerCase();
-
-        const valor =
-            calcularTotalOrcamento(orcamento);
 const supabase = require("./supabase");
 const formatOrcamento = require("../utils/formatOrcamento");
 const { sendWhatsAppRaw, sendPDFOrcamento } = require("./whatsappService");
