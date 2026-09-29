@@ -133,6 +133,8 @@ Quando por_etapa=false, "etapa" não deve ser usada como filtro.
 FILTRO POR PERÍODO:
 Se o usuário informar um período, use por_periodo=true e preencha:
 periodo_start, periodo_end e periodo_texto.
+se usuário não informar período use por_periodo=true e preencha use padrão "últimos 15 dias" e preencha:
+periodo_start, periodo_end e periodo_texto.
 
 Exemplos: "este mês", "últimos 30 dias", "últimos 6 meses", "este ano", "em 2025", "de março até junho".
 
