@@ -273,6 +273,9 @@ async function executeCreate(command, userPhone) {
                     .toISO();
             }
 
+            const telefone =
+                formatPhoneNumber(command.telefone ?? null);
+
             const { data, error } = await supabase
                 .from('events')
                 .insert([{
@@ -281,7 +284,7 @@ async function executeCreate(command, userPhone) {
                     reminder_minutes:
                         command.reminder_minutes || 30,
                     user_telefone: userPhone,
-                    telefone: command.telefone ?? null
+                    telefone
                 }])
                 .select(
                     'event_numero, title, date, telefone'
