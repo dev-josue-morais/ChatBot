@@ -213,9 +213,15 @@ function renderObservacoes(orcamento, opcoes, tipo) {
 async function generatePDF(orcamento, user, config = {}) {
     try {
         const { tipo = "Orçamento", opcoes: rawOpcoes = {}, valorRecibo = null } = config;
+        const documentoTipo = tipo || "Orçamento";
+
         const opcoes = {
-            listaServicos: true,
+            listaServicos: documentoTipo === "Pedido"
+                ? rawOpcoes.listaServicos === true
+                : true,
+
             listaMateriais: true,
+
             ocultarValorServicos: false,
             garantia: true,
             assinaturaCliente: false,
@@ -223,14 +229,28 @@ async function generatePDF(orcamento, user, config = {}) {
             observacoes: true,
             ...rawOpcoes
         };
-        const documentoTipo = tipo || "Orçamento";
+
+        // Regras específicas para Pedido
+        if (documentoTipo === "Pedido") {
+            // Material é obrigatório
+            opcoes.listaMateriais = true;
+
+            // Serviço só aparece se foi solicitado explicitamente
+            opcoes.listaServicos = rawOpcoes.listaServicos === true;
+        }
 
         const totalMateriais = (opcoes.listaMateriais && orcamento?.materiais?.length > 0)
-            ? orcamento.materiais.reduce((sum, m) => sum + (m.qtd || 0) * (m.valor || 0), 0)
+            ? orcamento.materiais.reduce(
+                (sum, m) => sum + (m.qtd || 0) * (m.valor || 0),
+                0
+            )
             : 0;
 
         const totalServicos = (opcoes.listaServicos && orcamento?.servicos?.length > 0)
-            ? orcamento.servicos.reduce((sum, s) => sum + (s.quantidade || 0) * (s.valor || 0), 0)
+            ? orcamento.servicos.reduce(
+                (sum, s) => sum + (s.quantidade || 0) * (s.valor || 0),
+                0
+            )
             : 0;
 
         const descontoMateriais = (opcoes.listaMateriais && totalMateriais > 0)
