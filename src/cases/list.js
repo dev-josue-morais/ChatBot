@@ -8,21 +8,33 @@ const {
     formatDateBR,
     nomeTipo,
     formatRelatorioOrcamentos,
-    formatFiltrosOrcamento
+    formatFiltrosOrcamento,
+    getDateRange
 } = require('../utils/handlersFunctions');
 
-const { getNowBRT, formatLocal, formatPhoneNumber } = require('../utils/utils');
+const {
+    getNowBRT,
+    formatLocal,
+    formatPhoneNumber
+} = require('../utils/utils');
 
 const formatOrcamento = require('../utils/formatOrcamento');
 const formatCurrency = require('../utils/formatCurrency');
-const { sendWhatsAppRaw } = require('../services/whatsappService');
+const {
+    sendWhatsAppRaw
+} = require('../services/whatsappService');
 
 
 // PROMPTS DE LISTAGEM
 
 function nowWithWeekday() {
+
     const now = getNowBRT();
-    const weekday = now.setLocale('pt').toFormat('cccc');
+
+    const weekday =
+        now
+            .setLocale('pt')
+            .toFormat('cccc');
 
     return `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
 }
@@ -37,7 +49,7 @@ async function getListPrompt(modulo, userMessage) {
 
         case 'orcamento': {
 
-    return `
+            return `
 Você interpreta comandos para consultar orçamentos.
 
 Fuso horário: GMT-3.
@@ -61,8 +73,8 @@ Retorne somente JSON válido.
   "nome_cliente": null,
   "telefone_cliente": null,
   "etapa": "negociacao",
-  "periodo_start": "YYYY-MM-DDT00:00:00-03:00",
-  "periodo_end": "YYYY-MM-DDT00:00:00-03:00",
+  "periodo_start": "YYYY-MM-DD",
+  "periodo_end": "YYYY-MM-DD",
   "periodo_texto": "últimos 15 dias"
 }
 
@@ -161,22 +173,27 @@ Se o usuário NÃO informar nenhum período, use obrigatoriamente o período pad
 Nesse caso:
 por_periodo=true
 
-periodo_start = início do período de 15 dias atrás, no fuso GMT-3.
+periodo_start = data de 15 dias atrás, no fuso GMT-3.
 
-periodo_end = data/hora atual, no fuso GMT-3.
+periodo_end = data de hoje, no fuso GMT-3.
 
 periodo_texto = "últimos 15 dias"
 
 FORMATO DAS DATAS:
-"periodo_start" e "periodo_end" devem sempre estar no formato ISO 8601 com fuso GMT-3:
+"periodo_start" e "periodo_end" devem sempre conter SOMENTE uma data no formato:
 
-YYYY-MM-DDTHH:mm:ss-03:00
+YYYY-MM-DD
+
+NÃO coloque horário.
+NÃO coloque fuso horário.
+NÃO coloque T00:00:00.
+NÃO coloque texto antes ou depois da data.
 
 Exemplo:
-"periodo_start": "2026-09-14T00:00:00-03:00"
-"periodo_end": "2026-09-29T00:00:00-03:00"
+"periodo_start": "2026-09-14"
+"periodo_end": "2026-09-29"
 
-Nunca adicione texto antes ou depois da data.
+O sistema será responsável por transformar essas datas em início e fim do dia usando o fuso America/Sao_Paulo.
 
 FORMATO DE "periodo_texto":
 "periodo_texto" deve ser uma descrição curta, clara e em português do período utilizado.
@@ -222,7 +239,7 @@ periodo_texto="março a junho"
 "de 1 a 15 de setembro" →
 periodo_texto="01/09 a 15/09"
 
-Não coloque as datas ISO dentro de "periodo_texto".
+Não coloque as datas em "periodo_texto".
 
 O "periodo_texto" deve ser apenas uma descrição legível para apresentação ao usuário.
 
@@ -230,8 +247,8 @@ Exemplo completo:
 "Lista meus orçamentos dos últimos 30 dias" →
 
 por_periodo=true,
-periodo_start="2026-08-30T00:00:00-03:00",
-periodo_end="2026-09-29T00:00:00-03:00",
+periodo_start="2026-08-30",
+periodo_end="2026-09-29",
 periodo_texto="últimos 30 dias"
 
 TODO O PERÍODO:
@@ -246,16 +263,11 @@ ou
 
 NÃO desative o filtro de período.
 
-Como o período é obrigatório, use um intervalo suficientemente amplo desde o início dos registros até a data atual.
+Como o período é obrigatório, use:
 
-Nesse caso:
-por_periodo=true
-
-periodo_start = "2000-01-01T00:00:00-03:00"
-
-periodo_end = data/hora atual no GMT-3.
-
-periodo_texto="todo o período"
+periodo_start = "2000-01-01"
+periodo_end = data de hoje no GMT-3.
+periodo_texto = "todo o período"
 
 Isso não altera "resumo".
 
@@ -266,14 +278,8 @@ resumo=false,
 por_etapa=true,
 etapa="aprovado",
 por_periodo=true,
-periodo_texto="todo o período"
-
-"lista relatório dos meus orçamentos aprovados todo o período" →
-
-resumo=true,
-por_etapa=true,
-etapa="aprovado",
-por_periodo=true,
+periodo_start="2000-01-01",
+periodo_end="2026-09-29",
 periodo_texto="todo o período"
 
 MÚLTIPLOS FILTROS:
@@ -316,7 +322,8 @@ REGRAS FINAIS:
 - "periodo_texto" NUNCA pode ser null.
 - "por_periodo" deve ser sempre true.
 - Sempre existe um período: período solicitado ou últimos 15 dias.
-- "periodo_start" e "periodo_end" devem ser ISO 8601 com GMT-3.
+- "periodo_start" e "periodo_end" devem conter SOMENTE YYYY-MM-DD.
+- Nunca coloque horário ou fuso nas datas.
 - "periodo_texto" deve ser curto, legível e descrever o período usado.
 - Flags devem ser true ou false.
 - Não invente IDs, nomes, telefones ou etapas.
@@ -327,13 +334,14 @@ REGRAS FINAIS:
 Mensagem:
 """${userMessage}"""
 `;
-}
+        }
+
 
         // DESPESAS
 
         case 'despesas': {
 
-    return `
+            return `
 Você interpreta comandos para listar despesas ou gerar resumo de despesas.
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
@@ -354,8 +362,8 @@ Retorne somente JSON válido.
   "mostrar_filtros": false,
   "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
   "descricao": null,
-  "periodo_start": "YYYY-MM-DDTHH:mm:ss-03:00",
-  "periodo_end": "YYYY-MM-DDTHH:mm:ss-03:00",
+  "periodo_start": "YYYY-MM-DD",
+  "periodo_end": "YYYY-MM-DD",
   "periodo_texto": "últimos 30 dias"
 }
 
@@ -371,7 +379,6 @@ Exemplos:
 "Qual o total das minhas despesas?" → true
 "Me mostre o total que gastei com combustível" →
 resumo=true, por_descricao=true, descricao="combustível"
-
 Se pedir para LISTAR ou MOSTRAR as despesas individualmente:
 resumo=false.
 
@@ -468,17 +475,21 @@ setembro, mês de janeiro, últimos 30 dias, últimos 6 meses,
 de 1 a 15 de setembro, desde o começo do mês, etc.
 
 FORMATO DAS DATAS:
-"periodo_start" e "periodo_end" devem sempre estar no formato
-ISO 8601 com fuso GMT-3:
+"periodo_start" e "periodo_end" devem sempre conter SOMENTE uma data no formato:
 
-YYYY-MM-DDTHH:mm:ss-03:00
+YYYY-MM-DD
+
+NÃO coloque horário.
+NÃO coloque fuso horário.
+NÃO coloque T00:00:00.
+NÃO coloque texto antes ou depois da data.
 
 Exemplo:
 
-"periodo_start": "2026-09-01T00:00:00-03:00"
-"periodo_end": "2026-09-29T00:00:00-03:00"
+"periodo_start": "2026-09-01"
+"periodo_end": "2026-09-29"
 
-Nunca coloque texto junto da data.
+O sistema será responsável por transformar essas datas em início e fim do dia usando o fuso America/Sao_Paulo.
 
 FORMATO DE "periodo_texto":
 "periodo_texto" deve ser uma descrição curta, clara e legível em português
@@ -522,13 +533,13 @@ periodo_texto="ano de 2025"
 "de 1 a 15 de setembro" →
 periodo_texto="01/09 a 15/09"
 
-Não coloque as datas ISO dentro de "periodo_texto".
+Não coloque as datas em "periodo_texto".
 
 O "periodo_texto" serve apenas para apresentar ao usuário qual período
 foi utilizado na consulta.
 
 SEM PERÍODO:
-Se nenhum período for informado, use obrigatoriamente o período padrão:
+Se nenhum período for informado, use obrigatoriamente:
 
 "últimos 30 dias"
 
@@ -536,9 +547,9 @@ Nesse caso:
 
 por_periodo=true
 
-periodo_start = data/hora de 30 dias atrás, no fuso GMT-3.
+periodo_start = data de 30 dias atrás, no fuso GMT-3.
 
-periodo_end = data/hora atual, no fuso GMT-3.
+periodo_end = data de hoje, no fuso GMT-3.
 
 periodo_texto="últimos 30 dias"
 
@@ -557,9 +568,9 @@ Use:
 
 por_periodo=true
 
-periodo_start="2000-01-01T00:00:00-03:00"
+periodo_start="2000-01-01"
 
-periodo_end=data/hora atual no GMT-3
+periodo_end=data de hoje no GMT-3
 
 periodo_texto="todo o período"
 
@@ -610,7 +621,8 @@ REGRAS FINAIS:
 - "periodo_end" NUNCA pode ser null.
 - "periodo_texto" NUNCA pode ser null.
 - Sempre existe um período: período solicitado ou últimos 30 dias.
-- As datas devem estar em ISO 8601 com GMT-3.
+- "periodo_start" e "periodo_end" devem conter SOMENTE YYYY-MM-DD.
+- Nunca coloque horário ou fuso nas datas.
 - "periodo_texto" deve ser curto, legível e descrever o período utilizado.
 - Não invente categorias ou descrições.
 - O handle consultará o banco usando somente os filtros marcados como true.
@@ -621,9 +633,10 @@ REGRAS FINAIS:
 Texto:
 """${userMessage}"""
 `;
-}
+        }
 
-// AGENDA
+
+        // AGENDA
 
         case 'agenda': {
 
@@ -646,7 +659,7 @@ Responda apenas com JSON válido:
 Regras importantes:
 
 1. ID sempre prevalece sobre título
-   - preencher Se o usuário mencionar um ID (ex: "1171125001"),
+   - preencher se o usuário mencionar um ID (ex: "1171125001"),
    - Quando "id" estiver preenchido, "title" deve ser null.
 
 2. Título
@@ -655,6 +668,7 @@ Regras importantes:
 
 3. Datas
    - Sempre preencher "start_date" e "end_date".
+   - As datas devem conter SOMENTE YYYY-MM-DD.
    - Se o usuário citar dias como "amanhã", "sábado", etc → usar exatamente esse dia.
    - Se citar um período ("de segunda a sexta") → gerar um intervalo correspondente.
    - Se não falar nada sobre data → usar a data de hoje para ambos.
@@ -671,8 +685,6 @@ Texto: """${userMessage}"""
     }
 }
 
-
-
 // EXECUÇÃO DAS LISTAGENS
 
 
@@ -682,9 +694,9 @@ async function executeList(command, userPhone) {
 
     switch (modulo) {
 
- 
+
         // AGENDA
- 
+
         case 'agenda': {
 
             const zone = 'America/Sao_Paulo';
@@ -701,6 +713,7 @@ async function executeList(command, userPhone) {
             let endDT;
 
             if (hasId) {
+
                 query = query.eq(
                     'event_numero',
                     command.id
@@ -708,6 +721,7 @@ async function executeList(command, userPhone) {
             }
 
             else if (hasTitle) {
+
                 query = query.ilike(
                     'title',
                     `%${command.title}%`
@@ -716,34 +730,32 @@ async function executeList(command, userPhone) {
 
             else {
 
-                startDT = command.start_date
-                    ? DateTime
-                        .fromISO(command.start_date, { zone })
-                        .startOf('day')
-                    : DateTime
-                        .now()
-                        .setZone(zone)
-                        .startOf('day');
+                const range =
+                    getDateRange(
+                        command.start_date,
+                        command.end_date,
+                        zone
+                    );
 
-                endDT = command.end_date
-                    ? DateTime
-                        .fromISO(command.end_date, { zone })
-                        .endOf('day')
-                    : startDT.endOf('day');
+                if (!range.valid) {
 
-                const start =
-                    startDT.toISO({
-                        includeOffset: true
-                    });
+                    console.error(
+                        '❌ Datas inválidas na agenda:',
+                        {
+                            start_date: command.start_date,
+                            end_date: command.end_date
+                        }
+                    );
 
-                const end =
-                    endDT.toISO({
-                        includeOffset: true
-                    });
+                    return '⚠️ As datas informadas são inválidas.';
+                }
+
+                startDT = range.startDT;
+                endDT = range.endDT;
 
                 query = query
-                    .gte('date', start)
-                    .lte('date', end);
+                    .gte('date', range.startIso)
+                    .lte('date', range.endIso);
             }
 
             const {
@@ -755,6 +767,7 @@ async function executeList(command, userPhone) {
             );
 
             if (error) {
+
                 console.error(
                     "❌ Erro ao buscar eventos:",
                     error
@@ -818,11 +831,12 @@ Dia ${formatLocal(e.date)}${telefone}`;
             return `📅 Eventos encontrados no período ${periodo}:\n${list}`;
         }
 
+
         // DESPESAS
 
-
         case 'despesas': {
-console.log(
+
+            console.log(
                 '🧠 JSON recebido do GPT para lista despesas:',
                 JSON.stringify(command, null, 2)
             );
@@ -843,6 +857,7 @@ console.log(
                 command.tipo &&
                 command.tipo !== 'todos'
             ) {
+
                 query = query.eq(
                     'tipo',
                     command.tipo
@@ -853,6 +868,7 @@ console.log(
                 filtros.por_descricao === true &&
                 command.descricao
             ) {
+
                 query = query.ilike(
                     'descricao',
                     `%${command.descricao}%`
@@ -861,19 +877,42 @@ console.log(
 
             if (filtros.por_periodo === true) {
 
-                if (command.periodo_start) {
-                    query = query.gte(
-                        'data',
-                        command.periodo_start
-                    );
+                if (
+                    !command.periodo_start ||
+                    !command.periodo_end
+                ) {
+
+                    return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
                 }
 
-                if (command.periodo_end) {
-                    query = query.lte(
-                        'data',
+                const range =
+                    getDateRange(
+                        command.periodo_start,
                         command.periodo_end
                     );
+
+                if (!range.valid) {
+
+                    console.error(
+                        '❌ Datas inválidas no filtro de despesas:',
+                        {
+                            periodo_start: command.periodo_start,
+                            periodo_end: command.periodo_end
+                        }
+                    );
+
+                    return '⚠️ As datas do período informado são inválidas.';
                 }
+
+                query = query
+                    .gte(
+                        'data',
+                        range.startIso
+                    )
+                    .lte(
+                        'data',
+                        range.endIso
+                    );
             }
 
             query = query.order(
@@ -887,6 +926,7 @@ console.log(
             } = await query;
 
             if (error) {
+
                 console.error(
                     'Erro ao listar despesas:',
                     error
@@ -930,20 +970,23 @@ console.log(
                             d.tipo
                         )
                     ) {
+
                         totais[d.tipo] += valor;
                     }
                 });
 
-                const totalGeral = data.reduce(
-                    (sum, d) =>
-                        sum + Number(d.valor || 0),
-                    0
-                );
+                const totalGeral =
+                    data.reduce(
+                        (sum, d) =>
+                            sum + Number(d.valor || 0),
+                        0
+                    );
 
                 let titulo =
                     "📊 Despesas";
 
                 if (command.periodo_texto) {
+
                     titulo +=
                         ` — ${formatPeriodoTitulo(
                             command.periodo_texto
@@ -1003,11 +1046,12 @@ console.log(
 
             });
 
-            const total = data.reduce(
-                (sum, d) =>
-                    sum + Number(d.valor || 0),
-                0
-            );
+            const total =
+                data.reduce(
+                    (sum, d) =>
+                        sum + Number(d.valor || 0),
+                    0
+                );
 
             const cabecalho = [
                 "📋 *Despesas encontradas*",
@@ -1034,12 +1078,8 @@ console.log(
 
         case 'orcamento': {
 
-          // console.log(
-          //    '🧠 JSON recebido do GPT para lista:',
-          //   JSON.stringify(command, null, 2)
-          //  );
-
-            const filtros = command.filtros || {};
+            const filtros =
+                command.filtros || {};
 
             let query = supabase
                 .from('orcamentos')
@@ -1049,6 +1089,7 @@ console.log(
             if (filtros.por_id === true) {
 
                 if (!command.id) {
+
                     return '⚠️ O filtro por ID foi identificado, mas nenhum ID foi informado.';
                 }
 
@@ -1061,11 +1102,13 @@ console.log(
             if (filtros.por_nome_cliente === true) {
 
                 if (!command.nome_cliente) {
+
                     return '⚠️ O filtro por cliente foi identificado, mas nenhum nome foi informado.';
                 }
 
                 const nome =
-                    String(command.nome_cliente).trim();
+                    String(command.nome_cliente)
+                        .trim();
 
                 query = query.ilike(
                     'nome_cliente',
@@ -1076,6 +1119,7 @@ console.log(
             if (filtros.por_telefone_cliente === true) {
 
                 if (!command.telefone_cliente) {
+
                     return '⚠️ O filtro por telefone foi identificado, mas nenhum telefone foi informado.';
                 }
 
@@ -1106,6 +1150,7 @@ console.log(
                 ];
 
                 if (!etapasValidas.includes(etapa)) {
+
                     return `⚠️ Etapa inválida: ${command.etapa}`;
                 }
 
@@ -1117,59 +1162,54 @@ console.log(
 
             if (filtros.por_periodo === true) {
 
-    if (
-        !command.periodo_start ||
-        !command.periodo_end
-    ) {
-        return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
-    }
+                if (
+                    !command.periodo_start ||
+                    !command.periodo_end
+                ) {
 
-    const zone = 'America/Sao_Paulo';
+                    return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
+                }
 
-    const startDT = DateTime
-        .fromISO(command.periodo_start, { zone })
-        .startOf('day');
+                const range =
+                    getDateRange(
+                        command.periodo_start,
+                        command.periodo_end
+                    );
 
-    const endDT = DateTime
-        .fromISO(command.periodo_end, { zone })
-        .endOf('day');
+                if (!range.valid) {
 
-    if (!startDT.isValid || !endDT.isValid) {
+                    console.error(
+                        '❌ Datas inválidas no filtro de orçamento:',
+                        {
+                            periodo_start: command.periodo_start,
+                            periodo_end: command.periodo_end
+                        }
+                    );
 
-        console.error(
-            '❌ Datas inválidas no filtro de período:',
-            {
-                periodo_start: command.periodo_start,
-                periodo_end: command.periodo_end,
-                erro_start: startDT.invalidExplanation,
-                erro_end: endDT.invalidExplanation
+                    return '⚠️ As datas do período informado são inválidas.';
+                }
+
+                const etapaFinalizado =
+                    filtros.por_etapa === true &&
+                    String(command.etapa || '')
+                        .trim()
+                        .toLowerCase() === 'finalizado';
+
+                const campoData =
+                    etapaFinalizado
+                        ? 'finalizado_em'
+                        : 'criado_em';
+
+                query = query
+                    .gte(
+                        campoData,
+                        range.startIso
+                    )
+                    .lte(
+                        campoData,
+                        range.endIso
+                    );
             }
-        );
-
-        return '⚠️ As datas do período informado são inválidas.';
-    }
-
-    const startIso =
-        startDT.toUTC().toISO();
-
-    const endIso =
-        endDT.toUTC().toISO();
-
-    const etapaFinalizado =
-        filtros.por_etapa === true &&
-        String(command.etapa || '')
-            .trim()
-            .toLowerCase() === 'finalizado';
-
-    const campoData =
-        etapaFinalizado
-            ? 'finalizado_em'
-            : 'criado_em';
-
-    query = query
-        .gte(campoData, startIso)
-        .lte(campoData, endIso);
-}
 
             query = query.order(
                 'criado_em',
@@ -1191,9 +1231,14 @@ console.log(
                 return "⚠️ Não foi possível listar os orçamentos.";
             }
 
-            if (!orcamentos || orcamentos.length === 0) {
+            if (
+                !orcamentos ||
+                orcamentos.length === 0
+            ) {
 
-                if (command.mostrar_filtros === true) {
+                if (
+                    command.mostrar_filtros === true
+                ) {
 
                     return `📄 Nenhum orçamento encontrado.
 
@@ -1215,19 +1260,28 @@ ${formatFiltrosOrcamento(command)}`;
                 let resposta =
                     relatorio;
 
-                if (command.mostrar_filtros === true) {
+                if (
+                    command.mostrar_filtros === true
+                ) {
 
                     resposta +=
                         `\n\n🔎 Filtros utilizados:\n` +
-                        formatFiltrosOrcamento(command);
+                        formatFiltrosOrcamento(
+                            command
+                        );
                 }
 
                 return resposta;
             }
 
             function wait(ms) {
-                return new Promise(resolve =>
-                    setTimeout(resolve, ms)
+
+                return new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            ms
+                        )
                 );
             }
 
@@ -1273,11 +1327,15 @@ ${formatFiltrosOrcamento(command)}`;
                     `\n📅 Período: ${command.periodo_texto}`;
             }
 
-            if (command.mostrar_filtros === true) {
+            if (
+                command.mostrar_filtros === true
+            ) {
 
                 resposta +=
                     `\n\n🔎 Filtros utilizados:\n` +
-                    formatFiltrosOrcamento(command);
+                    formatFiltrosOrcamento(
+                        command
+                    );
             }
 
             return resposta;
