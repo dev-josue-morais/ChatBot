@@ -5,6 +5,7 @@ const { getEditPrompt, executeEdit } = require('../cases/edit');
 const { getListPrompt, executeList } = require('../cases/list');
 const { getPdfPrompt, executePdf } = require('../cases/pdf');
 const { executeDelete } = require('../cases/delete');
+const { getContextWords } = require('../utils/processFunctions');
 
 function getContextWords(text) {
 
