@@ -10,9 +10,40 @@ const TIPOS_DESPESA = [
     'outras'
 ];
 
-// ======================================================
-// DESPESAS
-// ======================================================
+function getDateRange(startDate, endDate, zone = 'America/Sao_Paulo') {
+
+    const startDT = DateTime
+        .fromISO(startDate, { zone })
+        .startOf('day');
+
+    const endDT = DateTime
+        .fromISO(endDate || startDate, { zone })
+        .endOf('day');
+
+    if (!startDT.isValid || !endDT.isValid) {
+
+        return {
+            valid: false,
+            startDT,
+            endDT
+        };
+    }
+
+    return {
+        valid: true,
+
+        startDT,
+        endDT,
+
+        startIso: startDT
+            .toUTC()
+            .toISO(),
+
+        endIso: endDT
+            .toUTC()
+            .toISO()
+    };
+}
 
 function emojiTipo(tipo) {
     const emojis = {
@@ -296,5 +327,6 @@ module.exports = {
     formatFiltrosOrcamento,
     normalizeMoney,
 
-    deleteOldEvents
+    deleteOldEvents,
+    getDateRange
 };
