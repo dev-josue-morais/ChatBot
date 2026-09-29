@@ -878,40 +878,59 @@ Dia ${formatLocal(e.date)}${telefone}`;
 
             if (filtros.por_periodo === true) {
 
-                if (
-                    !command.periodo_start ||
-                    !command.periodo_end
-                ) {
-                    return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
-                }
+    if (
+        !command.periodo_start ||
+        !command.periodo_end
+    ) {
+        return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
+    }
 
-                const startLocal =
-                    `${command.periodo_start}T00:00:00-03:00`;
+    const zone = 'America/Sao_Paulo';
 
-                const endLocal =
-                    `${command.periodo_end}T23:59:59-03:00`;
+    const startDT = DateTime
+        .fromISO(command.periodo_start, { zone })
+        .startOf('day');
 
-                const startIso =
-                    new Date(startLocal).toISOString();
+    const endDT = DateTime
+        .fromISO(command.periodo_end, { zone })
+        .endOf('day');
 
-                const endIso =
-                    new Date(endLocal).toISOString();
+    if (!startDT.isValid || !endDT.isValid) {
 
-                const etapaFinalizado =
-                    filtros.por_etapa === true &&
-                    String(command.etapa || '')
-                        .trim()
-                        .toLowerCase() === 'finalizado';
-
-                const campoData =
-                    etapaFinalizado
-                        ? 'finalizado_em'
-                        : 'criado_em';
-
-                query = query
-                    .gte(campoData, startIso)
-                    .lte(campoData, endIso);
+        console.error(
+            '❌ Datas inválidas no filtro de período:',
+            {
+                periodo_start: command.periodo_start,
+                periodo_end: command.periodo_end,
+                erro_start: startDT.invalidExplanation,
+                erro_end: endDT.invalidExplanation
             }
+        );
+
+        return '⚠️ As datas do período informado são inválidas.';
+    }
+
+    const startIso =
+        startDT.toUTC().toISO();
+
+    const endIso =
+        endDT.toUTC().toISO();
+
+    const etapaFinalizado =
+        filtros.por_etapa === true &&
+        String(command.etapa || '')
+            .trim()
+            .toLowerCase() === 'finalizado';
+
+    const campoData =
+        etapaFinalizado
+            ? 'finalizado_em'
+            : 'criado_em';
+
+    query = query
+        .gte(campoData, startIso)
+        .lte(campoData, endIso);
+}
 
             query = query.order(
                 'criado_em',
