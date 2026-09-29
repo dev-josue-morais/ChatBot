@@ -300,10 +300,10 @@ async function executeEdit(command, userPhone) {
             }
 
             if (!data?.length) {
-                return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
-            }
+    return `⚠️ Nenhum evento encontrado com o ID "${command.event_numero}".`;
+}
 
-            await deleteOldEvents(userPhone);
+            await deleteOldEvents(supabase, userPhone);
 
             const telefone = data[0].telefone
                 ? `\ntelefone ${data[0].telefone}`
@@ -429,10 +429,10 @@ dia ${formatLocal(data[0].date)}${telefone}`;
             }
 
             const descricoes = Array.isArray(command.descricoes)
-                ? command.descricoes
-                    .map(d => String(d).replace(/\n/g, '').trim())
-                    .filter(Boolean)
-                : null;
+    ? command.descricoes
+        .map(d => String(d).replace(/\n/g, '').trim())
+        .filter(Boolean)
+    : undefined;
 
             const materiais = Array.isArray(command.materiais)
                 ? command.materiais.map(m => ({
