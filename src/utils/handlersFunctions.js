@@ -309,6 +309,19 @@ async function deleteOldEvents(supabase, userPhone) {
     }
 }
 
+function getContextWords(text) {
+
+  const words = text.trim().split(/\s+/);
+
+  if (words.length <= 30) {
+    return words.join(' ');
+  }
+
+  const first = words.slice(0, 20);
+  const last = words.slice(-10);
+
+  return [...first, ...last].join(' ');
+}
 // ======================================================
 // EXPORTS
 // ======================================================
@@ -328,5 +341,6 @@ module.exports = {
     normalizeMoney,
 
     deleteOldEvents,
-    getDateRange
+    getDateRange,
+    getContextWords
 };
