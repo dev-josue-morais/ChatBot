@@ -1,4 +1,3 @@
-const openai = require('../services/openai');
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
 
@@ -295,7 +294,7 @@ const { data, error } = await supabase
                 return '⚠️ Erro ao criar evento.';
             }
 
-            await deleteOldEvents(userPhone);
+            await deleteOldEvents(supabase, userPhone);
 
             const telefonetext = data[0].telefone
                 ? `\ntelefone ${data[0].telefone}`
