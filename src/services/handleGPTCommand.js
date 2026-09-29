@@ -302,11 +302,12 @@ async function handleGPTCommand(
 
 
         return {
-            erro: 'Falha ao chamar GPT',
-            modulo,
-            action
-        };
-    }
+    erro: 'Falha ao chamar GPT',
+    detalhe: err?.message || String(err),
+    modulo,
+    action
+};
+}
 }
 
 
