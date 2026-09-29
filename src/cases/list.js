@@ -156,16 +156,13 @@ Sempre preencha:
 
 Se o usuário informar um período, interprete o período solicitado e preencha as três propriedades.
 
-Se o usuário NÃO informar nenhum período, use obrigatoriamente o período padrão de:
-"últimos 15 dias"
-
+Se o usuário NÃO informar nenhum período, use obrigatoriamente o período padrão de: "últimos 15 dias"
+ex.: "Lista relatório de orçamentos"
 Nesse caso:
 por_periodo=true
-
+resumo=true
 periodo_start = data de 15 dias atrás, no fuso GMT-3.
-
 periodo_end = data de hoje, no fuso GMT-3.
-
 periodo_texto = "últimos 15 dias"
 
 FORMATO DAS DATAS:
