@@ -1,5 +1,4 @@
 const supabase = require('../services/supabase');
-const { DateTime } = require('luxon');
 
 const {
     TIPOS_DESPESA,
