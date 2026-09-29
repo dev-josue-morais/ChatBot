@@ -137,6 +137,7 @@ Retorne somente JSON válido.
 {
   "modulo": "agenda",
   "action": "edit",
+  "event_numero": número,
   "title": "string",
   "datetime": "Data/hora ISO 8601 no GMT-3",
   "reminder_minutes": número,
@@ -248,7 +249,7 @@ async function executeEdit(command, userPhone) {
 
         case 'agenda': {
 
-            if (!command.id) {
+            if (!command.event_numero) {
                 return '⚠️ É necessário informar o ID do evento para editar.';
             }
 
@@ -284,7 +285,7 @@ async function executeEdit(command, userPhone) {
             const { data, error } = await supabase
                 .from('events')
                 .update(updates)
-                .eq('event_numero', command.id)
+                .eq('event_numero', command.event_numero)
                 .eq('user_telefone', userPhone)
                 .select('event_numero, title, date, telefone');
 
