@@ -37,7 +37,7 @@ async function getListPrompt(modulo, userMessage) {
 
         case 'orcamento': {
 
-            return `
+    return `
 Você interpreta comandos para consultar orçamentos.
 
 Fuso horário: GMT-3.
@@ -54,16 +54,16 @@ Retorne somente JSON válido.
     "por_nome_cliente": false,
     "por_telefone_cliente": false,
     "por_etapa": false,
-    "por_periodo": false
+    "por_periodo": true
   },
   "mostrar_filtros": false,
   "id": null,
   "nome_cliente": null,
   "telefone_cliente": null,
   "etapa": "negociacao",
-  "periodo_start": null,
-  "periodo_end": null,
-  "periodo_texto": null
+  "periodo_start": "YYYY-MM-DDT00:00:00-03:00",
+  "periodo_end": "YYYY-MM-DDT00:00:00-03:00",
+  "periodo_texto": "últimos 15 dias"
 }
 
 RESUMO:
@@ -95,15 +95,23 @@ Nunca transforme uma LISTA em resumo=true apenas por possuir filtros.
 
 FILTRO POR ID:
 Use "por_id": true somente quando o usuário informar claramente o ID do orçamento.
-Ex.: "Lista o orçamento 1060926001" → por_id=true, id="1060926001".
-Caso contrário: por_id=false, id=null.
+
+Ex.:
+"Lista o orçamento 1060926001" →
+por_id=true, id="1060926001".
+
+Caso contrário:
+por_id=false, id=null.
 
 FILTRO POR CLIENTE:
 Se informar o nome do cliente, use por_nome_cliente=true e coloque somente o nome em "nome_cliente".
-Caso contrário: por_nome_cliente=false, nome_cliente=null.
+
+Caso contrário:
+por_nome_cliente=false, nome_cliente=null.
 
 FILTRO POR TELEFONE:
 Use por_telefone_cliente=true somente quando o usuário informar claramente um telefone de cliente.
+
 Nunca confunda telefone com ID.
 
 FILTRO POR ETAPA:
@@ -128,59 +136,190 @@ resumo=true, por_etapa=true, etapa="aprovado"
 
 Se nenhuma etapa for informada:
 por_etapa=false, etapa="negociacao".
+
 Quando por_etapa=false, "etapa" não deve ser usada como filtro.
 
 FILTRO POR PERÍODO:
-Se o usuário informar um período, use por_periodo=true e preencha:
-periodo_start, periodo_end e periodo_texto.
-se usuário não informar período use por_periodo=true e preencha use padrão "últimos 15 dias" e preencha:
-periodo_start, periodo_end e periodo_texto.
+O filtro por período é SEMPRE obrigatório para consultas de orçamento.
 
-Exemplos: "este mês", "últimos 30 dias", "últimos 6 meses", "este ano", "em 2025", "de março até junho".
+Sempre use:
+por_periodo=true
+
+Nunca use:
+por_periodo=false
+
+Sempre preencha:
+- periodo_start
+- periodo_end
+- periodo_texto
+
+Se o usuário informar um período, interprete o período solicitado e preencha as três propriedades.
+
+Se o usuário NÃO informar nenhum período, use obrigatoriamente o período padrão de:
+"últimos 15 dias"
+
+Nesse caso:
+por_periodo=true
+
+periodo_start = início do período de 15 dias atrás, no fuso GMT-3.
+
+periodo_end = data/hora atual, no fuso GMT-3.
+
+periodo_texto = "últimos 15 dias"
+
+FORMATO DAS DATAS:
+"periodo_start" e "periodo_end" devem sempre estar no formato ISO 8601 com fuso GMT-3:
+
+YYYY-MM-DDTHH:mm:ss-03:00
+
+Exemplo:
+"periodo_start": "2026-09-14T00:00:00-03:00"
+"periodo_end": "2026-09-29T00:00:00-03:00"
+
+Nunca adicione texto antes ou depois da data.
+
+FORMATO DE "periodo_texto":
+"periodo_texto" deve ser uma descrição curta, clara e em português do período utilizado.
+
+Exemplos:
+
+"hoje" →
+periodo_texto="hoje"
+
+"ontem" →
+periodo_texto="ontem"
+
+"esta semana" →
+periodo_texto="esta semana"
+
+"semana passada" →
+periodo_texto="semana passada"
+
+"este mês" →
+periodo_texto="este mês"
+
+"mês passado" →
+periodo_texto="mês passado"
+
+"últimos 15 dias" →
+periodo_texto="últimos 15 dias"
+
+"últimos 30 dias" →
+periodo_texto="últimos 30 dias"
+
+"últimos 6 meses" →
+periodo_texto="últimos 6 meses"
+
+"este ano" →
+periodo_texto="este ano"
+
+"em 2025" →
+periodo_texto="ano de 2025"
+
+"de março até junho" →
+periodo_texto="março a junho"
+
+"de 1 a 15 de setembro" →
+periodo_texto="01/09 a 15/09"
+
+Não coloque as datas ISO dentro de "periodo_texto".
+
+O "periodo_texto" deve ser apenas uma descrição legível para apresentação ao usuário.
+
+Exemplo completo:
+"Lista meus orçamentos dos últimos 30 dias" →
+
+por_periodo=true,
+periodo_start="2026-08-30T00:00:00-03:00",
+periodo_end="2026-09-29T00:00:00-03:00",
+periodo_texto="últimos 30 dias"
 
 TODO O PERÍODO:
-"todo o período", "período completo", "período inteiro", "desde o começo", "desde sempre" ou "todos os orçamentos" →
-por_periodo=false,
-periodo_start=null,
-periodo_end=null,
-periodo_texto="todo o período".
+Quando o usuário disser:
+"todo o período",
+"período completo",
+"período inteiro",
+"desde o começo",
+"desde sempre"
+ou
+"todos os orçamentos"
+
+NÃO desative o filtro de período.
+
+Como o período é obrigatório, use um intervalo suficientemente amplo desde o início dos registros até a data atual.
+
+Nesse caso:
+por_periodo=true
+
+periodo_start = "2000-01-01T00:00:00-03:00"
+
+periodo_end = data/hora atual no GMT-3.
+
+periodo_texto="todo o período"
 
 Isso não altera "resumo".
 
 Ex.:
 "Lista meus orçamentos aprovados todo o período" →
-resumo=false, por_etapa=true, etapa="aprovado", por_periodo=false.
+
+resumo=false,
+por_etapa=true,
+etapa="aprovado",
+por_periodo=true,
+periodo_texto="todo o período"
 
 "lista relatório dos meus orçamentos aprovados todo o período" →
-resumo=true, por_etapa=true, etapa="aprovado", por_periodo=false.
+
+resumo=true,
+por_etapa=true,
+etapa="aprovado",
+por_periodo=true,
+periodo_texto="todo o período"
 
 MÚLTIPLOS FILTROS:
 Podem ser combinados.
 
 "Lista todos os orçamentos de João aprovados dos últimos 6 meses" →
+
 resumo=false,
 por_nome_cliente=true,
 nome_cliente="João",
 por_etapa=true,
 etapa="aprovado",
-por_periodo=true.
+por_periodo=true
 
 "lista relatório dos orçamentos de João aprovados dos últimos 6 meses" →
+
 resumo=true,
 por_nome_cliente=true,
 nome_cliente="João",
 por_etapa=true,
 etapa="aprovado",
-por_periodo=true.
+por_periodo=true
 
 MOSTRAR FILTROS:
-Use "mostrar_filtros": true somente se o usuário pedir explicitamente para mostrar os filtros utilizados. Caso contrário, false.
+Use "mostrar_filtros": true somente se o usuário pedir explicitamente para mostrar os filtros utilizados.
+
+Exemplos:
+"mostra os filtros"
+"quais filtros foram usados"
+"me mostre os filtros"
+
+Caso contrário:
+mostrar_filtros=false.
 
 REGRAS FINAIS:
 - Todas as propriedades devem existir.
-- Use null quando não houver valor.
+- Use null somente para campos que realmente não possuem informação.
+- "periodo_start" NUNCA pode ser null.
+- "periodo_end" NUNCA pode ser null.
+- "periodo_texto" NUNCA pode ser null.
+- "por_periodo" deve ser sempre true.
+- Sempre existe um período: período solicitado ou últimos 15 dias.
+- "periodo_start" e "periodo_end" devem ser ISO 8601 com GMT-3.
+- "periodo_texto" deve ser curto, legível e descrever o período usado.
 - Flags devem ser true ou false.
-- Não invente IDs, nomes, telefones, etapas ou datas.
+- Não invente IDs, nomes, telefones ou etapas.
 - LISTA = resumo=false.
 - RELATÓRIO/RESUMO = resumo=true.
 - Filtros de cliente, etapa e período não transformam uma lista em relatório.
@@ -188,7 +327,7 @@ REGRAS FINAIS:
 Mensagem:
 """${userMessage}"""
 `;
-        }
+}
 
         // DESPESAS
 
