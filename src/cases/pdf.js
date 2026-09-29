@@ -128,7 +128,7 @@ async function executePdf(command, userPhone) {
         ocultarValorServicos: false,
         garantia: true,
         assinaturaEmpresa: false,
-        assinaturaUser: false
+        assinaturaEmpresa: false
       }
     };
 
