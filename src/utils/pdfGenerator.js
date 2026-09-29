@@ -216,28 +216,24 @@ async function generatePDF(orcamento, user, config = {}) {
         const documentoTipo = tipo || "Orçamento";
 
         const opcoes = {
-            listaServicos: documentoTipo === "Pedido"
-                ? rawOpcoes.listaServicos === true
-                : true,
+    listaServicos: true,
+    listaMateriais: true,
+    ocultarValorServicos: false,
+    garantia: true,
+    assinaturaCliente: false,
+    assinaturaEmpresa: false,
+    observacoes: true,
+    ...rawOpcoes
+};
 
-            listaMateriais: true,
+// Regras específicas para Pedido
+if (documentoTipo === "Pedido") {
+    // Material é sempre obrigatório no Pedido
+    opcoes.listaMateriais = true;
 
-            ocultarValorServicos: false,
-            garantia: true,
-            assinaturaCliente: false,
-            assinaturaEmpresa: false,
-            observacoes: true,
-            ...rawOpcoes
-        };
-
-        // Regras específicas para Pedido
-        if (documentoTipo === "Pedido") {
-            // Material é obrigatório
-            opcoes.listaMateriais = true;
-
-            // Serviço só aparece se foi solicitado explicitamente
-            opcoes.listaServicos = rawOpcoes.listaServicos === true;
-        }
+    // Serviços só aparecem se solicitados explicitamente
+    opcoes.listaServicos = rawOpcoes.listaServicos === true;
+}
 
         const totalMateriais = (opcoes.listaMateriais && orcamento?.materiais?.length > 0)
             ? orcamento.materiais.reduce(
