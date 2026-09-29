@@ -154,12 +154,6 @@ resumo=false, por_etapa=true, etapa="aprovado", por_periodo=false.
 "lista relatório dos meus orçamentos aprovados todo o período" →
 resumo=true, por_etapa=true, etapa="aprovado", por_periodo=false.
 
-PERÍODO PADRÃO:
-Se nenhum período for informado:
-por_periodo=true,
-use os últimos 30 dias,
-preencha periodo_start, periodo_end e periodo_texto="últimos 30 dias".
-
 MÚLTIPLOS FILTROS:
 Podem ser combinados.
 
