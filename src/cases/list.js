@@ -333,7 +333,7 @@ Mensagem:
 
         case 'despesas': {
 
-            return `
+    return `
 Você interpreta comandos para listar despesas ou gerar resumo de despesas.
 O usuário está no fuso GMT-3 (Brasil).
 ${nowWithWeekday()}
@@ -349,14 +349,14 @@ Retorne somente JSON válido.
   "filtros": {
     "por_tipo": false,
     "por_descricao": false,
-    "por_periodo": false
+    "por_periodo": true
   },
   "mostrar_filtros": false,
   "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
   "descricao": null,
-  "periodo_start": null,
-  "periodo_end": null,
-  "periodo_texto": null
+  "periodo_start": "YYYY-MM-DDTHH:mm:ss-03:00",
+  "periodo_end": "YYYY-MM-DDTHH:mm:ss-03:00",
+  "periodo_texto": "últimos 30 dias"
 }
 
 RESUMO:
@@ -369,7 +369,8 @@ Exemplos:
 "Relatório das minhas despesas do mês" → true
 "Quanto gastei esse mês?" → true
 "Qual o total das minhas despesas?" → true
-"Me mostre o total que gastei com combustível" → true, por_descricao=true, descricao="combustível"
+"Me mostre o total que gastei com combustível" →
+resumo=true, por_descricao=true, descricao="combustível"
 
 Se pedir para LISTAR ou MOSTRAR as despesas individualmente:
 resumo=false.
@@ -437,6 +438,7 @@ por_descricao=true, descricao="tomada"
 resumo=true, por_descricao=true, descricao="gasolina"
 
 Uma palavra pode representar categoria ou descrição:
+
 "Lista minhas despesas de material" →
 por_tipo=true, tipo="materiais", por_descricao=false
 
@@ -444,35 +446,124 @@ por_tipo=true, tipo="materiais", por_descricao=false
 por_tipo=false, tipo="todos", por_descricao=true, descricao="tomada"
 
 FILTRO POR PERÍODO:
-Use por_periodo=true quando o usuário informar qualquer período.
+O filtro por período é SEMPRE obrigatório.
 
-Exemplos:
+Sempre use:
+por_periodo=true
+
+Nunca use:
+por_periodo=false
+
+Sempre preencha:
+- periodo_start
+- periodo_end
+- periodo_texto
+
+Se o usuário informar um período, interprete o período solicitado e preencha
+as três propriedades.
+
+Exemplos de períodos:
 hoje, ontem, essa semana, semana passada, este mês, mês passado,
 setembro, mês de janeiro, últimos 30 dias, últimos 6 meses,
 de 1 a 15 de setembro, desde o começo do mês, etc.
 
-Quando houver período, preencha:
-periodo_start, periodo_end e periodo_texto.
+FORMATO DAS DATAS:
+"periodo_start" e "periodo_end" devem sempre estar no formato
+ISO 8601 com fuso GMT-3:
 
-As datas devem considerar GMT-3 e usar ISO 8601.
+YYYY-MM-DDTHH:mm:ss-03:00
+
+Exemplo:
+
+"periodo_start": "2026-09-01T00:00:00-03:00"
+"periodo_end": "2026-09-29T00:00:00-03:00"
+
+Nunca coloque texto junto da data.
+
+FORMATO DE "periodo_texto":
+"periodo_texto" deve ser uma descrição curta, clara e legível em português
+do período utilizado.
+
+Exemplos:
+
+"hoje" →
+periodo_texto="hoje"
+
+"ontem" →
+periodo_texto="ontem"
+
+"essa semana" →
+periodo_texto="esta semana"
+
+"semana passada" →
+periodo_texto="semana passada"
+
+"este mês" →
+periodo_texto="este mês"
+
+"mês passado" →
+periodo_texto="mês passado"
+
+"setembro" →
+periodo_texto="setembro"
+
+"últimos 30 dias" →
+periodo_texto="últimos 30 dias"
+
+"últimos 6 meses" →
+periodo_texto="últimos 6 meses"
+
+"este ano" →
+periodo_texto="este ano"
+
+"em 2025" →
+periodo_texto="ano de 2025"
+
+"de 1 a 15 de setembro" →
+periodo_texto="01/09 a 15/09"
+
+Não coloque as datas ISO dentro de "periodo_texto".
+
+O "periodo_texto" serve apenas para apresentar ao usuário qual período
+foi utilizado na consulta.
 
 SEM PERÍODO:
-Se nenhum período for informado:
-por_periodo=true,
-use os últimos 30 dias,
-periodo_start=data/hora de 30 dias atrás,
-periodo_end=data/hora atual,
-periodo_texto="últimos 30 dias".
+Se nenhum período for informado, use obrigatoriamente o período padrão:
+
+"últimos 30 dias"
+
+Nesse caso:
+
+por_periodo=true
+
+periodo_start = data/hora de 30 dias atrás, no fuso GMT-3.
+
+periodo_end = data/hora atual, no fuso GMT-3.
+
+periodo_texto="últimos 30 dias"
 
 TODO O PERÍODO:
-"todo o período", "desde o começo", "desde sempre", "sem limite de data"
-ou "todas as despesas que tenho" →
-por_periodo=false,
-periodo_start=null,
-periodo_end=null,
-periodo_texto="todo o período".
+Quando o usuário disser:
 
-Não crie datas artificiais.
+"todo o período"
+"desde o começo"
+"desde sempre"
+"sem limite de data"
+"todas as despesas que tenho"
+
+O período continua obrigatório.
+
+Use:
+
+por_periodo=true
+
+periodo_start="2000-01-01T00:00:00-03:00"
+
+periodo_end=data/hora atual no GMT-3
+
+periodo_texto="todo o período"
+
+Não use null nas propriedades de período.
 
 COMBINAÇÃO:
 Os filtros podem ser combinados.
@@ -483,14 +574,14 @@ por_tipo=false,
 tipo="todos",
 por_descricao=true,
 descricao="gasolina",
-por_periodo=true.
+por_periodo=true
 
 "Resumo das minhas despesas de material da semana" →
 resumo=true,
 por_tipo=true,
 tipo="materiais",
 por_descricao=false,
-por_periodo=true.
+por_periodo=true
 
 "Resumo das minhas despesas com tomada em setembro" →
 resumo=true,
@@ -498,18 +589,30 @@ por_tipo=false,
 tipo="todos",
 por_descricao=true,
 descricao="tomada",
-por_periodo=true.
+por_periodo=true
 
 MOSTRAR FILTROS:
 Use mostrar_filtros=true somente se o usuário pedir:
-"mostre os filtros", "quais filtros foram usados",
-"me diga os filtros" ou "mostrar filtros".
-Caso contrário, false.
 
-REGRAS:
+"mostre os filtros"
+"quais filtros foram usados"
+"me diga os filtros"
+"mostrar filtros"
+
+Caso contrário:
+mostrar_filtros=false.
+
+REGRAS FINAIS:
 - Todas as propriedades devem existir.
 - Flags devem ser true ou false.
-- Não invente datas, categorias ou descrições.
+- "por_periodo" deve ser sempre true.
+- "periodo_start" NUNCA pode ser null.
+- "periodo_end" NUNCA pode ser null.
+- "periodo_texto" NUNCA pode ser null.
+- Sempre existe um período: período solicitado ou últimos 30 dias.
+- As datas devem estar em ISO 8601 com GMT-3.
+- "periodo_texto" deve ser curto, legível e descrever o período utilizado.
+- Não invente categorias ou descrições.
 - O handle consultará o banco usando somente os filtros marcados como true.
 - Quando resumo=true, o handle calcula os valores agrupados por categoria:
   Condução, Materiais, Alimentação, Outras e Total.
@@ -518,8 +621,7 @@ REGRAS:
 Texto:
 """${userMessage}"""
 `;
-        }
-
+}
 
 // AGENDA
 
