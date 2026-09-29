@@ -18,9 +18,7 @@ const formatCurrency = require('../utils/formatCurrency');
 const { sendWhatsAppRaw } = require('../services/whatsappService');
 
 
-// ======================================================
 // PROMPTS DE LISTAGEM
-// ======================================================
 
 function nowWithWeekday() {
     const now = getNowBRT();
@@ -34,9 +32,8 @@ async function getListPrompt(modulo, userMessage) {
 
     switch (modulo) {
 
-        // ==================================================
+
         // ORÇAMENTO
-        // ==================================================
 
         case 'orcamento': {
 
@@ -197,11 +194,7 @@ Mensagem:
 `;
         }
 
-
-        //
-==================================================
         // DESPESAS
-        // ==================================================
 
         case 'despesas': {
 
@@ -393,9 +386,7 @@ Texto:
         }
 
 
-        // ==================================================
 // AGENDA
-        // ==================================================
 
         case 'agenda': {
 
@@ -444,9 +435,9 @@ Texto: """${userMessage}"""
 }
 
 
-// ======================================================
+
 // EXECUÇÃO DAS LISTAGENS
-// ======================================================
+
 
 async function executeList(command, userPhone) {
 
@@ -454,10 +445,9 @@ async function executeList(command, userPhone) {
 
     switch (modulo) {
 
-        // ==================================================
+ 
         // AGENDA
-        // ==================================================
-
+ 
         case 'agenda': {
 
             const zone = 'America/Sao_Paulo';
@@ -591,9 +581,8 @@ Dia ${formatLocal(e.date)}${telefone}`;
             return `📅 Eventos encontrados no período ${periodo}:\n${list}`;
         }
 
-// ==================================================
         // DESPESAS
-        // ==================================================
+
 
         case 'despesas': {
 
@@ -800,9 +789,7 @@ Dia ${formatLocal(e.date)}${telefone}`;
         }
 
 
-        // ==================================================
         // ORÇAMENTO
-        // ==================================================
 
         case 'orcamento': {
 
