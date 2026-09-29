@@ -18,7 +18,6 @@ async function handleGPTCommand(
 
     let prompt = '';
 
-
     // ==================================================
     // 🔀 SELECIONA O PROMPT NO CASE CORRESPONDENTE
     // ==================================================
