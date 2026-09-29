@@ -1,6 +1,6 @@
 const { DateTime } = require('luxon');
 const aplicarDesconto = require('./aplicarDesconto');
-
+const formatCurrency = require('./formatCurrency');
 const TIMEZONE = 'America/Sao_Paulo';
 
 const TIPOS_DESPESA = [
