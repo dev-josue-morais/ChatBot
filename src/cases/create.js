@@ -1,6 +1,6 @@
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
-const { formatCurrency } = require('../utils/formatCurrency');
+const formatCurrency = require('../utils/formatCurrency');
 const {
     getNowBRT,
     formatLocal,
