@@ -1,7 +1,7 @@
 const supabase = require('../services/supabase');
 const { sendPDFOrcamento } = require('../services/whatsappService');
 
-function getPdfPrompt(modulo, userMessage, nowWithWeekday) {
+function getPdfPrompt(modulo, userMessage) {
 
   if (modulo !== 'orcamento') {
     return null;
@@ -27,8 +27,6 @@ Responda somente com JSON válido:
   },
   "valorRecibo": número | null
 }
-
-${nowWithWeekday ? nowWithWeekday() : ''}
 
 Texto: """${userMessage}"""
 
