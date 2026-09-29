@@ -822,6 +822,10 @@ Dia ${formatLocal(e.date)}${telefone}`;
 
 
         case 'despesas': {
+console.log(
+                '🧠 JSON recebido do GPT para lista despesas:',
+                JSON.stringify(command, null, 2)
+            );
 
             const filtros =
                 command.filtros || {};
@@ -1030,10 +1034,10 @@ Dia ${formatLocal(e.date)}${telefone}`;
 
         case 'orcamento': {
 
-            console.log(
-                '🧠 JSON recebido do GPT para lista:',
-                JSON.stringify(command, null, 2)
-            );
+          // console.log(
+          //    '🧠 JSON recebido do GPT para lista:',
+          //   JSON.stringify(command, null, 2)
+          //  );
 
             const filtros = command.filtros || {};
 
