@@ -1,4 +1,3 @@
-const { getNowBRT } = require('../utils/utils');
 const openai = require('./openai');
 
 const { getCreatePrompt } = require('../cases/create');
@@ -18,8 +17,6 @@ async function handleGPTCommand(
     userMessage = (userMessage || "").trim();
 
     let prompt = '';
-
-    }
 
 
     // ==================================================
