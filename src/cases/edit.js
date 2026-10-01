@@ -2,6 +2,7 @@ const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
 const formatOrcamento = require('../utils/formatOrcamento');
 const formatCurrency = require('../utils/formatCurrency');
+
 const {
     TIPOS_DESPESA,
     formatDateBR,
@@ -9,21 +10,39 @@ const {
     normalizeMoney,
     deleteOldEvents
 } = require('../utils/processFunctions');
+
 const { formatLocal } = require('../utils/utils');
 
-async function getEditPrompt(modulo, userMessage, id, userPhone) {
+
+// ============================================================
+// BUSCA DADOS ATUAIS + MONTA PROMPT DE EDIÇÃO
+// ============================================================
+
+async function getEditPrompt(
+    modulo,
+    userMessage,
+    id,
+    userPhone
+) {
 
     switch (modulo) {
+
+        // ======================================================
+        // ORÇAMENTO
+        // ======================================================
 
         case 'orcamento': {
 
             if (!id) {
                 return {
-                    error: "⚠️ É necessário informar o ID do orçamento para editar."
+                    error: '⚠️ É necessário informar o ID do orçamento para editar.'
                 };
             }
 
-            const { data: currentData, error: fetchError } = await supabase
+            const {
+                data: currentData,
+                error: fetchError
+            } = await supabase
                 .from('orcamentos')
                 .select('*')
                 .eq('orcamento_numero', id)
@@ -36,55 +55,230 @@ async function getEditPrompt(modulo, userMessage, id, userPhone) {
                 };
             }
 
-            return `
-Você é um assistente comercial que edita um orçamento existente.
-Retorne somente JSON válido, sem texto adicional.
+            const prompt = `
+Você é um assistente comercial especializado em EDITAR orçamentos existentes.
+
+O orçamento atual foi localizado no banco de dados.
+Sua função é identificar EXATAMENTE o que o usuário deseja alterar.
+
+Não recrie o orçamento inteiro.
+
+Retorne SOMENTE as alterações necessárias em JSON válido.
+
+FORMATO:
 
 {
-  "modulo": "orcamento",
-  "action": "edit",
-  "orcamento_numero": número,
-  "nome_cliente": "string",
-  "descricoes": ["texto1", "texto2"] | [],
-  "telefone_cliente": "string",
-  "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
-  "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
-  "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }],
-  "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }],
-  "desconto_materiais": number | "10%" | null,
-  "desconto_servicos": number | "10%" | null
+  "alteracoes": {
+    "nome_cliente": "string",
+    "telefone_cliente": "string",
+    "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
+    "descricoes": ["texto"],
+    "observacoes": ["texto"],
+    "desconto_materiais": número | "10%" | null,
+    "desconto_servicos": número | "10%" | null,
+
+    "materiais": [
+      {
+        "acao": "alterar" | "adicionar" | "remover",
+        "nome_atual": "nome do item existente",
+        "item": {
+          "nome": "nome completo",
+          "qtd": número,
+          "und": "m",
+          "valor": número
+        },
+        "alteracoes": {
+          "nome": "novo nome",
+          "qtd": número,
+          "und": "m",
+          "valor": número
+        }
+      }
+    ],
+
+    "servicos": [
+      {
+        "acao": "alterar" | "adicionar" | "remover",
+        "titulo_atual": "título do serviço existente",
+        "item": {
+          "titulo": "título completo",
+          "qtd": número,
+          "valor": número
+        },
+        "alteracoes": {
+          "titulo": "novo título",
+          "qtd": número,
+          "valor": número
+        }
+      }
+    ]
+  }
 }
 
-Orçamento atual:
+ORÇAMENTO ATUAL:
+
 ${JSON.stringify(currentData, null, 2)}
 
-Instruções do usuário:
+INSTRUÇÃO DO USUÁRIO:
+
 "${userMessage}"
 
-Regras:
-- Mantenha toda a estrutura original e altere somente o que o usuário pedir.
-- Campos vazios podem ser null.
-- Ao adicionar desconto, altere somente "desconto_materiais" e/ou "desconto_servicos". Não altere os valores dos materiais ou serviços.
-- Utilize os nomes completos dos itens fornecidos no texto.
-- "und" pode ser "und", "m", "cm", "kit", "caixa", etc.
-- Se o valor não for informado, use 0.
-- Não crie novas propriedades.
-- Separe itens diferentes.
-- Valores monetários devem ser números com ponto decimal.
+REGRAS GERAIS:
 
-Retorne o orçamento completo atualizado.
+- Retorne somente o que precisa ser alterado.
+- Não repita campos que permanecerão iguais.
+- Nunca altere informações que o usuário não solicitou.
+- Não invente informações.
+- Se o usuário alterar somente um campo, retorne somente esse campo.
+- Não altere o número do orçamento.
+- Não crie propriedades fora da estrutura definida.
+
+CAMPOS SIMPLES:
+
+- "nome_cliente": somente se o nome do cliente mudar.
+- "telefone_cliente": somente se o telefone mudar.
+- "etapa": somente se a etapa mudar.
+- "descricoes": somente se o usuário solicitar alteração nas descrições.
+- "observacoes": somente se o usuário solicitar alteração nas observações.
+- "desconto_materiais": somente se o desconto dos materiais mudar.
+- "desconto_servicos": somente se o desconto dos serviços mudar.
+
+DESCONTOS:
+
+- Alterar desconto NÃO altera os valores dos materiais ou serviços.
+- "10%" significa desconto percentual.
+- Valor monetário deve ser número.
+- Não faça cálculos.
+
+MATERIAIS:
+
+Para alterar um material existente:
+
+{
+  "acao": "alterar",
+  "nome_atual": "nome exato ou claramente correspondente ao item atual",
+  "alteracoes": {
+    "qtd": 250
+  }
+}
+
+Exemplo:
+Usuário: "muda o cabo 10mm para 250 metros"
+
+Retorne somente a alteração da quantidade do cabo correspondente.
+
+Para adicionar material:
+
+{
+  "acao": "adicionar",
+  "item": {
+    "nome": "fio 2,5mm azul",
+    "qtd": 30,
+    "und": "m",
+    "valor": 2.5
+  }
+}
+
+Para remover material:
+
+{
+  "acao": "remover",
+  "nome_atual": "fio 2,5mm azul"
+}
+
+REGRAS DOS MATERIAIS:
+
+- Use o nome completo do item.
+- Separe itens diferentes.
+- "qtd" é quantidade.
+- "und" pode ser "und", "m", "cm", "kit", "caixa" etc.
+- Valores monetários são números.
+- Se adicionar um item sem valor informado, use 0.
+- Nunca altere outro material sem solicitação.
+
+SERVIÇOS:
+
+Para alterar:
+
+{
+  "acao": "alterar",
+  "titulo_atual": "Instalação de tomada",
+  "alteracoes": {
+    "qtd": 15
+  }
+}
+
+Para adicionar:
+
+{
+  "acao": "adicionar",
+  "item": {
+    "titulo": "Instalação de tomada",
+    "qtd": 10,
+    "valor": 25
+  }
+}
+
+Para remover:
+
+{
+  "acao": "remover",
+  "titulo_atual": "Instalação de tomada"
+}
+
+REGRAS DOS SERVIÇOS:
+
+- Não altere serviços que não foram mencionados.
+- Valores monetários são números.
+- Se adicionar serviço sem valor informado, use 0.
+
+DESCRIÇÕES E OBSERVAÇÕES:
+
+Se o usuário pedir para substituir completamente as descrições ou observações, retorne o novo array.
+
+Se pedir para adicionar uma descrição ou observação, indique a alteração de forma que o sistema possa preservar as existentes.
+
+Se pedir para remover uma descrição ou observação específica, indique somente a remoção solicitada.
+
+IMPORTANTE:
+
+Não retorne o orçamento completo.
+Retorne somente:
+
+{
+  "alteracoes": { ... }
+}
+
+Se nenhuma alteração puder ser identificada, retorne:
+
+{
+  "alteracoes": {}
+}
 `;
+
+            return {
+                prompt,
+                currentData
+            };
         }
+
+
+        // ======================================================
+        // AGENDA
+        // ======================================================
 
         case 'agenda': {
 
             if (!id) {
                 return {
-                    error: "⚠️ É necessário informar o ID do evento para editar."
+                    error: '⚠️ É necessário informar o ID do evento para editar.'
                 };
             }
 
-            const { data: currentData, error: fetchError } = await supabase
+            const {
+                data: currentData,
+                error: fetchError
+            } = await supabase
                 .from('events')
                 .select('*')
                 .eq('event_numero', id)
@@ -98,7 +292,12 @@ Retorne o orçamento completo atualizado.
             }
 
             const dateBRT = DateTime
-                .fromISO(currentData.date, { zone: 'utc' })
+                .fromISO(
+                    currentData.date,
+                    {
+                        zone: 'utc'
+                    }
+                )
                 .setZone('America/Sao_Paulo')
                 .toISO();
 
@@ -111,55 +310,112 @@ Retorne o orçamento completo atualizado.
                 .toFormat('cccc');
 
             const nowWithWeekday =
-                `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
+                `Hoje é ${weekday}, ${now.toFormat('yyyy-MM-dd HH:mm:ss')}`;
 
-            return `
-Você é um assistente que edita eventos de uma agenda.
+            const prompt = `
+Você é um assistente especializado em EDITAR eventos de uma agenda.
+
 ${nowWithWeekday}
 
-Retorne somente JSON válido.
+O evento atual foi localizado no banco de dados.
+
+Sua função é identificar SOMENTE as alterações solicitadas pelo usuário.
+
+Não recrie o evento inteiro.
+
+Retorne SOMENTE JSON válido neste formato:
 
 {
-  "modulo": "agenda",
-  "action": "edit",
-  "event_numero": número,
-  "title": "string",
-  "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número,
-  "telefone": "string"
+  "alteracoes": {
+    "title": "string",
+    "datetime": "ISO 8601 com offset -03:00",
+    "reminder_minutes": número,
+    "telefone": "string"
+  }
 }
 
-Regras:
-- Mantenha a estrutura original e altere somente o que o usuário solicitar.
-- Se o usuário não informar telefone, mantenha o telefone atual.
-- Se informar novo telefone, retorne o telefone informado.
-- "telefone" deve ser retornado sempre, usando o atual quando não houver alteração.
-- Todas as datas devem estar em GMT-3 com offset "-03:00".
-- Para "daqui X minutos/horas", "amanhã" e "mais tarde", sempre use a hora atual como base da soma.
-- Para horário exato ("às 14h", "7:40"), substitua somente a hora.
-- Atualize a data conforme o dia ou semana solicitado.
-- "reminder_minutes" permanece o atual se não houver alteração.
+EVENTO ATUAL:
 
-Evento atual:
 ${JSON.stringify({
     ...currentData,
     date: dateBRT
 }, null, 2)}
 
-Mensagem:
+MENSAGEM DO USUÁRIO:
+
 "${userMessage}"
+
+REGRAS:
+
+- Altere somente o que o usuário solicitar.
+- Não repita campos que permanecerão iguais.
+- Não invente informações.
+- Não altere o ID do evento.
+- Se o usuário não mencionar telefone, não retorne "telefone".
+- Se informar novo telefone, retorne "telefone".
+- Se não mencionar lembrete, não retorne "reminder_minutes".
+- Se não mencionar título, não retorne "title".
+- Se não mencionar data ou horário, não retorne "datetime".
+
+DATAS E HORÁRIOS:
+
+- Use America/Sao_Paulo.
+- O resultado de "datetime" deve conter o offset "-03:00".
+- "amanhã" significa o próximo dia em relação à data atual.
+- "daqui X minutos" deve usar a hora atual como base.
+- "daqui X horas" deve usar a hora atual como base.
+- "mais tarde" deve ser interpretado somente quando houver informação suficiente.
+- Para horário exato, como "às 14h" ou "7:40", altere somente o horário e preserve a data atual do evento.
+- Para "muda para segunda", altere a data preservando o horário atual do evento.
+- Para "muda para segunda às 15h", altere data e horário.
+- Se o usuário pedir somente alteração de data, preserve o horário atual.
+- Se pedir somente alteração de horário, preserve a data atual.
+
+LEMBRETE:
+
+- Só altere "reminder_minutes" se o usuário solicitar.
+- Não invente um novo lembrete.
+
+IMPORTANTE:
+
+Não retorne o evento completo.
+
+Retorne somente:
+
+{
+  "alteracoes": { ... }
+}
+
+Se nenhuma alteração puder ser identificada:
+
+{
+  "alteracoes": {}
+}
 `;
+
+            return {
+                prompt,
+                currentData
+            };
         }
+
+
+        // ======================================================
+        // DESPESAS
+        // ======================================================
 
         case 'despesas': {
 
             if (!id) {
                 return {
-                    error: "⚠️ Informe o ID da despesa."
+                    error: '⚠️ Informe o ID da despesa.'
                 };
             }
 
-            const { data: currentData, error: fetchError } = await supabase
+            const {
+                data: currentData,
+                error: fetchError
+            } = await supabase
                 .from('despesas')
                 .select('*')
                 .eq('despesa_numero', String(id))
@@ -172,52 +428,402 @@ Mensagem:
                 };
             }
 
-            return `
-Você é um assistente financeiro que edita uma despesa existente.
-Retorne somente JSON válido, sem explicações ou markdown.
+            const prompt = `
+Você é um assistente financeiro especializado em EDITAR despesas existentes.
+
+A despesa atual foi localizada no banco de dados.
+
+Sua função é identificar SOMENTE as alterações solicitadas.
+
+Não recrie a despesa inteira.
+
+Retorne SOMENTE JSON válido:
 
 {
-  "modulo": "despesas",
-  "action": "edit",
-  "despesa_numero": "${id}",
-  "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
-  "valor": número,
-  "descricao": "string"
+  "alteracoes": {
+    "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
+    "valor": número,
+    "descricao": "string"
+  }
 }
 
-Despesa atual:
+DESPESA ATUAL:
+
 ${JSON.stringify(currentData, null, 2)}
 
-Instruções:
+INSTRUÇÃO DO USUÁRIO:
+
 "${userMessage}"
 
-Regras:
-- Mantenha os dados atuais e altere somente o que o usuário solicitar.
-- Se a descrição mudar e ficar evidente que a categoria também mudou, atualize "tipo".
-- "Altera para gasolina" → descricao="gasolina", tipo="conducao"
-- "Altera para marmita" → descricao="marmita", tipo="alimentacao"
-- "Altera para tomada" → descricao="tomada", tipo="materiais"
-- Tipos permitidos: "conducao", "materiais", "alimentacao", "outras".
+REGRAS:
+
+- Altere somente o que o usuário solicitar.
+- Não repita campos que permanecerão iguais.
 - Não altere "despesa_numero".
 - Não crie novas propriedades.
-- Valores monetários devem ser números usando ponto como decimal.
+- Valores monetários devem ser números.
+- Valor não pode ser negativo.
+- Se a descrição mudar e ficar evidente que a categoria também mudou, altere "tipo".
 
-Retorne a despesa completa após a alteração.
+EXEMPLOS:
+
+"altera para gasolina"
+→ descricao = "gasolina"
+→ tipo = "conducao"
+
+"altera para marmita"
+→ descricao = "marmita"
+→ tipo = "alimentacao"
+
+"altera para tomada"
+→ descricao = "tomada"
+→ tipo = "materiais"
+
+TIPOS PERMITIDOS:
+
+- conducao
+- materiais
+- alimentacao
+- outras
+
+IMPORTANTE:
+
+Não retorne a despesa completa.
+
+Retorne somente:
+
+{
+  "alteracoes": { ... }
+}
+
+Se nenhuma alteração puder ser identificada:
+
+{
+  "alteracoes": {}
+}
 `;
+
+            return {
+                prompt,
+                currentData
+            };
         }
 
+
         default:
+
             return {
                 error: `⚠️ Módulo de edição não suportado: ${modulo}`
             };
     }
 }
 
-async function executeEdit(command, userPhone) {
 
-    const { modulo } = command || {};
+// ============================================================
+// FUNÇÕES AUXILIARES
+// ============================================================
+
+function normalizeText(value) {
+
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+
+function findMaterialIndex(
+    materiais,
+    nome
+) {
+
+    if (!Array.isArray(materiais)) {
+        return -1;
+    }
+
+    const target =
+        normalizeText(nome);
+
+    if (!target) {
+        return -1;
+    }
+
+    return materiais.findIndex(
+        material =>
+            normalizeText(material.nome) === target
+    );
+}
+
+
+function findServicoIndex(
+    servicos,
+    titulo
+) {
+
+    if (!Array.isArray(servicos)) {
+        return -1;
+    }
+
+    const target =
+        normalizeText(titulo);
+
+    if (!target) {
+        return -1;
+    }
+
+    return servicos.findIndex(
+        servico =>
+            normalizeText(servico.titulo) === target
+    );
+}
+
+
+function applyMaterialChanges(
+    materiais,
+    alteracoes
+) {
+
+    const result =
+        Array.isArray(materiais)
+            ? materiais.map(item => ({ ...item }))
+            : [];
+
+    if (!Array.isArray(alteracoes)) {
+        return result;
+    }
+
+    for (const change of alteracoes) {
+
+        if (!change || !change.acao) {
+            continue;
+        }
+
+        // ----------------------------------------------------
+        // ADICIONAR
+        // ----------------------------------------------------
+
+        if (change.acao === 'adicionar') {
+
+            const item = change.item;
+
+            if (!item || !item.nome) {
+                continue;
+            }
+
+            result.push({
+                nome: String(item.nome).trim(),
+                qtd: normalizeMoney(item.qtd),
+                unidade: item.und || item.unidade || 'und',
+                valor: normalizeMoney(item.valor)
+            });
+
+            continue;
+        }
+
+        // ----------------------------------------------------
+        // ALTERAR
+        // ----------------------------------------------------
+
+        const index =
+            findMaterialIndex(
+                result,
+                change.nome_atual
+            );
+
+        if (index === -1) {
+            continue;
+        }
+
+        if (change.acao === 'alterar') {
+
+            const changes =
+                change.alteracoes || {};
+
+            const material =
+                result[index];
+
+            if (
+                changes.nome !== undefined &&
+                changes.nome !== null
+            ) {
+                material.nome =
+                    String(changes.nome).trim();
+            }
+
+            if (
+                changes.qtd !== undefined &&
+                changes.qtd !== null
+            ) {
+                material.qtd =
+                    normalizeMoney(changes.qtd);
+            }
+
+            if (
+                changes.und !== undefined ||
+                changes.unidade !== undefined
+            ) {
+                material.unidade =
+                    changes.und ||
+                    changes.unidade;
+            }
+
+            if (
+                changes.valor !== undefined &&
+                changes.valor !== null
+            ) {
+                material.valor =
+                    normalizeMoney(changes.valor);
+            }
+
+            continue;
+        }
+
+        // ----------------------------------------------------
+        // REMOVER
+        // ----------------------------------------------------
+
+        if (change.acao === 'remover') {
+            result.splice(index, 1);
+        }
+    }
+
+    return result;
+}
+
+
+function applyServicoChanges(
+    servicos,
+    alteracoes
+) {
+
+    const result =
+        Array.isArray(servicos)
+            ? servicos.map(item => ({ ...item }))
+            : [];
+
+    if (!Array.isArray(alteracoes)) {
+        return result;
+    }
+
+    for (const change of alteracoes) {
+
+        if (!change || !change.acao) {
+            continue;
+        }
+
+        // ----------------------------------------------------
+        // ADICIONAR
+        // ----------------------------------------------------
+
+        if (change.acao === 'adicionar') {
+
+            const item = change.item;
+
+            if (!item || !item.titulo) {
+                continue;
+            }
+
+            result.push({
+                titulo: String(item.titulo).trim(),
+                quantidade: normalizeMoney(item.qtd),
+                valor: normalizeMoney(item.valor)
+            });
+
+            continue;
+        }
+
+        // ----------------------------------------------------
+        // ALTERAR
+        // ----------------------------------------------------
+
+        const index =
+            findServicoIndex(
+                result,
+                change.titulo_atual
+            );
+
+        if (index === -1) {
+            continue;
+        }
+
+        if (change.acao === 'alterar') {
+
+            const changes =
+                change.alteracoes || {};
+
+            const servico =
+                result[index];
+
+            if (
+                changes.titulo !== undefined &&
+                changes.titulo !== null
+            ) {
+                servico.titulo =
+                    String(changes.titulo).trim();
+            }
+
+            if (
+                changes.qtd !== undefined &&
+                changes.qtd !== null
+            ) {
+                servico.quantidade =
+                    normalizeMoney(changes.qtd);
+            }
+
+            if (
+                changes.valor !== undefined &&
+                changes.valor !== null
+            ) {
+                servico.valor =
+                    normalizeMoney(changes.valor);
+            }
+
+            continue;
+        }
+
+        // ----------------------------------------------------
+        // REMOVER
+        // ----------------------------------------------------
+
+        if (change.acao === 'remover') {
+            result.splice(index, 1);
+        }
+    }
+
+    return result;
+}
+
+
+// ============================================================
+// EXECUTE EDIT
+// ============================================================
+
+async function executeEdit(
+    command,
+    userPhone
+) {
+
+    const {
+        modulo
+    } = command || {};
+
+    /*
+     * currentData será colocado pelo processCommand depois
+     * que o getEditPrompt fizer a consulta.
+     *
+     * Assim evitamos uma segunda consulta ao Supabase.
+     */
+
+    const currentData =
+        command?._currentData;
+
 
     switch (modulo) {
+
+        // ======================================================
+        // AGENDA
+        // ======================================================
 
         case 'agenda': {
 
@@ -225,66 +831,181 @@ async function executeEdit(command, userPhone) {
                 return '⚠️ É necessário informar o ID do evento para editar.';
             }
 
-            let date = null;
-
-            if (command.datetime) {
-                date = DateTime
-                    .fromISO(command.datetime, {
-                        zone: 'America/Sao_Paulo'
-                    })
-                    .toUTC()
-                    .toISO();
+            if (!currentData) {
+                return '⚠️ Não foi possível recuperar os dados atuais do evento.';
             }
 
-            const updates = {
-                title: command.title,
-                ...(date && { date }),
-                reminder_minutes: command.reminder_minutes ?? 30,
-                notified: typeof command.notified === 'boolean'
-                    ? command.notified
-                    : false
-            };
+            const alteracoes =
+                command.alteracoes || {};
+
+
+            const updates = {};
+
+
+            // --------------------------------------------------
+            // TÍTULO
+            // --------------------------------------------------
+
+            if (
+                alteracoes.title !== undefined &&
+                alteracoes.title !== null &&
+                String(alteracoes.title).trim() !== ''
+            ) {
+
+                updates.title =
+                    String(alteracoes.title).trim();
+            }
+
+
+            // --------------------------------------------------
+            // DATA/HORA
+            // --------------------------------------------------
+
+            if (
+                alteracoes.datetime !== undefined &&
+                alteracoes.datetime !== null
+            ) {
+
+                const date =
+                    DateTime
+                        .fromISO(
+                            alteracoes.datetime,
+                            {
+                                zone: 'America/Sao_Paulo'
+                            }
+                        );
+
+                if (!date.isValid) {
+                    return '⚠️ A data e horário informados são inválidos.';
+                }
+
+                updates.date =
+                    date
+                        .toUTC()
+                        .toISO();
+            }
+
+
+            // --------------------------------------------------
+            // LEMBRETE
+            // --------------------------------------------------
+
+            if (
+                alteracoes.reminder_minutes !== undefined &&
+                alteracoes.reminder_minutes !== null
+            ) {
+
+                const reminder =
+                    Number(
+                        alteracoes.reminder_minutes
+                    );
+
+                if (
+                    !Number.isFinite(reminder) ||
+                    reminder < 0
+                ) {
+                    return '⚠️ O lembrete informado é inválido.';
+                }
+
+                updates.reminder_minutes =
+                    reminder;
+            }
+
+
+            // --------------------------------------------------
+            // TELEFONE
+            // --------------------------------------------------
 
             if (
                 Object.prototype.hasOwnProperty.call(
-                    command,
+                    alteracoes,
                     'telefone'
                 )
             ) {
-                updates.telefone = command.telefone;
+
+                updates.telefone =
+                    alteracoes.telefone;
             }
 
-            const { data, error } = await supabase
+
+            if (Object.keys(updates).length === 0) {
+                return '⚠️ Nenhuma alteração foi identificada.';
+            }
+
+
+            // --------------------------------------------------
+            // NOTIFICADO
+            // --------------------------------------------------
+
+            updates.notified = false;
+
+
+            const {
+                data,
+                error
+            } = await supabase
                 .from('events')
                 .update(updates)
-                .eq('event_numero', command.event_numero)
-                .eq('user_telefone', userPhone)
-                .select('event_numero, title, date, telefone');
+                .eq(
+                    'event_numero',
+                    command.event_numero
+                )
+                .eq(
+                    'user_telefone',
+                    userPhone
+                )
+                .select(
+                    'event_numero, title, date, telefone'
+                );
+
 
             if (error) {
-                console.error('❌ Erro ao atualizar evento:', error);
+
+                console.error(
+                    '❌ Erro ao atualizar evento:',
+                    error
+                );
+
                 console.error(
                     '📦 Updates enviados:',
-                    JSON.stringify(updates, null, 2)
+                    JSON.stringify(
+                        updates,
+                        null,
+                        2
+                    )
                 );
 
                 return '⚠️ Erro ao atualizar evento.';
             }
 
+
             if (!data?.length) {
-    return `⚠️ Nenhum evento encontrado com o ID "${command.event_numero}".`;
-}
 
-            await deleteOldEvents(supabase, userPhone);
+                return `⚠️ Nenhum evento encontrado com o ID "${command.event_numero}".`;
+            }
 
-            const telefone = data[0].telefone
-                ? `\ntelefone ${data[0].telefone}`
-                : '';
+
+            await deleteOldEvents(
+                supabase,
+                userPhone
+            );
+
+
+            const telefone =
+                data[0].telefone
+                    ? `\ntelefone ${data[0].telefone}`
+                    : '';
+
 
             return `✅ Evento atualizado: ${data[0].title}
 ID ${data[0].event_numero}
 dia ${formatLocal(data[0].date)}${telefone}`;
         }
+
+
+        // ======================================================
+        // DESPESAS
+        // ======================================================
 
         case 'despesas': {
 
@@ -293,65 +1014,92 @@ dia ${formatLocal(data[0].date)}${telefone}`;
                 command.despesa_numero;
 
             if (!id) {
-                return "⚠️ É necessário informar o ID da despesa para editar.";
+                return '⚠️ É necessário informar o ID da despesa para editar.';
             }
 
-            const {
-                data: current,
-                error: fetchError
-            } = await supabase
-                .from('despesas')
-                .select('*')
-                .eq('despesa_numero', String(id))
-                .eq('user_phone', userPhone)
-                .single();
-
-            if (fetchError || !current) {
-                return `⚠️ Não encontrei a despesa ID ${id}.`;
+            if (!currentData) {
+                return '⚠️ Não foi possível recuperar os dados atuais da despesa.';
             }
+
+            const alteracoes =
+                command.alteracoes || {};
 
             const updated = {};
 
+
+            // --------------------------------------------------
+            // TIPO
+            // --------------------------------------------------
+
             if (
-                command.tipo !== undefined &&
-                command.tipo !== null &&
-                command.tipo !== ''
+                alteracoes.tipo !== undefined &&
+                alteracoes.tipo !== null &&
+                alteracoes.tipo !== ''
             ) {
-                if (!TIPOS_DESPESA.includes(command.tipo)) {
-                    return "⚠️ Tipo de despesa inválido.";
+
+                if (
+                    !TIPOS_DESPESA.includes(
+                        alteracoes.tipo
+                    )
+                ) {
+                    return '⚠️ Tipo de despesa inválido.';
                 }
 
-                updated.tipo = command.tipo;
+                updated.tipo =
+                    alteracoes.tipo;
             }
 
+
+            // --------------------------------------------------
+            // VALOR
+            // --------------------------------------------------
+
             if (
-                command.valor !== undefined &&
-                command.valor !== null
+                alteracoes.valor !== undefined &&
+                alteracoes.valor !== null
             ) {
-                const valorNumerico = Number(command.valor);
+
+                const valorNumerico =
+                    Number(
+                        alteracoes.valor
+                    );
 
                 if (
                     !Number.isFinite(valorNumerico) ||
                     valorNumerico < 0
                 ) {
-                    return "⚠️ Informe um valor válido.";
+                    return '⚠️ Informe um valor válido.';
                 }
 
-                updated.valor = valorNumerico;
+                updated.valor =
+                    valorNumerico;
             }
+
+
+            // --------------------------------------------------
+            // DESCRIÇÃO
+            // --------------------------------------------------
 
             if (
-                command.descricao !== undefined &&
-                command.descricao !== null &&
-                String(command.descricao).trim() !== ''
+                alteracoes.descricao !== undefined &&
+                alteracoes.descricao !== null &&
+                String(
+                    alteracoes.descricao
+                ).trim() !== ''
             ) {
+
                 updated.descricao =
-                    String(command.descricao).trim();
+                    String(
+                        alteracoes.descricao
+                    ).trim();
             }
 
+
             if (Object.keys(updated).length === 0) {
-                return "⚠️ Nenhuma alteração foi identificada.";
+
+                return '⚠️ Nenhuma alteração foi identificada.';
             }
+
 
             const {
                 data,
@@ -359,23 +1107,32 @@ dia ${formatLocal(data[0].date)}${telefone}`;
             } = await supabase
                 .from('despesas')
                 .update(updated)
-                .eq('despesa_numero', String(id))
-                .eq('user_phone', userPhone)
+                .eq(
+                    'despesa_numero',
+                    String(id)
+                )
+                .eq(
+                    'user_phone',
+                    userPhone
+                )
                 .select('*')
                 .single();
 
+
             if (error) {
+
                 console.error(
                     'Erro ao atualizar despesa:',
                     error
                 );
 
-                return "❌ Falha ao atualizar a despesa.";
+                return '❌ Falha ao atualizar a despesa.';
             }
 
+
             return [
-                "✅ Despesa atualizada!",
-                "",
+                '✅ Despesa atualizada!',
+                '',
                 `🆔 ${data.despesa_numero}`,
                 `📅 ${formatDateBR(data.data)}`,
                 `📂 ${nomeTipo(data.tipo)}`,
@@ -384,78 +1141,289 @@ dia ${formatLocal(data[0].date)}${telefone}`;
             ].join('\n');
         }
 
+
+        // ======================================================
+        // ORÇAMENTO
+        // ======================================================
+
         case 'orcamento': {
 
-            if (!command.orcamento_numero) {
+            const id =
+                command.orcamento_numero ||
+                command.id;
+
+            if (!id) {
+
                 return '⚠️ É necessário informar o ID do orçamento para editar.';
             }
 
-            const descricoes = Array.isArray(command.descricoes)
-    ? command.descricoes
-        .map(d => String(d).replace(/\n/g, '').trim())
-        .filter(Boolean)
-    : undefined;
+            if (!currentData) {
 
-            const materiais = Array.isArray(command.materiais)
-                ? command.materiais.map(m => ({
-                    ...m,
-                    qtd: normalizeMoney(m.qtd),
-                    valor: normalizeMoney(m.valor),
-                    unidade: m.und
-                }))
-                : undefined;
+                return '⚠️ Não foi possível recuperar os dados atuais do orçamento.';
+            }
 
-            const servicos = Array.isArray(command.servicos)
-                ? command.servicos.map(s => ({
-                    ...s,
-                    quantidade: normalizeMoney(s.qtd),
-                    valor: normalizeMoney(s.valor)
-                }))
-                : undefined;
+            const alteracoes =
+                command.alteracoes || {};
 
-            const validFields = {
-                nome_cliente: command.nome_cliente,
-                telefone_cliente: command.telefone_cliente,
-                etapa: command.etapa || undefined,
-                observacoes: command.observacoes,
-                materiais,
-                servicos,
 
-                desconto_materiais:
-                    command.desconto_materiais !== undefined
-                        ? normalizeMoney(command.desconto_materiais)
-                        : undefined,
+            if (
+                Object.keys(alteracoes).length === 0
+            ) {
 
-                desconto_servicos:
-                    command.desconto_servicos !== undefined
-                        ? normalizeMoney(command.desconto_servicos)
-                        : undefined,
+                return '⚠️ Nenhuma alteração foi identificada.';
+            }
 
-                descricoes
-            };
 
-            const { data, error } = await supabase
+            const updates = {};
+
+
+            // --------------------------------------------------
+            // CAMPOS SIMPLES
+            // --------------------------------------------------
+
+            if (
+                alteracoes.nome_cliente !== undefined
+            ) {
+
+                updates.nome_cliente =
+                    alteracoes.nome_cliente;
+            }
+
+
+            if (
+                alteracoes.telefone_cliente !== undefined
+            ) {
+
+                updates.telefone_cliente =
+                    alteracoes.telefone_cliente;
+            }
+
+
+            if (
+                alteracoes.etapa !== undefined
+            ) {
+
+                const etapasValidas = [
+                    'negociacao',
+                    'finalizado',
+                    'andamento',
+                    'perdido',
+                    'aprovado'
+                ];
+
+                if (
+                    !etapasValidas.includes(
+                        alteracoes.etapa
+                    )
+                ) {
+
+                    return '⚠️ Etapa de orçamento inválida.';
+                }
+
+                updates.etapa =
+                    alteracoes.etapa;
+            }
+
+
+            // --------------------------------------------------
+            // DESCRIÇÕES
+            // --------------------------------------------------
+
+            if (
+                alteracoes.descricoes !== undefined
+            ) {
+
+                if (
+                    !Array.isArray(
+                        alteracoes.descricoes
+                    )
+                ) {
+
+                    return '⚠️ As descrições devem ser uma lista.';
+                }
+
+                updates.descricoes =
+                    alteracoes.descricoes
+                        .map(
+                            item =>
+                                String(item)
+                                    .replace(/\n/g, '')
+                                    .trim()
+                        )
+                        .filter(Boolean);
+            }
+
+
+            // --------------------------------------------------
+            // OBSERVAÇÕES
+            // --------------------------------------------------
+
+            if (
+                alteracoes.observacoes !== undefined
+            ) {
+
+                if (
+                    !Array.isArray(
+                        alteracoes.observacoes
+                    )
+                ) {
+
+                    return '⚠️ As observações devem ser uma lista.';
+                }
+
+                updates.observacoes =
+                    alteracoes.observacoes
+                        .map(
+                            item =>
+                                String(item)
+                                    .trim()
+                        )
+                        .filter(Boolean);
+            }
+
+
+            // --------------------------------------------------
+            // DESCONTO MATERIAIS
+            // --------------------------------------------------
+
+            if (
+                alteracoes.desconto_materiais !== undefined
+            ) {
+
+                updates.desconto_materiais =
+                    normalizeMoney(
+                        alteracoes.desconto_materiais
+                    );
+            }
+
+
+            // --------------------------------------------------
+            // DESCONTO SERVIÇOS
+            // --------------------------------------------------
+
+            if (
+                alteracoes.desconto_servicos !== undefined
+            ) {
+
+                updates.desconto_servicos =
+                    normalizeMoney(
+                        alteracoes.desconto_servicos
+                    );
+            }
+
+
+            // --------------------------------------------------
+            // MATERIAIS
+            // --------------------------------------------------
+
+            if (
+                alteracoes.materiais !== undefined
+            ) {
+
+                if (
+                    !Array.isArray(
+                        alteracoes.materiais
+                    )
+                ) {
+
+                    return '⚠️ A lista de alterações de materiais é inválida.';
+                }
+
+                updates.materiais =
+                    applyMaterialChanges(
+                        currentData.materiais,
+                        alteracoes.materiais
+                    );
+            }
+
+
+            // --------------------------------------------------
+            // SERVIÇOS
+            // --------------------------------------------------
+
+            if (
+                alteracoes.servicos !== undefined
+            ) {
+
+                if (
+                    !Array.isArray(
+                        alteracoes.servicos
+                    )
+                ) {
+
+                    return '⚠️ A lista de alterações de serviços é inválida.';
+                }
+
+                updates.servicos =
+                    applyServicoChanges(
+                        currentData.servicos,
+                        alteracoes.servicos
+                    );
+            }
+
+
+            if (Object.keys(updates).length === 0) {
+
+                return '⚠️ Nenhuma alteração válida foi identificada.';
+            }
+
+
+            // --------------------------------------------------
+            // ATUALIZA SUPABASE
+            // --------------------------------------------------
+
+            const {
+                data,
+                error
+            } = await supabase
                 .from('orcamentos')
-                .update(validFields)
-                .eq('orcamento_numero', command.orcamento_numero)
-                .eq('user_telefone', userPhone)
-                .select();
+                .update(updates)
+                .eq(
+                    'orcamento_numero',
+                    id
+                )
+                .eq(
+                    'user_telefone',
+                    userPhone
+                )
+                .select()
+                .single();
+
 
             if (error) {
-                console.error("Erro ao editar orçamento:", error);
 
-                return `⚠️ Não consegui editar o orçamento ${command.orcamento_numero}.`;
+                console.error(
+                    '❌ Erro ao editar orçamento:',
+                    error
+                );
+
+                console.error(
+                    '📦 Updates:',
+                    JSON.stringify(
+                        updates,
+                        null,
+                        2
+                    )
+                );
+
+                return `⚠️ Não consegui editar o orçamento ${id}.`;
             }
 
-            if (!data || data.length === 0) {
-                return `⚠️ Nenhum orçamento encontrado com o número ${command.orcamento_numero}.`;
+
+            if (!data) {
+
+                return `⚠️ Nenhum orçamento encontrado com o número ${id}.`;
             }
 
-            return `${formatOrcamento(data[0])}`;
+
+            return formatOrcamento(
+                data
+            );
         }
 
 
         default:
+
             return `⚠️ Módulo de edição não suportado: ${modulo}`;
     }
 }
