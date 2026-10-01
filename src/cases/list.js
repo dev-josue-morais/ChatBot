@@ -1538,12 +1538,6 @@ Dia ${formatLocal(event.date)}${telefone}`;
 
         case 'despesas': {
 
-            console.log(
-                '🧠 JSON recebido do GPT para lista despesas:',
-                JSON.stringify(command, null, 2)
-            );
-
-
             const filtros =
                 command.filtros || {};
 
@@ -1665,7 +1659,8 @@ Dia ${formatLocal(event.date)}${telefone}`;
             const range =
                 getDateRange(
                     command.periodo_start,
-                    command.periodo_end
+                    command.periodo_end,
+                    'America/Sao_Paulo'
                 );
 
 
@@ -2098,7 +2093,8 @@ Dia ${formatLocal(event.date)}${telefone}`;
             const range =
                 getDateRange(
                     command.periodo_start,
-                    command.periodo_end
+                    command.periodo_end,
+                    'America/Sao_Paulo'
                 );
 
 
