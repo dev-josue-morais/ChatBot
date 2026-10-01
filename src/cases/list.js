@@ -1655,40 +1655,78 @@ Dia ${formatLocal(event.date)}${telefone}`;
                 return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
             }
 
-
-            const range =
-                getDateRange(
-                    command.periodo_start,
-                    command.periodo_end
-                );
-
-
-            if (!range.valid) {
-
-                console.error(
-                    '❌ Datas inválidas no filtro de despesas:',
-                    {
-                        periodo_start:
-                            command.periodo_start,
-
-                        periodo_end:
-                            command.periodo_end
-                    }
-                );
-
-                return '⚠️ As datas do período informado são inválidas.';
+const startDate =
+    DateTime
+        .fromISO(
+            command.periodo_start,
+            {
+                zone: 'America/Sao_Paulo'
             }
+        )
+        .startOf('day');
+
+const endDate =
+    DateTime
+        .fromISO(
+            command.periodo_end,
+            {
+                zone: 'America/Sao_Paulo'
+            }
+        )
+        .endOf('day');
 
 
-            query = query
-                .gte(
-                    'data',
-                    range.startIso
-                )
-                .lte(
-                    'data',
-                    range.endIso
-                );
+if (
+    !startDate.isValid ||
+    !endDate.isValid
+) {
+
+    console.error(
+        '❌ Datas inválidas no filtro de despesas:',
+        {
+            periodo_start:
+                command.periodo_start,
+
+            periodo_end:
+                command.periodo_end
+        }
+    );
+
+    return '⚠️ As datas do período informado são inválidas.';
+}
+
+
+/*
+ * A coluna despesas.data está armazenando
+ * a data/hora local de Brasília.
+ *
+ * Exemplo:
+ * 2026-10-01 00:20:37
+ *
+ * Portanto a consulta precisa usar o mesmo
+ * formato de horário local, sem converter para UTC.
+ */
+
+const startValue =
+    startDate.toFormat(
+        'yyyy-MM-dd HH:mm:ss.SSS'
+    );
+
+const endValue =
+    endDate.toFormat(
+        'yyyy-MM-dd HH:mm:ss.SSS'
+    );
+
+
+query = query
+    .gte(
+        'data',
+        startValue
+    )
+    .lte(
+        'data',
+        endValue
+    );
 
 
             // ----------------------------------------------------
@@ -1710,8 +1748,8 @@ console.log('🔎 FILTRO DESPESAS:', {
     porDescricao,
     periodo_start: command.periodo_start,
     periodo_end: command.periodo_end,
-    startIso: range.startIso,
-    endIso: range.endIso
+    startValue,
+    endValue
 });
             const {
                 data,
