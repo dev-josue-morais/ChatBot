@@ -9,6 +9,17 @@ const { executeDelete } = require('../cases/delete');
 
 const { getContextWords } = require('../utils/processFunctions');
 
+
+// =========================================================
+// MODELOS OPENAI
+// =========================================================
+//
+// Mantidos separados para facilitar futuras alterações.
+// =========================================================
+
+const CLASSIFIER_MODEL = 'gpt-4o-mini';
+const INTERPRETER_MODEL = 'gpt-6-luna';
+
 const MODULOS_VALIDOS = [
     'orcamento',
     'agenda',
@@ -283,7 +294,7 @@ Contexto:
 
         const classifierResponse =
             await openai.chat.completions.create({
-                model: 'gpt-6-luna',
+                model: CLASSIFIER_MODEL,
 
                 messages: [
                     {
@@ -493,7 +504,7 @@ REGRAS GERAIS:
 
         const response =
             await openai.chat.completions.create({
-                model: 'gpt-6-luna',
+                model: INTERPRETER_MODEL,
 
                 messages: [
                     {
@@ -732,7 +743,12 @@ REGRAS GERAIS:
             case 'orcamento_list':
             case 'agenda_list':
             case 'despesas_list':
-console.log('📋 LIST COMMAND:', JSON.stringify(gptData, null, 2));
+
+                console.log(
+                    '📋 LIST COMMAND:',
+                    JSON.stringify(gptData, null, 2)
+                );
+
                 return await executeList(
                     gptData,
                     userPhone
