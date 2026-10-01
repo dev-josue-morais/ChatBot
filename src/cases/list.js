@@ -1,4 +1,5 @@
 const supabase = require('../services/supabase');
+
 const {
     TIPOS_DESPESA,
     emojiTipo,
@@ -9,47 +10,162 @@ const {
     formatFiltrosOrcamento,
     getDateRange
 } = require('../utils/processFunctions');
+
 const {
     getNowBRT,
     formatLocal,
     formatPhoneNumber
 } = require('../utils/utils');
+
 const formatOrcamento = require('../utils/formatOrcamento');
 const formatCurrency = require('../utils/formatCurrency');
+
 const {
     sendWhatsAppRaw
 } = require('../services/whatsappService');
+
+
+// ================================================================
+// UTILITÁRIOS
+// ================================================================
 
 function nowWithWeekday() {
 
     const now = getNowBRT();
 
-    const weekday =
-        now
-            .setLocale('pt')
-            .toFormat('cccc');
+    const weekday = now
+        .setLocale('pt')
+        .toFormat('cccc');
 
-    return `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
+    return `Hoje é ${weekday}, ${now.toFormat('yyyy-MM-dd HH:mm:ss')}`;
 }
+
+
+function isTrue(value) {
+    return value === true;
+}
+
+
+function normalizeString(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return null;
+    }
+
+    const result = String(value).trim();
+
+    return result || null;
+}
+
+
+function normalizeTipoDespesa(tipo) {
+
+    if (!tipo) {
+        return 'todos';
+    }
+
+    const value = String(tipo)
+        .trim()
+        .toLowerCase();
+
+    const aliases = {
+        conducao: 'conducao',
+        condução: 'conducao',
+
+        material: 'materiais',
+        materiais: 'materiais',
+
+        alimentacao: 'alimentacao',
+        alimentação: 'alimentacao',
+
+        outras: 'outras',
+        outra: 'outras',
+
+        todos: 'todos'
+    };
+
+    return aliases[value] || value;
+}
+
+
+function normalizeEtapa(etapa) {
+
+    if (!etapa) {
+        return null;
+    }
+
+    const value = String(etapa)
+        .trim()
+        .toLowerCase();
+
+    const aliases = {
+        negociação: 'negociacao',
+        negociacao: 'negociacao',
+
+        andamento: 'andamento',
+        'em andamento': 'andamento',
+
+        aprovado: 'aprovado',
+        aprovados: 'aprovado',
+
+        perdido: 'perdido',
+        perdidos: 'perdido',
+        recusado: 'perdido',
+        recusados: 'perdido',
+
+        finalizado: 'finalizado',
+        finalizados: 'finalizado'
+    };
+
+    return aliases[value] || value;
+}
+
+
+// ================================================================
+// PROMPT DE LISTAGEM
+// ================================================================
 
 async function getListPrompt(modulo, userMessage) {
 
     switch (modulo) {
 
+        // ========================================================
+        // ORÇAMENTOS
+        // ========================================================
+
         case 'orcamento': {
 
             return `
-Você interpreta comandos para consultar orçamentos.
+Você é o interpretador de consultas de ORÇAMENTOS de um sistema de gestão.
 
-Fuso horário: GMT-3.
+Sua função é interpretar a intenção do usuário e transformar o pedido
+em filtros estruturados.
+
+Você NÃO consulta o banco.
+Você NÃO deve responder ao usuário.
+Você deve SOMENTE retornar o JSON solicitado.
+
+Fuso horário:
+America/Sao_Paulo (GMT-3)
+
 ${nowWithWeekday()}
 
-Retorne somente JSON válido.
+
+============================================================
+FORMATO OBRIGATÓRIO
+============================================================
+
+Retorne exatamente um JSON válido neste formato:
 
 {
   "modulo": "orcamento",
   "action": "list",
+
   "resumo": false,
+
   "filtros": {
     "por_id": false,
     "por_nome_cliente": false,
@@ -57,439 +173,870 @@ Retorne somente JSON válido.
     "por_etapa": false,
     "por_periodo": true
   },
+
   "mostrar_filtros": false,
+
   "id": null,
   "nome_cliente": null,
   "telefone_cliente": null,
-  "etapa": "negociacao",
+
+  "etapa": null,
+
   "periodo_start": "YYYY-MM-DD",
   "periodo_end": "YYYY-MM-DD",
   "periodo_texto": "últimos 15 dias"
 }
 
-RESUMO:
-Use "resumo": true somente para RESUMO ou RELATÓRIO consolidado.
 
-Ative para:
-- relatório
-- resumo
-- panorama
-- total de orçamentos
-- quantidade de orçamentos
-- quantidade por etapa
-- valores por etapa
-- quanto tenho em orçamentos
-- valor total dos orçamentos
-- situação geral dos orçamentos
+============================================================
+REGRA MAIS IMPORTANTE — LISTA x RESUMO
+============================================================
 
-"lista", "listar", "mostrar", "mostra", "consultar" e "ver meus orçamentos" significam "resumo": false, mesmo com filtros.
+Existem dois tipos de consulta:
+
+1. LISTA DETALHADA
+2. RESUMO / RELATÓRIO
+
+------------------------------------------------------------
+LISTA DETALHADA
+------------------------------------------------------------
+
+Use:
+
+"resumo": false
+
+quando o usuário quiser VER OS ORÇAMENTOS individualmente.
+
+Palavras comuns:
+
+- lista
+- listar
+- mostre
+- mostra
+- mostrar
+- consulte
+- consultar
+- ver
+- veja
+- quais
+- quais são meus orçamentos
 
 Exemplos:
-"Lista meus orçamentos" → resumo=false
-"Lista meus orçamentos aprovados" → resumo=false
-"Lista meus orçamentos de João todo o período" → resumo=false
-"lista relatório dos meus orçamentos" → resumo=true
-"lista resumo dos meus orçamentos aprovados" → resumo=true
-"lista resumo dos orçamentos de João em andamento" → resumo=true
 
-Nunca transforme uma LISTA em resumo=true apenas por possuir filtros.
+"Lista meus orçamentos"
+→ resumo=false
 
-FILTRO POR ID:
-Use "por_id": true somente quando o usuário informar claramente o ID do orçamento.
+"Mostra meus orçamentos aprovados"
+→ resumo=false
 
-Ex.:
-"Lista o orçamento 1060926001" →
-por_id=true, id="1060926001".
+"Quais são os orçamentos de João?"
+→ resumo=false
+
+"Lista os orçamentos de João dos últimos 30 dias"
+→ resumo=false
+
+IMPORTANTE:
+
+A existência de filtros NÃO transforma uma lista em resumo.
+
+------------------------------------------------------------
+RESUMO / RELATÓRIO
+------------------------------------------------------------
+
+Use:
+
+"resumo": true
+
+somente quando o usuário pedir informação CONSOLIDADA.
+
+Exemplos:
+
+- resumo
+- relatório
+- panorama
+- total
+- quantidade
+- quanto tenho
+- valor total
+- situação geral
+- quantidade por etapa
+- valores por etapa
+
+Exemplos:
+
+"Resumo dos meus orçamentos"
+→ resumo=true
+
+"Relatório dos meus orçamentos"
+→ resumo=true
+
+"Quanto tenho em orçamentos?"
+→ resumo=true
+
+"Quantos orçamentos tenho aprovados?"
+→ resumo=true
+
+"Qual o valor total dos meus orçamentos?"
+→ resumo=true
+
+"Resumo dos orçamentos aprovados"
+→ resumo=true
+
+
+============================================================
+ATENÇÃO SOBRE "LISTA RELATÓRIO"
+============================================================
+
+Se o usuário utilizar explicitamente "relatório" ou "resumo",
+mesmo que também utilize "lista", considere como resumo.
+
+Exemplo:
+
+"Lista relatório dos meus orçamentos"
+→ resumo=true
+
+"Lista resumo dos orçamentos aprovados"
+→ resumo=true
+
+Mas:
+
+"Lista meus orçamentos aprovados"
+→ resumo=false
+
+
+============================================================
+FILTRO POR ID
+============================================================
+
+Use:
+
+"por_id": true
+
+somente quando o usuário informar claramente o número do orçamento.
+
+Exemplos:
+
+"Lista o orçamento 1060926001"
+
+"Mostra o orçamento número 1060926001"
+
+"Consulta o orçamento 1060926001"
+
+Resultado:
+
+"por_id": true,
+"id": 1060926001
 
 Caso contrário:
-por_id=false, id=null.
 
-FILTRO POR CLIENTE:
-Se informar o nome do cliente, use por_nome_cliente=true e coloque somente o nome em "nome_cliente".
+"por_id": false,
+"id": null
 
-Caso contrário:
-por_nome_cliente=false, nome_cliente=null.
 
-FILTRO POR TELEFONE:
-Use por_telefone_cliente=true somente quando o usuário informar claramente um telefone de cliente.
+IMPORTANTE:
 
 Nunca confunda telefone com ID.
 
-FILTRO POR ETAPA:
-Use por_etapa=true somente quando informar explicitamente uma etapa/status.
+Um telefone não deve ser colocado no campo "id".
 
-Valores:
-- negociação / em negociação → negociacao
-- andamento / em andamento → andamento
-- aprovado / aprovados → aprovado
-- perdido / perdidos / recusado / recusados → perdido
-- finalizado / finalizados → finalizado
 
-Exemplos:
-"Lista meus orçamentos aprovados" →
-resumo=false, por_etapa=true, etapa="aprovado"
+============================================================
+FILTRO POR CLIENTE
+============================================================
 
-"Lista meus orçamentos em negociação" →
-resumo=false, por_etapa=true, etapa="negociacao"
+Se o usuário informar o nome do cliente:
 
-"lista relatório dos orçamentos aprovados" →
-resumo=true, por_etapa=true, etapa="aprovado"
+"por_nome_cliente": true
 
-Se nenhuma etapa for informada:
-por_etapa=false, etapa="negociacao".
+e:
 
-Quando por_etapa=false, "etapa" não deve ser usada como filtro.
+"nome_cliente": "nome informado"
 
-FILTRO POR PERÍODO:
-O filtro por período é SEMPRE obrigatório para consultas de orçamento.
+Use SOMENTE o nome do cliente.
 
-Sempre use:
-por_periodo=true
+Exemplo:
 
-Nunca use:
-por_periodo=false
+"Lista os orçamentos do João Silva"
 
-Sempre preencha:
+→
+
+"por_nome_cliente": true,
+"nome_cliente": "João Silva"
+
+Se não houver nome:
+
+"por_nome_cliente": false,
+"nome_cliente": null
+
+
+============================================================
+FILTRO POR TELEFONE
+============================================================
+
+Use:
+
+"por_telefone_cliente": true
+
+somente quando o usuário estiver claramente informando
+um telefone de cliente.
+
+Exemplo:
+
+"Lista os orçamentos do cliente 64999999999"
+
+→ telefone_cliente deve receber o telefone.
+
+Nunca confunda um número de orçamento com telefone.
+
+Se não houver telefone:
+
+"por_telefone_cliente": false,
+"telefone_cliente": null
+
+
+============================================================
+FILTRO POR ETAPA
+============================================================
+
+Use:
+
+"por_etapa": true
+
+somente quando o usuário indicar explicitamente uma etapa/status.
+
+Mapeamento obrigatório:
+
+negociação
+em negociação
+→ negociacao
+
+andamento
+em andamento
+→ andamento
+
+aprovado
+aprovados
+→ aprovado
+
+perdido
+perdidos
+recusado
+recusados
+→ perdido
+
+finalizado
+finalizados
+→ finalizado
+
+Exemplo:
+
+"Lista meus orçamentos aprovados"
+
+→
+
+"por_etapa": true,
+"etapa": "aprovado"
+
+Exemplo:
+
+"Lista meus orçamentos em negociação"
+
+→
+
+"por_etapa": true,
+"etapa": "negociacao"
+
+Se nenhuma etapa foi mencionada:
+
+"por_etapa": false,
+"etapa": null
+
+NÃO use "negociacao" como valor padrão quando o filtro não estiver
+ativo.
+
+Isso é importante porque "etapa" só deve ser utilizada pelo sistema
+quando "por_etapa" for true.
+
+
+============================================================
+FILTRO POR PERÍODO
+============================================================
+
+O filtro por período é SEMPRE obrigatório.
+
+Sempre:
+
+"por_periodo": true
+
+Nunca:
+
+"por_periodo": false
+
+
+Sempre preencher:
+
 - periodo_start
 - periodo_end
 - periodo_texto
 
-Se o usuário informar um período, interprete o período solicitado e preencha as três propriedades.
 
-Se o usuário NÃO informar nenhum período, use obrigatoriamente o período padrão de: "últimos 15 dias"
-ex.: "Lista relatório de orçamentos"
-Nesse caso:
-por_periodo=true
-resumo=true
-periodo_start = data de 15 dias atrás, no fuso GMT-3.
-periodo_end = data de hoje, no fuso GMT-3.
+------------------------------------------------------------
+SE O USUÁRIO INFORMAR UM PERÍODO
+------------------------------------------------------------
+
+Interprete exatamente o período solicitado.
+
+Exemplos:
+
+"hoje"
+
+"ontem"
+
+"esta semana"
+
+"semana passada"
+
+"este mês"
+
+"mês passado"
+
+"últimos 30 dias"
+
+"últimos 6 meses"
+
+"este ano"
+
+"em 2025"
+
+"em setembro"
+
+"de março até junho"
+
+"de 1 a 15 de setembro"
+
+
+------------------------------------------------------------
+SE NÃO INFORMAR PERÍODO
+------------------------------------------------------------
+
+Use obrigatoriamente:
+
+"últimos 15 dias"
+
+Exemplo:
+
+"Lista meus orçamentos"
+
+→
+
 periodo_texto = "últimos 15 dias"
 
-FORMATO DAS DATAS:
-"periodo_start" e "periodo_end" devem sempre conter SOMENTE uma data no formato:
+periodo_start = data de 15 dias atrás
+
+periodo_end = data de hoje
+
+
+============================================================
+TODO O PERÍODO
+============================================================
+
+Se o usuário disser:
+
+- todo o período
+- período completo
+- período inteiro
+- desde o começo
+- desde sempre
+- todos os orçamentos
+
+NÃO desative o filtro.
+
+Use:
+
+"por_periodo": true
+
+"periodo_start": "2000-01-01"
+
+"periodo_end": data de hoje
+
+"periodo_texto": "todo o período"
+
+
+============================================================
+FORMATO DAS DATAS
+============================================================
+
+periodo_start e periodo_end devem conter SOMENTE:
 
 YYYY-MM-DD
 
-NÃO coloque horário.
-NÃO coloque fuso horário.
-NÃO coloque T00:00:00.
-NÃO coloque texto antes ou depois da data.
+Correto:
+
+"2026-09-01"
+
+Errado:
+
+"2026-09-01T00:00:00"
+
+Errado:
+
+"01/09/2026"
+
+Errado:
+
+"2026-09-01-03:00"
+
+O sistema será responsável por transformar as datas em início/fim
+do dia usando America/Sao_Paulo.
+
+
+============================================================
+PERIODO_TEXTO
+============================================================
+
+É somente uma descrição legível do período.
+
+Exemplos:
+
+"hoje"
+→ "hoje"
+
+"ontem"
+→ "ontem"
+
+"esta semana"
+→ "esta semana"
+
+"últimos 30 dias"
+→ "últimos 30 dias"
+
+"este ano"
+→ "este ano"
+
+"em 2025"
+→ "ano de 2025"
+
+"de 1 a 15 de setembro"
+→ "01/09 a 15/09"
+
+Não coloque horários ou informações extras.
+
+
+============================================================
+MÚLTIPLOS FILTROS
+============================================================
+
+Os filtros podem ser combinados.
 
 Exemplo:
-"periodo_start": "2026-09-14"
-"periodo_end": "2026-09-29"
 
-O sistema será responsável por transformar essas datas em início e fim do dia usando o fuso America/Sao_Paulo.
+"Lista todos os orçamentos de João aprovados dos últimos 6 meses"
 
-FORMATO DE "periodo_texto":
-"periodo_texto" deve ser uma descrição curta, clara e em português do período utilizado.
+Resultado conceitual:
+
+resumo=false
+por_nome_cliente=true
+nome_cliente="João"
+por_etapa=true
+etapa="aprovado"
+por_periodo=true
+
+
+Outro exemplo:
+
+"Relatório dos orçamentos de João aprovados dos últimos 6 meses"
+
+Resultado conceitual:
+
+resumo=true
+por_nome_cliente=true
+nome_cliente="João"
+por_etapa=true
+etapa="aprovado"
+por_periodo=true
+
+
+============================================================
+MOSTRAR FILTROS
+============================================================
+
+Use:
+
+"mostrar_filtros": true
+
+SOMENTE quando o usuário pedir explicitamente os filtros.
 
 Exemplos:
 
-"hoje" → periodo_texto="hoje"
-"ontem" → periodo_texto="ontem"
-"esta semana" → periodo_texto="esta semana"
-"semana passada" → periodo_texto="semana passada"
-"este mês" → periodo_texto="este mês"
-"mês passado" → periodo_texto="mês passado"
-"últimos 15 dias" → periodo_texto="últimos 15 dias"
-"últimos 30 dias" → periodo_texto="últimos 30 dias"
-"últimos 6 meses" → periodo_texto="últimos 6 meses"
-"este ano" → periodo_texto="este ano"
-"em 2025" → periodo_texto="ano de 2025"
-"de março até junho" → periodo_texto="março a junho"
-"de 1 a 15 de setembro" → periodo_texto="01/09 a 15/09"
-
-Não coloque as datas em "periodo_texto".
-
-O "periodo_texto" deve ser apenas uma descrição legível para apresentação ao usuário.
-
-Exemplo completo:
-"Lista meus orçamentos dos últimos 30 dias" →
-
-por_periodo=true,
-periodo_start="2026-08-30",
-periodo_end="2026-09-29",
-periodo_texto="últimos 30 dias"
-
-TODO O PERÍODO:
-Quando o usuário disser:
-"todo o período",
-"período completo",
-"período inteiro",
-"desde o começo",
-"desde sempre"
-ou
-"todos os orçamentos"
-
-NÃO desative o filtro de período.
-
-Como o período é obrigatório, use:
-
-periodo_start = "2000-01-01"
-periodo_end = data de hoje no GMT-3.
-periodo_texto = "todo o período"
-
-Isso não altera "resumo".
-
-Ex.:
-"Lista meus orçamentos aprovados todo o período" →
-
-resumo=false,
-por_etapa=true,
-etapa="aprovado",
-por_periodo=true,
-periodo_start="2000-01-01",
-periodo_end="2026-09-29",
-periodo_texto="todo o período"
-
-MÚLTIPLOS FILTROS:
-Podem ser combinados.
-
-"Lista todos os orçamentos de João aprovados dos últimos 6 meses" →
-
-resumo=false,
-por_nome_cliente=true,
-nome_cliente="João",
-por_etapa=true,
-etapa="aprovado",
-por_periodo=true
-
-"lista relatório dos orçamentos de João aprovados dos últimos 6 meses" →
-
-resumo=true,
-por_nome_cliente=true,
-nome_cliente="João",
-por_etapa=true,
-etapa="aprovado",
-por_periodo=true
-
-MOSTRAR FILTROS:
-Use "mostrar_filtros": true somente se o usuário pedir explicitamente para mostrar os filtros utilizados.
-
-Exemplos:
 "mostra os filtros"
+
 "quais filtros foram usados"
+
 "me mostre os filtros"
 
+"quais foram os filtros da consulta"
+
 Caso contrário:
-mostrar_filtros=false.
 
-REGRAS FINAIS:
-- Todas as propriedades devem existir.
-- Use null somente para campos que realmente não possuem informação.
-- "periodo_start" NUNCA pode ser null.
-- "periodo_end" NUNCA pode ser null.
-- "periodo_texto" NUNCA pode ser null.
-- "por_periodo" deve ser sempre true.
-- Sempre existe um período: período solicitado ou últimos 15 dias.
-- "periodo_start" e "periodo_end" devem conter SOMENTE YYYY-MM-DD.
-- Nunca coloque horário ou fuso nas datas.
-- "periodo_texto" deve ser curto, legível e descrever o período usado.
+"mostrar_filtros": false
+
+
+============================================================
+REGRAS FINAIS
+============================================================
+
+- Todas as propriedades do JSON devem existir.
 - Flags devem ser true ou false.
-- Não invente IDs, nomes, telefones ou etapas.
-- LISTA = resumo=false.
-- RELATÓRIO/RESUMO = resumo=true.
-- Filtros de cliente, etapa e período não transformam uma lista em relatório.
+- por_periodo deve ser SEMPRE true.
+- periodo_start nunca pode ser null.
+- periodo_end nunca pode ser null.
+- periodo_texto nunca pode ser null.
+- Nunca invente ID.
+- Nunca invente nome.
+- Nunca invente telefone.
+- Nunca invente etapa.
+- Não confunda telefone com ID.
+- LISTA detalhada = resumo=false.
+- RESUMO/RELATÓRIO = resumo=true.
+- Filtros não transformam lista em resumo.
+- "etapa" só deve ser utilizada como filtro quando por_etapa=true.
+- Quando por_etapa=false, use etapa=null.
+- O período padrão é últimos 15 dias.
+- Todo o período começa em 2000-01-01.
+- Retorne SOMENTE JSON válido.
 
-Mensagem:
+
+Mensagem do usuário:
+
 """${userMessage}"""
 `;
         }
 
+
+        // ========================================================
+        // DESPESAS
+        // ========================================================
+
         case 'despesas': {
 
             return `
-Você interpreta comandos para listar despesas ou gerar resumo de despesas.
-O usuário está no fuso GMT-3 (Brasil).
+Você é o interpretador de consultas de DESPESAS de um sistema de gestão.
+
+Você NÃO consulta o banco.
+Você NÃO deve responder ao usuário.
+Sua única função é transformar o pedido em filtros estruturados.
+
+Fuso horário:
+America/Sao_Paulo (GMT-3)
+
 ${nowWithWeekday()}
 
-Identifique os filtros solicitados e se o usuário deseja LISTAGEM detalhada ou RESUMO agrupado.
 
-Retorne somente JSON válido.
+============================================================
+FORMATO OBRIGATÓRIO
+============================================================
+
+Retorne somente JSON válido:
 
 {
   "modulo": "despesas",
   "action": "list",
+
   "resumo": false,
+
   "filtros": {
     "por_tipo": false,
     "por_descricao": false,
     "por_periodo": true
   },
+
   "mostrar_filtros": false,
-  "tipo": "conducao" | "materiais" | "alimentacao" | "outras" | "todos",
+
+  "tipo": "todos",
   "descricao": null,
+
   "periodo_start": "YYYY-MM-DD",
   "periodo_end": "YYYY-MM-DD",
   "periodo_texto": "últimos 30 dias"
 }
 
+
+============================================================
+LISTA x RESUMO
+============================================================
+
+LISTA:
+
+Use resumo=false quando o usuário quiser visualizar as despesas
+individualmente.
+
+Exemplos:
+
+"Lista minhas despesas"
+→ resumo=false
+
+"Mostra minhas despesas do mês"
+→ resumo=false
+
+"Lista meus gastos com gasolina"
+→ resumo=false
+
+"Quais despesas tive essa semana?"
+→ resumo=false
+
+
 RESUMO:
-Use resumo=true quando o usuário pedir RESUMO, TOTAL, SOMATÓRIO ou RELATÓRIO resumido.
+
+Use resumo=true quando o usuário pedir uma informação consolidada.
 
 Exemplos:
-"Resumo das minhas despesas do mês" → true
-"Resumo das minhas despesas" → true
-"Quero um resumo dos meus gastos" → true
-"Relatório das minhas despesas do mês" → true
-"Quanto gastei esse mês?" → true
-"Qual o total das minhas despesas?" → true
-"Me mostre o total que gastei com combustível" →
-resumo=true, por_descricao=true, descricao="combustível"
-Se pedir para LISTAR ou MOSTRAR as despesas individualmente:
-resumo=false.
+
+"Resumo das minhas despesas"
+→ resumo=true
+
+"Relatório das minhas despesas"
+→ resumo=true
+
+"Quanto gastei?"
+→ resumo=true
+
+"Qual o total das minhas despesas?"
+→ resumo=true
+
+"Quanto gastei com gasolina?"
+→ resumo=true
+
+"Qual o total gasto com materiais?"
+→ resumo=true
+
+
+IMPORTANTE:
+
+Filtros não transformam lista em resumo.
+
+"Lista minhas despesas de gasolina"
+→ resumo=false
+
+"Resumo das minhas despesas de gasolina"
+→ resumo=true
+
+
+============================================================
+FILTRO POR TIPO
+============================================================
+
+Tipos permitidos:
+
+- conducao
+- materiais
+- alimentacao
+- outras
+- todos
+
+Use por_tipo=true quando o usuário estiver pedindo uma CATEGORIA.
+
+Condução:
+
+- condução
+- transporte
+- deslocamento
+
+Materiais:
+
+- material
+- materiais
+- material elétrico
+- ferramentas, quando utilizado como categoria de material
+
+Alimentação:
+
+- alimentação
+- comida
+- refeições
+
+Outras:
+
+- outras
+- outros gastos
+
 
 Exemplos:
-"Lista minhas despesas do mês" → false
-"Mostra minhas despesas" → false
 
-FILTRO POR TIPO:
-Use por_tipo=true quando o usuário solicitar explicitamente uma categoria:
-"conducao", "materiais", "alimentacao" ou "outras".
+"Lista minhas despesas de condução"
 
-"conducao" inclui deslocamento/transporte, como combustível, gasolina, diesel,
-etanol, Uber, táxi, estacionamento, pedágio e transporte.
+→ por_tipo=true
+→ tipo="conducao"
 
-Porém, quando o usuário especificar uma despesa concreta, como combustível,
-gasolina, diesel, Uber, estacionamento ou pedágio, trate como FILTRO POR
-DESCRIÇÃO, não como filtro por tipo.
+"Lista minhas despesas de materiais"
 
-Exemplos:
-"Lista minhas despesas de condução" →
-por_tipo=true, tipo="conducao", por_descricao=false, descricao=null
+→ por_tipo=true
+→ tipo="materiais"
 
-"Resumo das minhas despesas de combustível" →
-por_tipo=false, tipo="todos", por_descricao=true, descricao="combustível"
+"Lista minhas despesas de alimentação"
 
-"Lista minhas despesas de gasolina" →
-por_tipo=false, tipo="todos", por_descricao=true, descricao="gasolina"
+→ por_tipo=true
+→ tipo="alimentacao"
 
-"Lista minhas despesas de Uber" →
-por_tipo=false, tipo="todos", por_descricao=true, descricao="Uber"
 
-"Lista minhas despesas de estacionamento" →
-por_tipo=false, tipo="todos", por_descricao=true, descricao="estacionamento"
+============================================================
+DESCRIÇÃO ESPECÍFICA
+============================================================
 
-"Lista minhas despesas de material" →
-por_tipo=true, tipo="materiais", por_descricao=false
-
-"Lista minhas despesas de alimentação" →
-por_tipo=true, tipo="alimentacao", por_descricao=false
-
-"Lista minhas outras despesas" →
-por_tipo=true, tipo="outras", por_descricao=false
-
-FILTRO POR DESCRIÇÃO:
-Os termos abaixo devem ser tratados como descrição:
-combustível, gasolina, diesel, etanol, álcool, Uber, taxi, táxi,
-estacionamento, pedágio, mecânico, oficina.
-
-Esses termos não devem automaticamente definir tipo="conducao".
-
-Use por_descricao=true quando o usuário procurar uma despesa específica pelo nome.
+Quando o usuário citar uma despesa concreta, prefira filtro por
+DESCRIÇÃO em vez de categoria.
 
 Exemplos:
-"Lista minhas despesas com gasolina" →
-por_descricao=true, descricao="gasolina"
 
-"Resumo das minhas despesas com gasolina" →
-por_descricao=true, descricao="gasolina"
-
-"Lista meus gastos com tomada" →
-por_descricao=true, descricao="tomada"
-
-"Quanto gastei com gasolina?" →
-resumo=true, por_descricao=true, descricao="gasolina"
-
-Uma palavra pode representar categoria ou descrição:
-
-"Lista minhas despesas de material" →
-por_tipo=true, tipo="materiais", por_descricao=false
-
-"Lista minhas despesas com tomada" →
-por_tipo=false, tipo="todos", por_descricao=true, descricao="tomada"
-
-FILTRO POR PERÍODO:
-O filtro por período é SEMPRE obrigatório.
-
-Nunca use:
-por_periodo=false
-
-Sempre preencha:
-- periodo_start
-- periodo_end
-- periodo_texto
-
-Se o usuário informar um período, interprete o período solicitado e preencha
-as três propriedades.
-
-Exemplos de períodos:
-hoje, ontem, essa semana, semana passada, este mês, mês passado,
-setembro, mês de janeiro, últimos 30 dias, últimos 6 meses,
-de 1 a 15 de setembro, desde o começo do mês, etc.
-
-FORMATO DAS DATAS:
-"periodo_start" e "periodo_end" devem sempre conter SOMENTE uma data no formato:
-
-YYYY-MM-DD
-
-NÃO coloque horário.
-NÃO coloque fuso horário.
-NÃO coloque T00:00:00.
-NÃO coloque texto antes ou depois da data.
+gasolina
+combustível
+diesel
+etanol
+Uber
+táxi
+estacionamento
+pedágio
+mecânico
+oficina
+tomada
+fio
+disjuntor
+lâmpada
+marmita
 
 Exemplo:
 
-"periodo_start": "2026-09-01"
-"periodo_end": "2026-09-29"
+"Lista minhas despesas com gasolina"
 
-O sistema será responsável por transformar essas datas em início e fim do dia usando o fuso America/Sao_Paulo.
+→
 
-FORMATO DE "periodo_texto":
-"periodo_texto" deve ser uma descrição curta, clara e legível em português
-do período utilizado.
+por_tipo=false
+tipo="todos"
+por_descricao=true
+descricao="gasolina"
 
-Exemplos:
 
-"hoje" → periodo_texto="hoje"
-"ontem" → periodo_texto="ontem"
-"essa semana" → periodo_texto="esta semana"
-"últimos 30 dias" → periodo_texto="últimos 30 dias"
-"este ano" → periodo_texto="este ano"
-"em 2025" → periodo_texto="ano de 2025"
-"de 1 a 15 de setembro" → periodo_texto="01/09 a 15/09"
+"Quanto gastei com gasolina?"
 
-Não coloque as datas em "periodo_texto".
+→
 
-O "periodo_texto" serve apenas para apresentar ao usuário qual período
-foi utilizado na consulta.
+resumo=true
+por_tipo=false
+tipo="todos"
+por_descricao=true
+descricao="gasolina"
 
-SEM PERÍODO:
-Se nenhum período for informado, use obrigatoriamente:
 
-"últimos 30 dias"
+"Lista meus gastos com tomada"
 
-Nesse caso:
+→
+
+por_tipo=false
+tipo="todos"
+por_descricao=true
+descricao="tomada"
+
+
+IMPORTANTE:
+
+Não transforme automaticamente uma descrição específica em tipo.
+
+"gasolina" não significa que o filtro por tipo deve ser usado.
+
+"tomada" não significa que o filtro por tipo deve ser usado.
+
+
+============================================================
+QUANDO USAR TIPO E DESCRIÇÃO
+============================================================
+
+"Lista minhas despesas de materiais"
+
+→ por_tipo=true
+→ tipo="materiais"
+→ por_descricao=false
+→ descricao=null
+
+
+"Lista minhas despesas com tomada"
+
+→ por_tipo=false
+→ tipo="todos"
+→ por_descricao=true
+→ descricao="tomada"
+
+
+"Resumo das minhas despesas de materiais com tomada"
+
+Nesse caso podem existir dois filtros:
+
+por_tipo=true
+tipo="materiais"
+
+por_descricao=true
+descricao="tomada"
+
+
+============================================================
+FILTRO POR PERÍODO
+============================================================
+
+O período é SEMPRE obrigatório.
+
+Sempre:
 
 por_periodo=true
 
-periodo_start = data de 30 dias atrás, no fuso GMT-3.
+Nunca:
 
-periodo_end = data de hoje, no fuso GMT-3.
+por_periodo=false
+
+
+Se o usuário não informar período:
+
+Use obrigatoriamente:
+
+"últimos 30 dias"
+
+
+Exemplo:
+
+"Lista minhas despesas"
+
+→
 
 periodo_texto="últimos 30 dias"
 
-TODO O PERÍODO:
-Quando o usuário disser:
 
-"todo o período"
-"desde o começo"
-"desde sempre"
-"sem limite de data"
-"todas as despesas que tenho"
+Se o usuário informar período, respeite o período solicitado.
 
-O período continua obrigatório.
+Exemplos:
+
+hoje
+ontem
+esta semana
+semana passada
+este mês
+mês passado
+setembro
+mês de janeiro
+últimos 30 dias
+últimos 6 meses
+este ano
+em 2025
+de 1 a 15 de setembro
+
+
+============================================================
+TODO O PERÍODO
+============================================================
+
+Quando disser:
+
+- todo o período
+- desde o começo
+- desde sempre
+- sem limite de data
+- todas as despesas que tenho
 
 Use:
 
@@ -497,120 +1044,291 @@ por_periodo=true
 
 periodo_start="2000-01-01"
 
-periodo_end=data de hoje no GMT-3
+periodo_end=data de hoje
 
 periodo_texto="todo o período"
 
-Não use null nas propriedades de período.
 
-COMBINAÇÃO:
-Os filtros podem ser combinados.
+============================================================
+FORMATO DAS DATAS
+============================================================
 
-"Resumo das minhas despesas de gasolina desse mês" →
-resumo=true,
-por_tipo=false,
-tipo="todos",
-por_descricao=true,
-descricao="gasolina",
-por_periodo=true
+periodo_start:
 
-"Resumo das minhas despesas de material da semana" →
-resumo=true,
-por_tipo=true,
-tipo="materiais",
-por_descricao=false,
-por_periodo=true
+YYYY-MM-DD
 
-"Resumo das minhas despesas com tomada em setembro" →
-resumo=true,
-por_tipo=false,
-tipo="todos",
-por_descricao=true,
-descricao="tomada",
-por_periodo=true
+periodo_end:
 
-MOSTRAR FILTROS:
-Use mostrar_filtros=true somente se o usuário pedir:
+YYYY-MM-DD
 
-"mostre os filtros"
+Nunca coloque:
+
+- horário
+- timezone
+- T00:00:00
+- texto adicional
+
+
+============================================================
+MOSTRAR FILTROS
+============================================================
+
+Use mostrar_filtros=true somente quando solicitado explicitamente.
+
+Exemplos:
+
+"mostra os filtros"
+
 "quais filtros foram usados"
+
 "me diga os filtros"
-"mostrar filtros"
+
+"quais filtros você utilizou"
 
 Caso contrário:
+
 mostrar_filtros=false.
 
-REGRAS FINAIS:
+
+============================================================
+REGRAS FINAIS
+============================================================
+
 - Todas as propriedades devem existir.
 - Flags devem ser true ou false.
-- "por_periodo" deve ser sempre true.
-- "periodo_start" NUNCA pode ser null.
-- "periodo_end" NUNCA pode ser null.
-- "periodo_texto" NUNCA pode ser null.
-- Sempre existe um período: período solicitado ou últimos 30 dias.
-- "periodo_start" e "periodo_end" devem conter SOMENTE YYYY-MM-DD.
-- Nunca coloque horário ou fuso nas datas.
-- "periodo_texto" deve ser curto, legível e descrever o período utilizado.
-- Não invente categorias ou descrições.
-- O handle consultará o banco usando somente os filtros marcados como true.
-- Quando resumo=true, o handle calcula os valores agrupados por categoria:
-  Condução, Materiais, Alimentação, Outras e Total.
-- Quando resumo=false, o handle apresenta as despesas individualmente.
+- por_periodo sempre true.
+- periodo_start nunca null.
+- periodo_end nunca null.
+- periodo_texto nunca null.
+- tipo nunca deve ser null; use "todos" quando não houver filtro.
+- descricao deve ser null quando não houver filtro.
+- Não invente descrições.
+- Não invente períodos.
+- Não invente tipos.
+- Lista detalhada = resumo=false.
+- Resumo/relatório/total = resumo=true.
+- Retorne somente JSON válido.
 
-Texto:
+
+Mensagem:
+
 """${userMessage}"""
 `;
         }
 
+
+        // ========================================================
+        // AGENDA
+        // ========================================================
+
         case 'agenda': {
 
             return `
-Você é um assistente que lista eventos da agenda.
-O usuário está no fuso GMT-3 (Brasil).
+Você é o interpretador de consultas da AGENDA.
+
+Você NÃO consulta o banco.
+Você NÃO deve responder ao usuário.
+Sua função é transformar a solicitação em filtros estruturados.
+
+Fuso horário:
+America/Sao_Paulo (GMT-3)
+
 ${nowWithWeekday()}
 
-Responda apenas com JSON válido:
+
+============================================================
+FORMATO OBRIGATÓRIO
+============================================================
+
+Retorne somente JSON válido:
 
 {
   "modulo": "agenda",
   "action": "list",
-  "title": "string" ou null,
-  "id": "number" ou null,
+  "title": null,
+  "id": null,
   "start_date": "YYYY-MM-DD",
   "end_date": "YYYY-MM-DD"
 }
 
-Regras importantes:
 
-1. ID sempre prevalece sobre título
-   - preencher se o usuário mencionar um ID (ex: "1171125001"),
-   - Quando "id" estiver preenchido, "title" deve ser null.
+============================================================
+ID
+============================================================
 
-2. Título
-   - Só preencha "title" se o usuário citar nome ou local.
-   - Não trate números como título.
+Se o usuário informar claramente o número do evento:
 
-3. Datas
-   - Sempre preencher "start_date" e "end_date".
-   - As datas devem conter SOMENTE YYYY-MM-DD.
-   - Se o usuário citar dias como "amanhã", "sábado", etc → usar exatamente esse dia.
-   - Se citar um período ("de segunda a sexta") → gerar um intervalo correspondente.
-   - Se não falar nada sobre data → usar a data de hoje para ambos.
+"id": número
 
-4. Não invente nada. Analise somente o texto fornecido.
+e:
 
-Texto: """${userMessage}"""
+"title": null
+
+
+Exemplos:
+
+"Mostra o evento 1171125001"
+
+"Consulta a agenda 1171125001"
+
+"Lista o evento número 1171125001"
+
+
+IMPORTANTE:
+
+Não confunda telefone com ID.
+
+Se houver dúvida, use:
+
+"id": null
+
+
+============================================================
+TÍTULO
+============================================================
+
+Use title somente quando o usuário fornecer claramente
+um nome, assunto ou local do evento.
+
+Exemplos:
+
+"Lista a reunião com João"
+
+→ title="reunião com João"
+
+"Mostra os eventos da obra"
+
+→ title="obra"
+
+Não transforme números em título.
+
+Se o usuário informar ID:
+
+id recebe o número
+title deve ser null
+
+
+============================================================
+PRIORIDADE
+============================================================
+
+Se houver ID, o ID tem prioridade.
+
+Se houver título e não houver ID, use o título.
+
+Se não houver ID nem título, use somente o período.
+
+
+============================================================
+PERÍODO
+============================================================
+
+Sempre preencha:
+
+start_date
+end_date
+
+As datas devem conter somente:
+
+YYYY-MM-DD
+
+
+Se o usuário disser:
+
+"hoje"
+
+→ start_date = hoje
+→ end_date = hoje
+
+
+"amanhã"
+
+→ start_date = amanhã
+→ end_date = amanhã
+
+
+"ontem"
+
+→ start_date = ontem
+→ end_date = ontem
+
+
+Se disser:
+
+"esta semana"
+
+use o intervalo correspondente à semana atual.
+
+
+"semana passada"
+
+use o intervalo correspondente à semana anterior.
+
+
+"este mês"
+
+use o primeiro e o último dia do mês atual.
+
+
+"mês passado"
+
+use o primeiro e o último dia do mês anterior.
+
+
+"de segunda a sexta"
+
+calcule o intervalo correspondente.
+
+
+Se não informar nenhuma data:
+
+use a data de hoje para start_date e end_date.
+
+
+============================================================
+REGRAS IMPORTANTES
+============================================================
+
+- Nunca retorne datas com horário.
+- Nunca retorne timezone.
+- Nunca invente ID.
+- Nunca invente título.
+- Não confunda telefone com ID.
+- Sempre preencha start_date.
+- Sempre preencha end_date.
+- Se houver ID, title deve ser null.
+- Retorne somente JSON válido.
+
+
+Mensagem:
+
+"""${userMessage}"""
 `;
         }
+
 
         default:
             return null;
     }
 }
 
+
+// ================================================================
+// EXECUTE LIST
+// ================================================================
+
 async function executeList(command, userPhone) {
 
     const { modulo } = command || {};
+
+    if (!modulo) {
+        return '⚠️ Módulo de listagem não informado.';
+    }
+
+
+    // ============================================================
+    // AGENDA
+    // ============================================================
 
     switch (modulo) {
 
@@ -618,34 +1336,65 @@ async function executeList(command, userPhone) {
 
             const zone = 'America/Sao_Paulo';
 
-            const hasId = !!command.id;
-            const hasTitle = !!command.title;
+            const id =
+                normalizeString(command.id);
+
+            const title =
+                normalizeString(command.title);
+
+            const hasId = !!id;
+            const hasTitle = !!title;
+
 
             let query = supabase
                 .from('events')
                 .select('*')
                 .eq('user_telefone', userPhone);
 
+
             let startDT;
             let endDT;
+
+
+            // ----------------------------------------------------
+            // ID
+            // ----------------------------------------------------
 
             if (hasId) {
 
                 query = query.eq(
                     'event_numero',
-                    command.id
+                    id
                 );
             }
+
+
+            // ----------------------------------------------------
+            // TÍTULO
+            // ----------------------------------------------------
 
             else if (hasTitle) {
 
                 query = query.ilike(
                     'title',
-                    `%${command.title}%`
+                    `%${title}%`
                 );
             }
 
+
+            // ----------------------------------------------------
+            // PERÍODO
+            // ----------------------------------------------------
+
             else {
+
+                if (
+                    !command.start_date ||
+                    !command.end_date
+                ) {
+                    return '⚠️ O período da agenda não foi informado.';
+                }
+
 
                 const range =
                     getDateRange(
@@ -654,55 +1403,78 @@ async function executeList(command, userPhone) {
                         zone
                     );
 
+
                 if (!range.valid) {
 
                     console.error(
                         '❌ Datas inválidas na agenda:',
                         {
-                            start_date: command.start_date,
-                            end_date: command.end_date
+                            start_date:
+                                command.start_date,
+
+                            end_date:
+                                command.end_date
                         }
                     );
 
                     return '⚠️ As datas informadas são inválidas.';
                 }
 
-                startDT = range.startDT;
-                endDT = range.endDT;
+
+                startDT =
+                    range.startDT;
+
+                endDT =
+                    range.endDT;
+
 
                 query = query
-                    .gte('date', range.startIso)
-                    .lte('date', range.endIso);
+                    .gte(
+                        'date',
+                        range.startIso
+                    )
+                    .lte(
+                        'date',
+                        range.endIso
+                    );
             }
+
 
             const {
                 data: events,
                 error
             } = await query.order(
                 'date',
-                { ascending: true }
+                {
+                    ascending: true
+                }
             );
+
 
             if (error) {
 
                 console.error(
-                    "❌ Erro ao buscar eventos:",
+                    '❌ Erro ao buscar eventos:',
                     error
                 );
 
-                return "⚠️ Não foi possível buscar os eventos.";
+                return '⚠️ Não foi possível buscar os eventos.';
             }
+
 
             if (!events?.length) {
 
-                if (hasId || hasTitle) {
+                if (hasId) {
 
-                    if (hasId) {
-                        return `📅 Nenhum evento encontrado com o ID ${command.id}.`;
-                    }
-
-                    return `📅 Nenhum evento encontrado com o título contendo "${command.title}".`;
+                    return `📅 Nenhum evento encontrado com o ID ${id}.`;
                 }
+
+
+                if (hasTitle) {
+
+                    return `📅 Nenhum evento encontrado com o título contendo "${title}".`;
+                }
+
 
                 const startBr =
                     startDT.toFormat('dd/LL');
@@ -710,29 +1482,38 @@ async function executeList(command, userPhone) {
                 const endBr =
                     endDT.toFormat('dd/LL');
 
+
                 const periodo =
                     startBr === endBr
                         ? startBr
                         : `${startBr} a ${endBr}`;
 
+
                 return `📅 Nenhum evento encontrado no período ${periodo}.`;
             }
 
-            const list = events
-                .map(e => {
 
-                    const telefone = e.telefone
-                        ? `\nTelefone ${e.telefone}`
-                        : '';
+            const list =
+                events
+                    .map(event => {
 
-                    return `- ID ${e.event_numero}: ${e.title}
-Dia ${formatLocal(e.date)}${telefone}`;
-                })
-                .join('\n');
+                        const telefone =
+                            event.telefone
+                                ? `\nTelefone ${event.telefone}`
+                                : '';
+
+
+                        return `- ID ${event.event_numero}: ${event.title}
+Dia ${formatLocal(event.date)}${telefone}`;
+                    })
+                    .join('\n');
+
 
             if (hasId || hasTitle) {
+
                 return `📅 Eventos encontrados:\n${list}`;
             }
+
 
             const startBr =
                 startDT.toFormat('dd/LL');
@@ -740,13 +1521,20 @@ Dia ${formatLocal(e.date)}${telefone}`;
             const endBr =
                 endDT.toFormat('dd/LL');
 
+
             const periodo =
                 startBr === endBr
                     ? startBr
                     : `${startBr} a ${endBr}`;
 
+
             return `📅 Eventos encontrados no período ${periodo}:\n${list}`;
         }
+
+
+        // ========================================================
+        // DESPESAS
+        // ========================================================
 
         case 'despesas': {
 
@@ -755,114 +1543,217 @@ Dia ${formatLocal(e.date)}${telefone}`;
                 JSON.stringify(command, null, 2)
             );
 
+
             const filtros =
                 command.filtros || {};
+
 
             const resumo =
                 command.resumo === true;
 
+
+            const porTipo =
+                filtros.por_tipo === true;
+
+
+            const porDescricao =
+                filtros.por_descricao === true;
+
+
+            const porPeriodo =
+                filtros.por_periodo === true;
+
+
+            const tipo =
+                normalizeTipoDespesa(
+                    command.tipo
+                );
+
+
+            const descricao =
+                normalizeString(
+                    command.descricao
+                );
+
+
+            // ----------------------------------------------------
+            // VALIDAÇÃO DOS TIPOS
+            // ----------------------------------------------------
+
+            const tiposValidos = [
+                'conducao',
+                'materiais',
+                'alimentacao',
+                'outras',
+                'todos'
+            ];
+
+
+            if (
+                porTipo &&
+                !tiposValidos.includes(tipo)
+            ) {
+
+                return `⚠️ Tipo de despesa inválido: ${command.tipo}`;
+            }
+
+
+            // ----------------------------------------------------
+            // QUERY
+            // ----------------------------------------------------
+
             let query = supabase
                 .from('despesas')
                 .select('*')
-                .eq('user_phone', userPhone);
+                .eq(
+                    'user_phone',
+                    userPhone
+                );
+
+
+            // ----------------------------------------------------
+            // FILTRO POR TIPO
+            // ----------------------------------------------------
 
             if (
-                filtros.por_tipo === true &&
-                command.tipo &&
-                command.tipo !== 'todos'
+                porTipo &&
+                tipo !== 'todos'
             ) {
 
                 query = query.eq(
                     'tipo',
-                    command.tipo
+                    tipo
                 );
             }
 
+
+            // ----------------------------------------------------
+            // FILTRO POR DESCRIÇÃO
+            // ----------------------------------------------------
+
             if (
-                filtros.por_descricao === true &&
-                command.descricao
+                porDescricao &&
+                descricao
             ) {
 
                 query = query.ilike(
                     'descricao',
-                    `%${command.descricao}%`
+                    `%${descricao}%`
                 );
             }
 
-            if (filtros.por_periodo === true) {
 
-                if (
-                    !command.periodo_start ||
-                    !command.periodo_end
-                ) {
+            // ----------------------------------------------------
+            // FILTRO POR PERÍODO
+            // ----------------------------------------------------
 
-                    return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
-                }
+            if (!porPeriodo) {
 
-                const range =
-                    getDateRange(
-                        command.periodo_start,
-                        command.periodo_end
-                    );
-
-                if (!range.valid) {
-
-                    console.error(
-                        '❌ Datas inválidas no filtro de despesas:',
-                        {
-                            periodo_start: command.periodo_start,
-                            periodo_end: command.periodo_end
-                        }
-                    );
-
-                    return '⚠️ As datas do período informado são inválidas.';
-                }
-
-                query = query
-                    .gte(
-                        'data',
-                        range.startIso
-                    )
-                    .lte(
-                        'data',
-                        range.endIso
-                    );
+                return '⚠️ A consulta de despesas precisa informar um período.';
             }
+
+
+            if (
+                !command.periodo_start ||
+                !command.periodo_end
+            ) {
+
+                return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
+            }
+
+
+            const range =
+                getDateRange(
+                    command.periodo_start,
+                    command.periodo_end
+                );
+
+
+            if (!range.valid) {
+
+                console.error(
+                    '❌ Datas inválidas no filtro de despesas:',
+                    {
+                        periodo_start:
+                            command.periodo_start,
+
+                        periodo_end:
+                            command.periodo_end
+                    }
+                );
+
+                return '⚠️ As datas do período informado são inválidas.';
+            }
+
+
+            query = query
+                .gte(
+                    'data',
+                    range.startIso
+                )
+                .lte(
+                    'data',
+                    range.endIso
+                );
+
+
+            // ----------------------------------------------------
+            // ORDENAR
+            // ----------------------------------------------------
 
             query = query.order(
                 'data',
-                { ascending: false }
+                {
+                    ascending: false
+                }
             );
+
 
             const {
                 data,
                 error
             } = await query;
 
+
             if (error) {
 
                 console.error(
-                    'Erro ao listar despesas:',
+                    '❌ Erro ao listar despesas:',
                     error
                 );
 
-                return "❌ Erro ao consultar despesas.";
+                return '❌ Erro ao consultar despesas.';
             }
 
-            if (!data || data.length === 0) {
+
+            // ----------------------------------------------------
+            // NENHUM RESULTADO
+            // ----------------------------------------------------
+
+            if (
+                !data ||
+                data.length === 0
+            ) {
 
                 return [
                     resumo
-                        ? "📊 Nenhuma despesa encontrada para gerar o resumo."
-                        : "📋 Nenhuma despesa encontrada.",
-                    "",
+                        ? '📊 Nenhuma despesa encontrada para gerar o resumo.'
+                        : '📋 Nenhuma despesa encontrada.',
+
+                    '',
+
                     command.periodo_texto
                         ? `📅 Período: ${command.periodo_texto}`
-                        : ""
+                        : ''
                 ]
                     .filter(Boolean)
                     .join('\n');
             }
+
+
+            // ====================================================
+            // RESUMO
+            // ====================================================
 
             if (resumo) {
 
@@ -873,31 +1764,41 @@ Dia ${formatLocal(e.date)}${telefone}`;
                     outras: 0
                 };
 
-                data.forEach((d) => {
+
+                data.forEach(despesa => {
 
                     const valor =
-                        Number(d.valor || 0);
+                        Number(
+                            despesa.valor || 0
+                        );
+
 
                     if (
                         Object.prototype.hasOwnProperty.call(
                             totais,
-                            d.tipo
+                            despesa.tipo
                         )
                     ) {
 
-                        totais[d.tipo] += valor;
+                        totais[despesa.tipo] += valor;
                     }
                 });
 
+
                 const totalGeral =
                     data.reduce(
-                        (sum, d) =>
-                            sum + Number(d.valor || 0),
+                        (sum, despesa) =>
+                            sum +
+                            Number(
+                                despesa.valor || 0
+                            ),
                         0
                     );
 
+
                 let titulo =
-                    "📊 Despesas";
+                    '📊 Despesas';
+
 
                 if (command.periodo_texto) {
 
@@ -907,20 +1808,32 @@ Dia ${formatLocal(e.date)}${telefone}`;
                         )}`;
                 }
 
+
                 const linhas = [];
 
+
+                // ------------------------------------------------
+                // QUANDO HÁ FILTRO DE TIPO
+                // ------------------------------------------------
+
                 const tipoSelecionado =
-                    filtros.por_tipo === true &&
-                    command.tipo &&
-                    command.tipo !== 'todos';
+                    porTipo &&
+                    tipo !== 'todos';
+
 
                 if (tipoSelecionado) {
 
                     linhas.push(
-                        `${emojiTipo(command.tipo)} ${nomeTipo(command.tipo)}:       ${formatCurrency(totais[command.tipo])}`
+                        `${emojiTipo(tipo)} ${nomeTipo(tipo)}: ${formatCurrency(totais[tipo])}`
                     );
+                }
 
-                } else {
+
+                // ------------------------------------------------
+                // SEM FILTRO DE TIPO
+                // ------------------------------------------------
+
+                else {
 
                     linhas.push(
                         `🚗 Condução:       ${formatCurrency(totais.conducao)}`
@@ -939,70 +1852,128 @@ Dia ${formatLocal(e.date)}${telefone}`;
                     );
                 }
 
+
                 return [
                     titulo,
-                    "",
+                    '',
                     linhas.join('\n'),
-                    "────────────────────────",
+                    '────────────────────────',
                     `💰 Total: ${formatCurrency(totalGeral)}`
                 ].join('\n');
             }
 
-            const linhas = data.map((d) => {
 
-                return [
-                    `🆔 ${d.despesa_numero}`,
-                    `📅 ${formatDateBR(d.data)}`,
-                    `📂 ${nomeTipo(d.tipo)}`,
-                    `📘 ${d.descricao}`,
-                    `💰 ${formatCurrency(d.valor)}`
-                ].join('\n');
+            // ====================================================
+            // LISTA DETALHADA
+            // ====================================================
 
-            });
+            const linhas =
+                data.map(despesa => {
+
+                    return [
+                        `🆔 ${despesa.despesa_numero}`,
+                        `📅 ${formatDateBR(despesa.data)}`,
+                        `📂 ${nomeTipo(despesa.tipo)}`,
+                        `📘 ${despesa.descricao}`,
+                        `💰 ${formatCurrency(despesa.valor)}`
+                    ].join('\n');
+                });
+
 
             const total =
                 data.reduce(
-                    (sum, d) =>
-                        sum + Number(d.valor || 0),
+                    (sum, despesa) =>
+                        sum +
+                        Number(
+                            despesa.valor || 0
+                        ),
                     0
                 );
 
+
             const cabecalho = [
-                "📋 *Despesas encontradas*",
+                '📋 *Despesas encontradas*',
+
                 command.periodo_texto
                     ? `📅 ${command.periodo_texto}`
                     : null,
-                ""
+
+                ''
             ]
                 .filter(Boolean)
                 .join('\n');
 
+
             return [
                 cabecalho,
+
                 linhas.join('\n\n'),
-                "",
-                "────────────────────",
+
+                '',
+
+                '────────────────────',
+
                 `📊 Quantidade: ${data.length}`,
+
                 `💰 Total: ${formatCurrency(total)}`
             ].join('\n');
         }
+
+
+        // ========================================================
+        // ORÇAMENTOS
+        // ========================================================
 
         case 'orcamento': {
 
             const filtros =
                 command.filtros || {};
 
+
+            const porId =
+                filtros.por_id === true;
+
+
+            const porNome =
+                filtros.por_nome_cliente === true;
+
+
+            const porTelefone =
+                filtros.por_telefone_cliente === true;
+
+
+            const porEtapa =
+                filtros.por_etapa === true;
+
+
+            const porPeriodo =
+                filtros.por_periodo === true;
+
+
             let query = supabase
                 .from('orcamentos')
                 .select('*')
-                .eq('user_telefone', userPhone);
+                .eq(
+                    'user_telefone',
+                    userPhone
+                );
 
-            if (filtros.por_id === true) {
 
-                if (!command.id) {
+            // ----------------------------------------------------
+            // ID
+            // ----------------------------------------------------
+
+            if (porId) {
+
+                if (
+                    command.id === null ||
+                    command.id === undefined ||
+                    command.id === ''
+                ) {
 
                     return '⚠️ O filtro por ID foi identificado, mas nenhum ID foi informado.';
                 }
+
 
                 query = query.eq(
                     'orcamento_numero',
@@ -1010,16 +1981,24 @@ Dia ${formatLocal(e.date)}${telefone}`;
                 );
             }
 
-            if (filtros.por_nome_cliente === true) {
 
-                if (!command.nome_cliente) {
+            // ----------------------------------------------------
+            // CLIENTE
+            // ----------------------------------------------------
+
+            if (porNome) {
+
+                const nome =
+                    normalizeString(
+                        command.nome_cliente
+                    );
+
+
+                if (!nome) {
 
                     return '⚠️ O filtro por cliente foi identificado, mas nenhum nome foi informado.';
                 }
 
-                const nome =
-                    String(command.nome_cliente)
-                        .trim();
 
                 query = query.ilike(
                     'nome_cliente',
@@ -1027,17 +2006,32 @@ Dia ${formatLocal(e.date)}${telefone}`;
                 );
             }
 
-            if (filtros.por_telefone_cliente === true) {
 
-                if (!command.telefone_cliente) {
+            // ----------------------------------------------------
+            // TELEFONE
+            // ----------------------------------------------------
+
+            if (porTelefone) {
+
+                if (
+                    !command.telefone_cliente
+                ) {
 
                     return '⚠️ O filtro por telefone foi identificado, mas nenhum telefone foi informado.';
                 }
+
 
                 const telefone =
                     formatPhoneNumber(
                         command.telefone_cliente
                     );
+
+
+                if (!telefone) {
+
+                    return '⚠️ O telefone informado é inválido.';
+                }
+
 
                 query = query.eq(
                     'telefone_cliente',
@@ -1045,12 +2039,18 @@ Dia ${formatLocal(e.date)}${telefone}`;
                 );
             }
 
-            if (filtros.por_etapa === true) {
+
+            // ----------------------------------------------------
+            // ETAPA
+            // ----------------------------------------------------
+
+            if (porEtapa) {
 
                 const etapa =
-                    String(command.etapa || '')
-                        .trim()
-                        .toLowerCase();
+                    normalizeEtapa(
+                        command.etapa
+                    );
+
 
                 const etapasValidas = [
                     'negociacao',
@@ -1060,10 +2060,14 @@ Dia ${formatLocal(e.date)}${telefone}`;
                     'finalizado'
                 ];
 
-                if (!etapasValidas.includes(etapa)) {
+
+                if (
+                    !etapasValidas.includes(etapa)
+                ) {
 
                     return `⚠️ Etapa inválida: ${command.etapa}`;
                 }
+
 
                 query = query.eq(
                     'etapa',
@@ -1071,76 +2075,118 @@ Dia ${formatLocal(e.date)}${telefone}`;
                 );
             }
 
-            if (filtros.por_periodo === true) {
 
-                if (
-                    !command.periodo_start ||
-                    !command.periodo_end
-                ) {
+            // ----------------------------------------------------
+            // PERÍODO
+            // ----------------------------------------------------
 
-                    return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
-                }
+            if (!porPeriodo) {
 
-                const range =
-                    getDateRange(
-                        command.periodo_start,
-                        command.periodo_end
-                    );
-
-                if (!range.valid) {
-
-                    console.error(
-                        '❌ Datas inválidas no filtro de orçamento:',
-                        {
-                            periodo_start: command.periodo_start,
-                            periodo_end: command.periodo_end
-                        }
-                    );
-
-                    return '⚠️ As datas do período informado são inválidas.';
-                }
-
-                const etapaFinalizado =
-                    filtros.por_etapa === true &&
-                    String(command.etapa || '')
-                        .trim()
-                        .toLowerCase() === 'finalizado';
-
-                const campoData =
-                    etapaFinalizado
-                        ? 'finalizado_em'
-                        : 'criado_em';
-
-                query = query
-                    .gte(
-                        campoData,
-                        range.startIso
-                    )
-                    .lte(
-                        campoData,
-                        range.endIso
-                    );
+                return '⚠️ A consulta de orçamentos precisa informar um período.';
             }
+
+
+            if (
+                !command.periodo_start ||
+                !command.periodo_end
+            ) {
+
+                return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
+            }
+
+
+            const range =
+                getDateRange(
+                    command.periodo_start,
+                    command.periodo_end
+                );
+
+
+            if (!range.valid) {
+
+                console.error(
+                    '❌ Datas inválidas no filtro de orçamento:',
+                    {
+                        periodo_start:
+                            command.periodo_start,
+
+                        periodo_end:
+                            command.periodo_end
+                    }
+                );
+
+                return '⚠️ As datas do período informado são inválidas.';
+            }
+
+
+            // ----------------------------------------------------
+            // DATA DO ORÇAMENTO
+            // ----------------------------------------------------
+            //
+            // Para finalizados, usamos finalizado_em.
+            // Para as demais consultas, usamos criado_em.
+            //
+
+            const etapaFinalizado =
+                porEtapa &&
+                normalizeEtapa(
+                    command.etapa
+                ) === 'finalizado';
+
+
+            const campoData =
+                etapaFinalizado
+                    ? 'finalizado_em'
+                    : 'criado_em';
+
+
+            query = query
+                .gte(
+                    campoData,
+                    range.startIso
+                )
+                .lte(
+                    campoData,
+                    range.endIso
+                );
+
+
+            // ----------------------------------------------------
+            // ORDENAR
+            // ----------------------------------------------------
 
             query = query.order(
                 'criado_em',
-                { ascending: false }
+                {
+                    ascending: false
+                }
             );
+
+
+            // ----------------------------------------------------
+            // CONSULTA
+            // ----------------------------------------------------
 
             const {
                 data: orcamentos,
                 error
             } = await query;
 
+
             if (error) {
 
                 console.error(
-                    "Erro ao listar orcamentos:",
+                    '❌ Erro ao listar orcamentos:',
                     error
                 );
 
-                return "⚠️ Não foi possível listar os orçamentos.";
+                return '⚠️ Não foi possível listar os orçamentos.';
             }
+
+
+            // ----------------------------------------------------
+            // NENHUM RESULTADO
+            // ----------------------------------------------------
 
             if (
                 !orcamentos ||
@@ -1157,8 +2203,14 @@ Dia ${formatLocal(e.date)}${telefone}`;
 ${formatFiltrosOrcamento(command)}`;
                 }
 
-                return "📄 Nenhum orçamento encontrado.";
+
+                return '📄 Nenhum orçamento encontrado.';
             }
+
+
+            // ====================================================
+            // RESUMO
+            // ====================================================
 
             if (command.resumo === true) {
 
@@ -1168,8 +2220,10 @@ ${formatFiltrosOrcamento(command)}`;
                         command.periodo_texto
                     );
 
+
                 let resposta =
                     relatorio;
+
 
                 if (
                     command.mostrar_filtros === true
@@ -1182,8 +2236,14 @@ ${formatFiltrosOrcamento(command)}`;
                         );
                 }
 
+
                 return resposta;
             }
+
+
+            // ====================================================
+            // LISTA DETALHADA
+            // ====================================================
 
             function wait(ms) {
 
@@ -1196,23 +2256,32 @@ ${formatFiltrosOrcamento(command)}`;
                 );
             }
 
+
             for (
                 let i = 0;
                 i < orcamentos.length;
                 i++
             ) {
 
-                const o =
+                const orcamento =
                     orcamentos[i];
 
+
                 await sendWhatsAppRaw({
-                    messaging_product: "whatsapp",
+                    messaging_product: 'whatsapp',
+
                     to: userPhone,
-                    type: "text",
+
+                    type: 'text',
+
                     text: {
-                        body: formatOrcamento(o)
-                    },
+                        body:
+                            formatOrcamento(
+                                orcamento
+                            )
+                    }
                 });
+
 
                 if (
                     i <
@@ -1225,18 +2294,22 @@ ${formatFiltrosOrcamento(command)}`;
                             Math.random() * 900
                         );
 
+
                     await wait(delay);
                 }
             }
 
+
             let resposta =
                 `✅ ${orcamentos.length} orçamento(s) enviado(s).`;
+
 
             if (command.periodo_texto) {
 
                 resposta +=
                     `\n📅 Período: ${command.periodo_texto}`;
             }
+
 
             if (
                 command.mostrar_filtros === true
@@ -1249,11 +2322,13 @@ ${formatFiltrosOrcamento(command)}`;
                     );
             }
 
+
             return resposta;
         }
 
 
         default:
+
             return `⚠️ Módulo de listagem não suportado: ${modulo}`;
     }
 }
