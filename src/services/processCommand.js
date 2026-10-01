@@ -264,7 +264,8 @@ Se houver dúvida se um número é telefone ou ID:
 Se não houver ID claramente identificável:
 "id": null
 
-Responda SOMENTE:
+RESPONDA SOMENTE COM JSON VÁLIDO.
+NÃO ESCREVA NENHUM TEXTO FORA DO JSON.
 
 {
   "modulo": "orcamento" | "agenda" | "despesas" | "outro",
