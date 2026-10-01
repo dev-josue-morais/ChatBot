@@ -81,25 +81,25 @@ REGRAS DE INTERPRETAÇÃO:
 
 EXEMPLOS:
 
-"Pedido 123"
+"Pedido 1300926001"
 => tipo Pedido, materiais true, serviços false.
 
-"Pedido 123 com materiais e serviços"
+"Pedido 1300926001 com materiais e serviços"
 => tipo Pedido, materiais true, serviços true.
 
-"Orçamento 123"
+"Orçamento 1300926001"
 => tipo Orçamento, materiais true, serviços true.
 
-"Orçamento 123 sem materiais"
+"Orçamento 1300926001 sem materiais"
 => tipo Orçamento, materiais false, serviços true.
 
-"Orçamento 123 sem valores dos serviços"
+"Orçamento 1300926001 sem valores dos serviços"
 => ocultarValorServicos true.
 
-"Recibo 123 de 500 reais"
+"Recibo 1300926001 de 500 reais"
 => tipo Recibo, valorRecibo 500.
 
-"Recibo 123"
+"Recibo 1300926001"
 => tipo Recibo, valorRecibo null.
 `;
 }
