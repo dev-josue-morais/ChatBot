@@ -50,6 +50,7 @@ function emojiTipo(tipo) {
         conducao: '🚗',
         materiais: '🔨',
         alimentacao: '🍽️',
+        ferramentas: '🛠️',
         outras: '📦'
     };
 
