@@ -269,22 +269,22 @@ Exemplos:
 
 Exemplos:
 
-"Resumo dos meus orçamentos"
+"Lista resumo dos meus orçamentos"
 → resumo=true
 
-"Relatório dos meus orçamentos"
+"Lista relatório dos meus orçamentos"
 → resumo=true
 
-"Quanto tenho em orçamentos?"
+"lista quanto tenho em orçamentos?"
 → resumo=true
 
-"Quantos orçamentos tenho aprovados?"
+"lista quantos orçamentos tenho aprovados?"
 → resumo=true
 
-"Qual o valor total dos meus orçamentos?"
+"lista qual o valor total dos meus orçamentos?"
 → resumo=true
 
-"Resumo dos orçamentos aprovados"
+"lista resumo dos orçamentos aprovados"
 → resumo=true
 
 
@@ -649,7 +649,7 @@ por_periodo=true
 
 Outro exemplo:
 
-"Relatório dos orçamentos de João aprovados dos últimos 6 meses"
+"lista relatório dos orçamentos de João aprovados dos últimos 6 meses"
 
 Resultado conceitual:
 
@@ -786,7 +786,7 @@ Exemplos:
 "Lista meus gastos com gasolina"
 → resumo=false
 
-"Quais despesas tive essa semana?"
+"lista quais despesas tive essa semana?"
 → resumo=false
 
 
@@ -796,25 +796,25 @@ Use resumo=true quando o usuário pedir uma informação consolidada.
 
 Exemplos:
 
-"Resumo das minhas despesas"
+"lista Resumo das minhas despesas"
 → resumo=true
 
-"Relatório das minhas despesas"
+"lista Relatório das minhas despesas"
 → resumo=true
 
-"Quanto gastei?"
+"lista Quanto gastei?"
 → resumo=true
 
-"Qual o total das minhas despesas?"
+"lista qual o total das minhas despesas?"
 → resumo=true
 
-"Quanto gastei com gasolina?"
+"lista quanto gastei com gasolina?"
 → resumo=true
 
-"Qual o total gasto com materiais?"
+"lista qual o total gasto com materiais?"
 → resumo=true
 
-"Quanto gastei com ferramentas?"
+"lista quanto gastei com ferramentas?"
 → resumo=true
 
 
@@ -825,7 +825,7 @@ Filtros não transformam lista em resumo.
 "Lista minhas despesas de gasolina"
 → resumo=false
 
-"Resumo das minhas despesas de gasolina"
+"lista resumo das minhas despesas de gasolina"
 → resumo=true
 
 
@@ -945,7 +945,7 @@ por_descricao=true
 descricao="gasolina"
 
 
-"Quanto gastei com gasolina?"
+"lista quanto gastei com gasolina?"
 
 →
 
@@ -1006,7 +1006,7 @@ QUANDO USAR TIPO E DESCRIÇÃO
 → descricao="tomada"
 
 
-"Resumo das minhas despesas de materiais com tomada"
+"losta resumo das minhas despesas de materiais com tomada"
 
 Nesse caso podem existir dois filtros:
 
@@ -1149,7 +1149,6 @@ REGRAS FINAIS
 - Os tipos válidos são: conducao, materiais, alimentacao, ferramentas e outras.
 - Lista detalhada = resumo=false.
 - Resumo/relatório/total = resumo=true.
-- Retorne somente JSON válido.
 
 
 Mensagem:
@@ -1339,8 +1338,6 @@ REGRAS IMPORTANTES
 - Sempre preencha start_date.
 - Sempre preencha end_date.
 - Se houver ID, title deve ser null.
-- Retorne somente JSON válido.
-
 
 Mensagem:
 
