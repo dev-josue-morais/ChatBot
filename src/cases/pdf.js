@@ -3,349 +3,251 @@ const { sendPDFOrcamento } = require('../services/whatsappService');
 
 function getPdfPrompt(modulo, userMessage) {
 
-  if (modulo !== 'orcamento') {
-    return null;
-  }
+    if (modulo !== 'orcamento') {
+        return null;
+    }
 
-  return `
-Você é um assistente que gera PDFs de orçamentos.
+    return `
+Você interpreta comandos para geração de PDF de um orçamento.
 
-Responda somente com JSON válido.
+Responda SOMENTE com JSON válido, seguindo exatamente esta estrutura:
 
 {
-  "modulo": "orcamento",
-  "action": "pdf",
-  "id": número,
-  "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
-  "opcoes": {
-    "listaServicos": true,
-    "listaMateriais": true,
-    "ocultarValorServicos": false,
-    "garantia": true,
-    "assinaturaCliente": false,
-    "assinaturaEmpresa": false
-  },
-  "valorRecibo": número | null
+    "modulo": "orcamento",
+    "action": "pdf",
+    "id": número,
+    "tipo": "Orçamento" | "Ordem de Serviço" | "Relatório Técnico" | "Nota de Serviço" | "Pedido" | "Proposta Comercial" | "Recibo",
+    "opcoes": {
+        "listaServicos": true,
+        "listaMateriais": true,
+        "ocultarValorServicos": false,
+        "garantia": true,
+        "assinaturaCliente": false,
+        "assinaturaEmpresa": false
+    },
+    "valorRecibo": número | null
 }
 
-Texto do usuário:
+Comando do usuário:
 """${userMessage}"""
 
-⚠️ REGRAS:
+REGRAS DE INTERPRETAÇÃO:
 
-1. Sempre retorne JSON válido.
+1. O "id" é o número do orçamento solicitado. Nunca invente um ID.
 
-2. "id" deve ser o número do orçamento solicitado.
+2. Se o usuário não informar o tipo, use "Orçamento".
 
-3. Se tipo = "Recibo", inclua "valorRecibo".
-   Se o valor não for informado, use null.
+3. Para qualquer tipo diferente de "Pedido":
+   - listaServicos = true por padrão.
+   - listaMateriais = true por padrão.
 
-4. Para documentos diferentes de "Pedido", se o usuário não informar nenhuma preferência sobre materiais ou serviços, use:
+4. Para "Pedido":
+   - listaMateriais = true por padrão.
+   - listaServicos = false por padrão.
+   - Se o usuário pedir, mencionar ou incluir serviços, listaServicos = true.
+   - Se pedir materiais e serviços, ambos ficam true.
+   - Mesmo que o usuário diga para ocultar materiais, em "Pedido" listaMateriais continua true.
 
-   "listaServicos": true
-   "listaMateriais": true
+5. Fora de "Pedido":
+   - Se pedir explicitamente para ocultar materiais, listaMateriais = false.
+   - Se pedir explicitamente para ocultar serviços, listaServicos = false.
 
-5. Para tipo = "Pedido":
+6. "ocultarValorServicos":
+   - true somente se o usuário pedir para ocultar, esconder ou não mostrar os valores dos serviços.
+   - Caso contrário, false.
 
-   "listaMateriais" DEVE SER SEMPRE true.
+7. "garantia":
+   - false somente se o usuário pedir para retirar, ocultar ou não mostrar a garantia.
+   - Caso contrário, true.
 
-   Um Pedido sempre deve mostrar a lista de materiais,
-   mesmo que o usuário não mencione materiais no comando.
+8. "assinaturaCliente":
+   - true somente se o usuário solicitar assinatura do cliente.
+   - Caso contrário, false.
 
-   "listaServicos" deve ser false por padrão.
+9. "assinaturaEmpresa":
+   - true somente se o usuário solicitar assinatura da empresa.
+   - Caso contrário, false.
 
-   Somente coloque "listaServicos": true se o usuário
-   mencionar ou solicitar serviços.
+10. "Recibo":
+   - Se o usuário informar o valor recebido, coloque o número em "valorRecibo".
+   - Se não informar, use null.
+   - Para qualquer outro tipo, "valorRecibo" deve ser null.
 
-6. Para tipo = "Pedido", se o usuário mencionar ou solicitar serviços, use:
+11. Não altere nenhuma opção sem:
+   - uma solicitação explícita do usuário; ou
+   - uma regra padrão definida acima.
 
-   "listaServicos": true
-
-7. Para tipo = "Pedido", se o usuário mencionar materiais E serviços, use:
-
-   "listaMateriais": true
-   "listaServicos": true
-
-8. Para tipo = "Pedido", se o usuário não mencionou serviços, somente materiais:
-
-   "listaMateriais": true
-   "listaServicos": false
-
-9. Se o usuário pedir explicitamente para ocultar materiais:
-
-   "listaMateriais": false
-
-   Porém, se o tipo for "Pedido", esta regra não se aplica,
-   pois materiais são obrigatórios em um Pedido.
-
-10. Se o usuário pedir explicitamente para ocultar serviços:
-
-   "listaServicos": false
-
-11. Não invente uma solicitação de materiais ou serviços que o usuário não fez.
-
-12. "listaMateriais" controla se a lista de materiais será exibida no PDF.
-
-13. "listaServicos" controla se a lista de serviços será exibida no PDF.
-
-14. "ocultarValorServicos": true somente quando o usuário pedir para ocultar os valores dos serviços.
-
-    Caso contrário:
-
-    "ocultarValorServicos": false
-
-15. "garantia": false somente se o usuário pedir para retirar ou ocultar a garantia.
-
-    Caso contrário:
-
-    "garantia": true
-
-16. "assinaturaCliente": true somente se o usuário solicitar assinatura do cliente.
-
-    Caso contrário:
-
-    "assinaturaCliente": false
-
-17. "assinaturaEmpresa": true somente se o usuário solicitar assinatura da empresa.
-
-    Caso contrário:
-
-    "assinaturaEmpresa": false
-
-18. Nunca altere uma opção sem que exista uma instrução do usuário ou uma regra definida acima.
+12. Não invente materiais, serviços, valores, preferências ou outras informações.
 
 EXEMPLOS:
 
-Usuário:
 "Pedido 123"
+=> tipo Pedido, materiais true, serviços false.
 
-Resultado:
-{
-  "modulo": "orcamento",
-  "action": "pdf",
-  "id": 123,
-  "tipo": "Pedido",
-  "opcoes": {
-    "listaServicos": false,
-    "listaMateriais": true,
-    "ocultarValorServicos": false,
-    "garantia": true,
-    "assinaturaCliente": false,
-    "assinaturaEmpresa": false
-  },
-  "valorRecibo": null
-}
-
-Usuário:
-"Pedido 123 com os materiais"
-
-Resultado:
-{
-  "modulo": "orcamento",
-  "action": "pdf",
-  "id": 123,
-  "tipo": "Pedido",
-  "opcoes": {
-    "listaServicos": false,
-    "listaMateriais": true,
-    "ocultarValorServicos": false,
-    "garantia": true,
-    "assinaturaCliente": false,
-    "assinaturaEmpresa": false
-  },
-  "valorRecibo": null
-}
-
-Usuário:
 "Pedido 123 com materiais e serviços"
+=> tipo Pedido, materiais true, serviços true.
 
-Resultado:
-{
-  "modulo": "orcamento",
-  "action": "pdf",
-  "id": 123,
-  "tipo": "Pedido",
-  "opcoes": {
-    "listaServicos": true,
-    "listaMateriais": true,
-    "ocultarValorServicos": false,
-    "garantia": true,
-    "assinaturaCliente": false,
-    "assinaturaEmpresa": false
-  },
-  "valorRecibo": null
-}
-
-Usuário:
 "Orçamento 123"
+=> tipo Orçamento, materiais true, serviços true.
 
-Resultado:
-{
-  "modulo": "orcamento",
-  "action": "pdf",
-  "id": 123,
-  "tipo": "Orçamento",
-  "opcoes": {
-    "listaServicos": true,
-    "listaMateriais": true,
-    "ocultarValorServicos": false,
-    "garantia": true,
-    "assinaturaCliente": false,
-    "assinaturaEmpresa": false
-  },
-  "valorRecibo": null
-}
+"Orçamento 123 sem materiais"
+=> tipo Orçamento, materiais false, serviços true.
+
+"Orçamento 123 sem valores dos serviços"
+=> ocultarValorServicos true.
+
+"Recibo 123 de 500 reais"
+=> tipo Recibo, valorRecibo 500.
+
+"Recibo 123"
+=> tipo Recibo, valorRecibo null.
 `;
 }
 
 async function executePdf(command, userPhone) {
 
-  if (command.modulo !== 'orcamento') {
-    return '⚠️ Este módulo não possui geração de PDF.';
-  }
-
-  try {
-
-    if (!command.id) {
-      return '⚠️ É necessário informar o ID do orçamento para gerar o PDF.';
+    if (command.modulo !== 'orcamento') {
+        return '⚠️ Este módulo não possui geração de PDF.';
     }
 
-    const { data: orcamentos, error: orcamentoError } = await supabase
-      .from('orcamentos')
-      .select('*')
-      .eq('orcamento_numero', command.id)
-      .eq('user_telefone', userPhone)
-      .limit(1);
+    try {
 
-    if (orcamentoError) {
-      console.error(
-        'Erro ao buscar orçamento para PDF:',
-        orcamentoError
-      );
+        if (
+            command.id === null ||
+            command.id === undefined ||
+            command.id === '' ||
+            Number.isNaN(Number(command.id))
+        ) {
+            return '⚠️ É necessário informar o ID do orçamento para gerar o PDF.';
+        }
 
-      return `⚠️ Não foi possível buscar o orçamento ${command.id}.`;
-    }
+        const { data: orcamentos, error: orcamentoError } = await supabase
+            .from('orcamentos')
+            .select('*')
+            .eq('orcamento_numero', command.id)
+            .eq('user_telefone', userPhone)
+            .limit(1);
 
-    if (!orcamentos?.length) {
-      return `⚠️ Orçamento ${command.id} não encontrado.`;
-    }
+        if (orcamentoError) {
+            console.error(
+                'Erro ao buscar orçamento para PDF:',
+                orcamentoError
+            );
 
-    const o = orcamentos[0];
+            return `⚠️ Não foi possível buscar o orçamento ${command.id}.`;
+        }
 
-    const { data: users, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('telefone', userPhone)
-      .limit(1);
+        if (!orcamentos?.length) {
+            return `⚠️ Orçamento ${command.id} não encontrado.`;
+        }
 
-    if (userError) {
-      console.error(
-        'Erro ao buscar usuário para PDF:',
-        userError
-      );
+        const o = orcamentos[0];
 
-      return '⚠️ Não foi possível buscar o usuário para gerar o PDF.';
-    }
+        const { data: users, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('telefone', userPhone)
+            .limit(1);
 
-    if (!users?.length) {
-      return '⚠️ Usuário não encontrado para gerar o PDF.';
-    }
+        if (userError) {
+            console.error(
+                'Erro ao buscar usuário para PDF:',
+                userError
+            );
 
-    const user = users[0];
+            return '⚠️ Não foi possível buscar o usuário para gerar o PDF.';
+        }
 
-    // ================================
-    // 📄 Configuração do PDF
-    // ================================
+        if (!users?.length) {
+            return '⚠️ Usuário não encontrado para gerar o PDF.';
+        }
 
-    const pdfConfig = {
-      tipo: command.tipo || 'Orçamento',
+        const user = users[0];
 
-      opcoes: command.opcoes || {
-        listaServicos: true,
-        listaMateriais: true,
-        ocultarValorServicos: false,
-        garantia: true,
-        assinaturaCliente: false,
-        assinaturaEmpresa: false
-      }
-    };
+        const pdfConfig = {
+            tipo: command.tipo || 'Orçamento',
 
-    // ================================
-    // 🧾 Recibo
-    // ================================
+            opcoes: {
+                listaServicos: command.opcoes?.listaServicos ?? true,
+                listaMateriais: command.opcoes?.listaMateriais ?? true,
+                ocultarValorServicos:
+                    command.opcoes?.ocultarValorServicos ?? false,
+                garantia: command.opcoes?.garantia ?? true,
+                assinaturaCliente:
+                    command.opcoes?.assinaturaCliente ?? false,
+                assinaturaEmpresa:
+                    command.opcoes?.assinaturaEmpresa ?? false
+            },
 
-    if (pdfConfig.tipo === 'Recibo') {
+            valorRecibo: null
+        };
 
-      const valor = parseFloat(command.valorRecibo);
+        // Pedido sempre deve mostrar materiais.
+        if (pdfConfig.tipo === 'Pedido') {
+            pdfConfig.opcoes.listaMateriais = true;
+        }
 
-      pdfConfig.valorRecibo =
-        !isNaN(valor) && valor > 0
-          ? valor
-          : null;
+        // Recibo
+        if (pdfConfig.tipo === 'Recibo') {
 
-    } else {
+            const valor = Number(command.valorRecibo);
 
-      pdfConfig.valorRecibo = null;
-    }
+            if (!Number.isNaN(valor) && valor > 0) {
+                pdfConfig.valorRecibo = valor;
+            }
+        }
 
-    // ================================
-    // 📌 Finaliza orçamento
-    // ================================
+        // Recibo e Nota de Serviço finalizam o orçamento.
+        if (
+            ['Recibo', 'Nota de Serviço'].includes(pdfConfig.tipo) &&
+            o.etapa?.toLowerCase() !== 'finalizado'
+        ) {
 
-    if (
-      ['Recibo', 'Nota de Serviço'].includes(pdfConfig.tipo) &&
-      o.etapa?.toLowerCase() !== 'finalizado'
-    ) {
+            const { error: updateError } = await supabase
+                .from('orcamentos')
+                .update({
+                    etapa: 'finalizado'
+                })
+                .eq('orcamento_numero', command.id)
+                .eq('user_telefone', userPhone);
 
-      const { error: updateError } = await supabase
-        .from('orcamentos')
-        .update({
-          etapa: 'finalizado'
-        })
-        .eq('orcamento_numero', command.id)
-        .eq('user_telefone', userPhone);
+            if (updateError) {
+                console.error(
+                    'Erro ao finalizar orçamento:',
+                    updateError
+                );
+            } else {
+                o.etapa = 'finalizado';
+            }
+        }
 
-      if (updateError) {
-        console.error(
-          'Erro ao finalizar orçamento:',
-          updateError
+        const enviado = await sendPDFOrcamento(
+            userPhone,
+            o,
+            {
+                ...pdfConfig,
+                user
+            }
         );
-      } else {
-        o.etapa = 'finalizado';
-      }
+
+        if (enviado) {
+            return;
+        }
+
+        return `⚠️ PDF do ${pdfConfig.tipo.toLowerCase()} ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
+
+    } catch (err) {
+
+        console.error(
+            'Erro ao gerar/enviar PDF:',
+            err
+        );
+
+        return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
     }
-
-    // ================================
-    // 📤 Gera e envia PDF
-    // ================================
-
-    const enviado = await sendPDFOrcamento(
-      userPhone,
-      o,
-      {
-        ...pdfConfig,
-        user
-      }
-    );
-
-    if (enviado) {
-      return;
-    }
-
-    return `⚠️ PDF do ${pdfConfig.tipo.toLowerCase()} ${command.id} gerado mas não foi possível enviar pelo WhatsApp.`;
-
-  } catch (err) {
-
-    console.error(
-      'Erro ao gerar/enviar PDF:',
-      err
-    );
-
-    return `⚠️ Erro ao gerar/enviar PDF do orçamento ${command.id}.`;
-  }
 }
 
 module.exports = {
-  getPdfPrompt,
-  executePdf
+    getPdfPrompt,
+    executePdf
 };
