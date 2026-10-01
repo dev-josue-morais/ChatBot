@@ -1,13 +1,16 @@
 const supabase = require('../services/supabase');
 const { DateTime } = require('luxon');
+
 const formatCurrency = require('../utils/formatCurrency');
+const formatOrcamento = require('../utils/formatOrcamento');
+
 const {
     getNowBRT,
     formatLocal,
     formatarData,
     formatPhoneNumber
 } = require('../utils/utils');
-const formatOrcamento = require('../utils/formatOrcamento');
+
 const {
     normalizeMoney,
     deleteOldEvents,
@@ -15,15 +18,21 @@ const {
     nomeTipo
 } = require('../utils/processFunctions');
 
+
 // ======================================================
 // DATA / HORA
 // ======================================================
 
 function nowWithWeekday() {
-    const now = getNowBRT();
-    const weekday = now.setLocale('pt').toFormat('cccc');
 
-    return `Hoje é ${weekday}, ${now.toFormat("yyyy-MM-dd HH:mm:ss")}`;
+    const now = getNowBRT();
+
+    const weekday =
+        now
+            .setLocale('pt')
+            .toFormat('cccc');
+
+    return `Hoje é ${weekday}, ${now.toFormat('yyyy-MM-dd HH:mm:ss')}`;
 }
 
 
@@ -35,117 +44,178 @@ function getCreatePrompt(modulo, userMessage) {
 
     switch (modulo) {
 
+        // ==================================================
+        // ORÇAMENTO
+        // ==================================================
+
         case 'orcamento':
 
             return `
-Você é um assistente comercial. O usuário está criando um novo orçamento.
+Você interpreta pedidos para criar um novo orçamento.
+
+Retorne somente JSON válido:
 
 {
   "modulo": "orcamento",
   "action": "create",
   "nome_cliente": "string",
-  "descricoes": ["texto1", "texto2"] | [],
+  "descricoes": [],
   "telefone_cliente": "string",
   "etapa": "negociacao" | "finalizado" | "andamento" | "perdido" | "aprovado",
-  "observacoes": ["Garantia 90 dias", "Pagamento via Pix"] | [],
-  "materiais": [{ "nome": "fio 2,5mm azul", "qtd": 30, "und": "m", "valor": 2.5 }] | [],
-  "servicos": [{ "titulo": "Instalação de tomada", "qtd": 10, "valor": 25.0 }] | [],
+  "observacoes": [],
+  "materiais": [
+    {
+      "nome": "string",
+      "qtd": number,
+      "und": "string",
+      "valor": number
+    }
+  ],
+  "servicos": [
+    {
+      "titulo": "string",
+      "qtd": number,
+      "valor": number
+    }
+  ],
   "desconto_materiais": number | "10%" | null,
   "desconto_servicos": number | "10%" | null
 }
 
 Regras:
-- Etapa padrão: "negociacao".
-- Não inclua expressões matemáticas, apenas números.
-- "und" pode ser "und", "m", "cm", "kit", "caixa", etc.
-- Se o valor não for informado, use 0.
-- Utilize os nomes completos dos itens fornecidos no texto.
-- Separe itens diferentes. Ex.: 25m de fio 4mm azul e verde → 25m fio 4mm azul e 25m fio 4mm verde.
-- Valores monetários devem ser números com ponto decimal.
-- Ao adicionar desconto, altere somente "desconto_materiais" e/ou "desconto_servicos". Não altere os valores dos materiais ou serviços.
 
-Texto: """${userMessage}"""
+- Etapa padrão: "negociacao".
+- Nome e telefone do cliente devem vir somente da mensagem.
+- Não invente dados ausentes.
+- Materiais e serviços devem ficar separados.
+- Cada item diferente deve ser um item separado.
+- Preserve o nome completo informado para cada item.
+- Se quantidades ou valores não forem informados, use 0.
+- "und" pode ser qualquer unidade informada ou adequada ao item, como "und", "m", "cm", "kit", "caixa".
+- Valores monetários devem ser números, sem R$.
+- Use ponto para casas decimais.
+- Não retorne expressões matemáticas.
+- Desconto deve ser colocado somente no respectivo campo.
+- Não altere o valor individual dos itens para aplicar desconto.
+- "descricoes" e "observacoes" devem ser arrays.
+- Se não houver descrições, observações, materiais ou serviços, use [].
+
+Importante:
+"25 m de fio 4mm azul e verde" representa dois materiais se azul e verde forem itens distintos:
+[
+  {"nome":"fio 4mm azul",...},
+  {"nome":"fio 4mm verde",...}
+]
+
+Mensagem:
+"""${userMessage}"""
 `;
 
+
+        // ==================================================
+        // AGENDA
+        // ==================================================
 
         case 'agenda':
 
             return `
-Você é um assistente que cria compromissos de agenda.
-O usuário está no fuso GMT-3 (Brasil).
+Você interpreta pedidos para criar um evento na agenda.
+
+Fuso horário: America/Sao_Paulo (GMT-3).
 ${nowWithWeekday()}
+
+Retorne somente JSON válido:
 
 {
   "modulo": "agenda",
   "action": "create",
   "title": "string",
-  "datetime": "Data/hora ISO 8601 no GMT-3",
-  "reminder_minutes": número,
-  "telefone": "string" ou null
+  "datetime": "ISO 8601 com GMT-3",
+  "reminder_minutes": number,
+  "telefone": "string" | null
 }
 
 Regras:
-- "title" deve conter o nome do compromisso, pessoa, serviço ou local informado.
-- "datetime" deve ser ISO 8601 com fuso GMT-3. Use o contexto de data/hora para interpretar "amanhã", "sexta", etc.
-- "reminder_minutes": use o informado pelo usuário; se não informar, use 30.
-- "telefone": preencha somente se o usuário informar um telefone relacionado ao evento. Se não informar, use null.
-- Não confunda o telefone do usuário com o telefone do contato do evento.
-- Não invente ou complete números. Preserve o número informado, com ou sem formatação.
-- Não invente informações ausentes da mensagem.
 
-Texto: """${userMessage}"""
+- "title" deve representar o compromisso, pessoa, serviço ou local informado.
+- "datetime" deve ser a data e hora finais do evento em GMT-3.
+- Interprete corretamente expressões relativas como hoje, amanhã, depois de amanhã, sexta, próxima segunda, à tarde etc.
+- Use o horário atual informado no contexto para interpretar referências relativas.
+- Se o usuário informar somente a hora, use a data apropriada indicada pelo contexto ou pela mensagem.
+- Se não informar lembrete, use 30 minutos.
+- "telefone" só deve ser preenchido se o usuário fornecer o telefone do contato relacionado ao evento.
+- Não use o telefone do usuário como telefone do evento.
+- Preserve o telefone informado; não invente, complete ou altere dígitos.
+- Não invente informações ausentes.
+
+Mensagem:
+"""${userMessage}"""
 `;
 
+
+        // ==================================================
+        // DESPESAS
+        // ==================================================
 
         case 'despesas':
 
             return `
-Você é um assistente financeiro que registra uma nova despesa.
-O usuário está no fuso GMT-3 (Brasil).
-${nowWithWeekday()}
+Você interpreta pedidos para registrar uma nova despesa.
+
+Retorne somente JSON válido:
 
 {
   "modulo": "despesas",
   "action": "create",
   "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
-  "valor": número,
+  "valor": number,
   "descricao": "string"
 }
 
-Classifique automaticamente:
+Classifique pelo significado da despesa:
 
-"conducao":
-gasolina, combustível, álcool combustível, diesel, estacionamento, pedágio,
-transporte, ônibus, Uber, manutenção relacionada ao veículo e outras despesas
-claramente relacionadas à condução.
+conducao:
+combustível, gasolina, diesel, etanol, estacionamento, pedágio,
+Uber, táxi, transporte, manutenção de veículo e despesas de deslocamento.
 
-"materiais":
-tomada, interruptor, fio, cabo, disjuntor, eletroduto, eletrocalha, condulete,
-lâmpada, fita de LED, material elétrico, ferramentas, materiais utilizados na
-obra e qualquer material comprado para serviço.
+materiais:
+tomada, interruptor, fio, cabo, disjuntor, eletroduto, eletrocalha,
+condulete, lâmpada, fita de LED, ferramentas e materiais utilizados
+em serviços ou obras.
 
-"alimentacao":
-marmita, almoço, jantar, café, lanche, comida, alimentação, bebida sem álcool
-e qualquer despesa claramente relacionada à alimentação.
+alimentacao:
+marmita, almoço, jantar, café, lanche, comida, alimentação e bebidas
+sem álcool.
 
-"outras":
-despesas que não se enquadrem nas categorias acima.
+outras:
+qualquer despesa que não se enquadre claramente nas categorias acima.
 
-DESCRIÇÃO:
-Registre exatamente o que o usuário informou, sem inventar detalhes.
+Regras:
 
-Exemplos:
-"25 reais gasolina" → tipo="conducao", valor=25, descricao="gasolina"
-"gastei 30 com marmita" → tipo="alimentacao", valor=30, descricao="marmita"
-"adiciona gasto com tomada 15 reais" → tipo="materiais", valor=15, descricao="tomada"
-
-VALOR:
-- Retorne somente número, usando ponto como decimal.
-- Não inclua "R$".
-- Não faça cálculos nem invente valores.
+- Classifique pelo contexto, não apenas por uma palavra isolada.
+- "gasolina" → conducao.
+- "tomada" → materiais.
+- "marmita" → alimentacao.
+- Não invente informações.
+- A descrição deve representar o que o usuário informou.
+- O valor deve ser somente número, sem R$.
+- Use ponto para casas decimais.
+- Não faça cálculos.
 - Se o valor não puder ser identificado, use 0.
 
-Texto: """${userMessage}"""
+Exemplos:
+
+"25 reais gasolina"
+→ tipo="conducao", valor=25, descricao="gasolina"
+
+"gastei 30 com marmita"
+→ tipo="alimentacao", valor=30, descricao="marmita"
+
+"adiciona tomada 15 reais"
+→ tipo="materiais", valor=15, descricao="tomada"
+
+Mensagem:
+"""${userMessage}"""
 `;
 
 
@@ -162,9 +232,14 @@ Texto: """${userMessage}"""
 async function executeCreate(command, userPhone) {
 
     if (!userPhone) {
-        console.error('executeCreate: userPhone não informado.');
-        return "❌ Não foi possível identificar o usuário.";
+
+        console.error(
+            'executeCreate: userPhone não informado.'
+        );
+
+        return '❌ Não foi possível identificar o usuário.';
     }
+
 
     switch (command.modulo) {
 
@@ -175,70 +250,126 @@ async function executeCreate(command, userPhone) {
         case 'orcamento': {
 
             if (!command.nome_cliente) {
-                return "⚠️ O campo *nome do cliente* é obrigatório.";
+                return '⚠️ O campo *nome do cliente* é obrigatório.';
             }
 
             if (!command.telefone_cliente) {
-                return "⚠️ O campo *telefone do cliente* é obrigatório.";
+                return '⚠️ O campo *telefone do cliente* é obrigatório.';
             }
 
-            const materiais = Array.isArray(command.materiais)
-                ? command.materiais.map(m => ({
-                    ...m,
-                    qtd: normalizeMoney(m.qtd),
-                    valor: normalizeMoney(m.valor),
-                    unidade: m.und
-                }))
-                : [];
 
-            const servicos = Array.isArray(command.servicos)
-                ? command.servicos.map(s => ({
-                    ...s,
-                    quantidade: normalizeMoney(s.qtd),
-                    valor: normalizeMoney(s.valor)
-                }))
-                : [];
+            const materiais =
+                Array.isArray(command.materiais)
+                    ? command.materiais.map(m => ({
+                        ...m,
 
-            const observacoes = Array.isArray(command.observacoes)
-                ? command.observacoes.filter(Boolean)
-                : [];
+                        qtd: normalizeMoney(
+                            m.qtd
+                        ),
 
-            const descricoes = Array.isArray(command.descricoes)
-                ? command.descricoes
-                    .map(d => String(d).replace(/\n/g, '').trim())
-                    .filter(Boolean)
-                : [];
+                        valor: normalizeMoney(
+                            m.valor
+                        ),
+
+                        unidade: m.und
+                    }))
+                    : [];
+
+
+            const servicos =
+                Array.isArray(command.servicos)
+                    ? command.servicos.map(s => ({
+                        ...s,
+
+                        quantidade: normalizeMoney(
+                            s.qtd
+                        ),
+
+                        valor: normalizeMoney(
+                            s.valor
+                        )
+                    }))
+                    : [];
+
+
+            const observacoes =
+                Array.isArray(command.observacoes)
+                    ? command.observacoes
+                        .filter(Boolean)
+                    : [];
+
+
+            const descricoes =
+                Array.isArray(command.descricoes)
+                    ? command.descricoes
+                        .map(d =>
+                            String(d)
+                                .replace(/\n/g, '')
+                                .trim()
+                        )
+                        .filter(Boolean)
+                    : [];
+
 
             const telefone_cliente =
-    formatPhoneNumber(command.telefone_cliente);
+                formatPhoneNumber(
+                    command.telefone_cliente
+                );
 
-const { data, error } = await supabase
-    .from('orcamentos')
-    .insert([{
-        nome_cliente: command.nome_cliente,
-        telefone_cliente,
-        etapa: command.etapa || "negociacao",
-        observacoes,
-        descricoes,
-        materiais,
-        servicos,
-        desconto_materiais: normalizeMoney(
-            command.desconto_materiais
-        ),
-        desconto_servicos: normalizeMoney(
-            command.desconto_servicos
-        ),
-        user_telefone: userPhone
-    }])
-    .select();
+
+            const {
+                data,
+                error
+            } = await supabase
+                .from('orcamentos')
+                .insert([{
+                    nome_cliente:
+                        command.nome_cliente,
+
+                    telefone_cliente,
+
+                    etapa:
+                        command.etapa ||
+                        'negociacao',
+
+                    observacoes,
+
+                    descricoes,
+
+                    materiais,
+
+                    servicos,
+
+                    desconto_materiais:
+                        normalizeMoney(
+                            command.desconto_materiais
+                        ),
+
+                    desconto_servicos:
+                        normalizeMoney(
+                            command.desconto_servicos
+                        ),
+
+                    user_telefone:
+                        userPhone
+                }])
+                .select();
+
 
             if (error) {
-                console.error("Erro ao criar orçamento:", error);
+
+                console.error(
+                    'Erro ao criar orçamento:',
+                    error
+                );
 
                 return `⚠️ Não consegui criar o orçamento para "${command.nome_cliente}".`;
             }
 
-            return formatOrcamento(data[0]);
+
+            return formatOrcamento(
+                data[0]
+            );
         }
 
 
@@ -250,34 +381,67 @@ const { data, error } = await supabase
 
             let date = null;
 
+
             if (command.datetime) {
-                date = DateTime
-                    .fromISO(
+
+                const parsed =
+                    DateTime.fromISO(
                         command.datetime,
-                        { zone: 'America/Sao_Paulo' }
-                    )
-                    .toUTC()
-                    .toISO();
+                        {
+                            setZone: true
+                        }
+                    );
+
+
+                if (!parsed.isValid) {
+
+                    return '⚠️ A data/hora informada é inválida.';
+                }
+
+
+                date =
+                    parsed
+                        .setZone(
+                            'America/Sao_Paulo'
+                        )
+                        .toUTC()
+                        .toISO();
             }
 
-            const telefone =
-                formatPhoneNumber(command.telefone ?? null);
 
-            const { data, error } = await supabase
+            const telefone =
+                formatPhoneNumber(
+                    command.telefone ?? null
+                );
+
+
+            const {
+                data,
+                error
+            } = await supabase
                 .from('events')
                 .insert([{
-                    title: command.title,
+                    title:
+                        command.title,
+
                     date,
+
                     reminder_minutes:
-                        command.reminder_minutes || 30,
-                    user_telefone: userPhone,
+                        command.reminder_minutes ??
+                        30,
+
+                    user_telefone:
+                        userPhone,
+
                     telefone
                 }])
                 .select(
                     'event_numero, title, date, telefone'
                 );
 
+
             if (error) {
+
                 console.error(
                     '❌ Erro ao criar evento:',
                     error
@@ -285,17 +449,28 @@ const { data, error } = await supabase
 
                 console.error(
                     '📦 Payload enviado ao Supabase:',
-                    JSON.stringify(command, null, 2)
+                    JSON.stringify(
+                        command,
+                        null,
+                        2
+                    )
                 );
 
                 return '⚠️ Erro ao criar evento.';
             }
 
-            await deleteOldEvents(supabase, userPhone);
 
-            const telefonetext = data[0].telefone
-                ? `\ntelefone ${data[0].telefone}`
-                : '';
+            await deleteOldEvents(
+                supabase,
+                userPhone
+            );
+
+
+            const telefonetext =
+                data[0].telefone
+                    ? `\ntelefone ${data[0].telefone}`
+                    : '';
+
 
             return `✅ Evento criado: ${data[0].title}
 ID ${data[0].event_numero}
@@ -315,46 +490,74 @@ dia ${formatLocal(data[0].date)}${telefonetext}`;
                 descricao
             } = command;
 
-            if (!descricao || !String(descricao).trim()) {
-                return "⚠️ A descrição é obrigatória.";
+
+            if (
+                !descricao ||
+                !String(descricao).trim()
+            ) {
+
+                return '⚠️ A descrição é obrigatória.';
             }
 
-            if (!tipo || !TIPOS_DESPESA.includes(tipo)) {
-                return "⚠️ Tipo de despesa inválido.";
+
+            if (
+                !tipo ||
+                !TIPOS_DESPESA.includes(tipo)
+            ) {
+
+                return '⚠️ Tipo de despesa inválido.';
             }
 
-            const valorNumerico = Number(valor);
+
+            const valorNumerico =
+                Number(valor);
+
 
             if (
                 !Number.isFinite(valorNumerico) ||
                 valorNumerico < 0
             ) {
-                return "⚠️ Informe um valor válido para a despesa.";
+
+                return '⚠️ Informe um valor válido para a despesa.';
             }
 
-            const { data, error } = await supabase
+
+            const {
+                data,
+                error
+            } = await supabase
                 .from('despesas')
                 .insert({
                     tipo,
-                    valor: valorNumerico,
-                    descricao: String(descricao).trim(),
-                    user_phone: userPhone
+
+                    valor:
+                        valorNumerico,
+
+                    descricao:
+                        String(descricao)
+                            .trim(),
+
+                    user_phone:
+                        userPhone
                 })
                 .select('*')
                 .single();
 
+
             if (error) {
+
                 console.error(
                     'Erro ao criar despesa:',
                     error
                 );
 
-                return "❌ Erro ao registrar a despesa.";
+                return '❌ Erro ao registrar a despesa.';
             }
 
+
             return [
-                "✅ Despesa registrada com sucesso!",
-                "",
+                '✅ Despesa registrada com sucesso!',
+                '',
                 `🆔 ${data.despesa_numero}`,
                 `📅 ${formatarData(data.data)}`,
                 `📂 ${nomeTipo(data.tipo)}`,
@@ -365,7 +568,8 @@ dia ${formatLocal(data[0].date)}${telefonetext}`;
 
 
         default:
-            return "⚠️ Módulo não suportado para criação.";
+
+            return '⚠️ Módulo não suportado para criação.';
     }
 }
 
