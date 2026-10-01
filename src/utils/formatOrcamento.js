@@ -531,11 +531,11 @@ function formatOrcamento(o) {
 
     "",
 
-    *`🧾 Total Geral: ${
+    `*🧾 Total Geral: ${
       totalFinal !== totalOriginal
         ? `~${formatCurrency(totalOriginal)}~ ${formatCurrency(totalFinal)}`
         : formatCurrency(totalFinal)
-    }`*
+    }*`
 
   ];
 
