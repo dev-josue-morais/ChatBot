@@ -9,10 +9,97 @@ const { executeDelete } = require('../cases/delete');
 
 const { getContextWords } = require('../utils/processFunctions');
 
+const MODULOS_VALIDOS = [
+    'orcamento',
+    'agenda',
+    'despesas'
+];
+
+const ACTIONS_VALIDAS = [
+    'create',
+    'edit',
+    'delete',
+    'list',
+    'pdf'
+];
+
+function normalizeId(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ''
+    ) {
+        return null;
+    }
+
+    const id = Number(value);
+
+    return Number.isFinite(id)
+        ? id
+        : null;
+}
+
+function normalizeAgendaDateTime(value) {
+
+    if (!value) {
+        return value;
+    }
+
+    const dt = DateTime.fromISO(
+        value,
+        {
+            setZone: true
+        }
+    );
+
+    if (!dt.isValid) {
+        return null;
+    }
+
+    return dt
+        .setZone('America/Sao_Paulo')
+        .toISO();
+}
+
+function normalizeAgendaDateOnly(value, endOfDay = false) {
+
+    if (!value) {
+        return value;
+    }
+
+    const date = DateTime.fromISO(
+        value,
+        {
+            zone: 'America/Sao_Paulo'
+        }
+    );
+
+    if (!date.isValid) {
+        return null;
+    }
+
+    const localDate = endOfDay
+        ? date.endOf('day')
+        : date.startOf('day');
+
+    return localDate
+        .toUTC()
+        .toISO();
+}
 
 async function processCommand(userMessage, userPhone) {
+
     try {
-        if (!userMessage || typeof userMessage !== 'string') {
+
+        // =========================================================
+        // 1. VALIDAÇÃO DA MENSAGEM
+        // =========================================================
+
+        if (
+            !userMessage ||
+            typeof userMessage !== 'string'
+        ) {
             return '⚠️ Não consegui entender a mensagem.';
         }
 
@@ -24,46 +111,46 @@ async function processCommand(userMessage, userPhone) {
 
 
         // =========================================================
-        // 1. CONTEXTO REDUZIDO PARA A CLASSIFICAÇÃO
+        // 2. CONTEXTO PARA CLASSIFICAÇÃO
         // =========================================================
 
         const contextWords = getContextWords(userMessage);
 
 
         // =========================================================
-        // 2. CLASSIFICAÇÃO INICIAL
+        // 3. CLASSIFICAÇÃO INICIAL
         // =========================================================
 
         const classifierPrompt = `
 Você é o classificador inicial de comandos de um assistente de WhatsApp.
 
-Sua função é identificar SOMENTE:
+Identifique SOMENTE:
 - módulo
 - ação
 - ID, quando existir
 
 Não execute o comando.
+Não responda ao usuário.
 Não invente dados.
-Não tente responder ao usuário.
 
-MÓDULOS POSSÍVEIS:
+MÓDULOS:
 
-1. orcamento
-Use quando o usuário estiver falando de:
+orcamento:
 - orçamento
 - cliente
 - proposta
-- materiais de um orçamento
-- serviços de um orçamento
-- valor de orçamento
-- etapa de orçamento
-- desconto de orçamento
+- materiais ou serviços de orçamento
+- valor, etapa ou desconto de orçamento
 - alteração de orçamento
 - PDF de orçamento
-- ordem de serviço, recibo, proposta comercial ou outros documentos relacionados ao orçamento
+- ordem de serviço
+- recibo
+- proposta comercial
+- pedido
+- nota de serviço
+- relatório relacionado ao orçamento
 
-2. agenda
-Use quando estiver falando de:
+agenda:
 - compromisso
 - evento
 - atendimento
@@ -75,10 +162,9 @@ Use quando estiver falando de:
 - alteração ou exclusão de evento
 
 IMPORTANTE:
-Atendimento, visita, reunião ou serviço marcado para determinado dia/horário pertence à AGENDA, mesmo que o usuário use palavras relacionadas a cliente ou serviço.
+Atendimento, visita, reunião ou serviço marcado para determinado dia ou horário pertence à AGENDA, mesmo que o usuário use palavras como cliente ou serviço.
 
-3. despesas
-Use quando estiver falando de:
+despesas:
 - gasto
 - despesa
 - gasolina
@@ -94,10 +180,7 @@ Use quando estiver falando de:
 - gasto diverso
 - lançamento, alteração, exclusão ou consulta de despesas
 
-4. outro
-Use quando não for possível identificar nenhum dos módulos acima.
-
-AÇÕES POSSÍVEIS:
+AÇÕES:
 
 create:
 - criar
@@ -105,9 +188,9 @@ create:
 - cadastrar
 - lançar
 - registrar
-- marcar um novo evento
-- criar novo orçamento
-- lançar nova despesa
+- marcar novo evento
+- criar orçamento
+- lançar despesa
 
 edit:
 - alterar
@@ -122,7 +205,7 @@ delete:
 - excluir
 - apagar
 - remover
-- cancelar um registro existente
+- cancelar registro existente
 
 list:
 - listar
@@ -148,46 +231,40 @@ pdf:
 - gerar nota de serviço
 - gerar pedido
 
-REGRAS IMPORTANTES SOBRE ID:
+REGRAS DE PRIORIDADE:
+
+- Alteração de registro existente = edit.
+- Consulta de registros = list.
+- Exclusão de registro existente = delete.
+- Novo registro = create.
+- Geração de documento/PDF = pdf.
+
+"Adicionar item a um orçamento existente" = orcamento + edit.
+
+"Adicionar nova despesa" = despesas + create.
+
+ID:
 
 O ID pode aparecer como:
 - número isolado
 - número de orçamento
 - número de evento
 - número de despesa
-- "orçamento 123456"
-- "evento 123456"
-- "despesa 123456"
-- "o 123456"
-- "número 123456"
+- "orçamento 1080826001"
+- "evento 1080826001"
+- "despesa 1080826001"
+- "o 1080826003"
+- "número 1080826002"
 
-Retorne o número identificado no campo "id".
+Não confunda telefone com ID.
 
-NÃO confunda telefone com ID.
-
-Se houver um telefone, não coloque o telefone em "id".
+Se houver dúvida se um número é telefone ou ID:
+"id": null
 
 Se não houver ID claramente identificável:
 "id": null
 
-Se houver dúvida entre um número ser telefone ou ID:
-"id": null
-
-REGRAS DE PRIORIDADE:
-
-- Se o usuário estiver alterando algo que já existe, use "edit".
-- Se estiver apenas consultando registros, use "list".
-- Se estiver excluindo algo existente, use "delete".
-- Se estiver criando um novo registro, use "create".
-- Se estiver pedindo geração de documento/PDF, use "pdf".
-
-Não confunda "adicionar item a um orçamento existente" com criar novo orçamento.
-Nesse caso é "orcamento" + "edit".
-
-Não confunda "adicionar uma nova despesa" com editar uma despesa existente.
-Nesse caso é "despesas" + "create".
-
-Responda SOMENTE JSON válido neste formato:
+Responda SOMENTE:
 
 {
   "modulo": "orcamento" | "agenda" | "despesas" | "outro",
@@ -195,33 +272,39 @@ Responda SOMENTE JSON válido neste formato:
   "id": number | null
 }
 
-Mensagem completa:
+Mensagem:
 "${userMessage}"
 
-Contexto principal da mensagem:
+Contexto:
 "${contextWords}"
 `;
 
 
-        const classifierResponse = await openai.chat.completions.create({
-            model: 'gpt-6-luna',
-            messages: [
-                {
-                    role: 'system',
-                    content: classifierPrompt
+        const classifierResponse =
+            await openai.chat.completions.create({
+                model: 'gpt-6-luna',
+
+                messages: [
+                    {
+                        role: 'system',
+                        content: classifierPrompt
+                    }
+                ],
+
+                response_format: {
+                    type: 'json_object'
                 }
-            ],
-            response_format: {
-                type: 'json_object'
-            }
-        });
+            });
 
 
-        let quickJSON = classifierResponse.choices?.[0]?.message?.content;
+        let quickJSON =
+            classifierResponse.choices?.[0]?.message?.content;
+
 
         if (!quickJSON) {
             return '⚠️ Não consegui interpretar o comando.';
         }
+
 
         quickJSON = quickJSON
             .replace(/```json\s*|```/g, '')
@@ -231,73 +314,53 @@ Contexto principal da mensagem:
         let classification;
 
         try {
+
             classification = JSON.parse(quickJSON);
+
         } catch (error) {
-            console.error('❌ Erro ao interpretar classificação:', error);
-            console.error('Resposta recebida:', quickJSON);
+
+            console.error(
+                '❌ Erro ao interpretar classificação:',
+                error
+            );
+
+            console.error(
+                'Resposta recebida:',
+                quickJSON
+            );
 
             return '⚠️ Não consegui interpretar o comando.';
         }
 
 
         // =========================================================
-        // 3. NORMALIZAÇÃO DA CLASSIFICAÇÃO
+        // 4. NORMALIZAÇÃO DA CLASSIFICAÇÃO
         // =========================================================
 
         const modulo = classification.modulo;
         const action = classification.action;
-
-        let id = classification.id ?? null;
-
-        if (
-            id !== null &&
-            id !== undefined &&
-            id !== ''
-        ) {
-            const parsedId = Number(id);
-
-            if (Number.isFinite(parsedId)) {
-                id = parsedId;
-            } else {
-                id = null;
-            }
-        } else {
-            id = null;
-        }
+        const id = normalizeId(classification.id);
 
 
-        const modulosValidos = [
-            'orcamento',
-            'agenda',
-            'despesas'
-        ];
-
-        const actionsValidas = [
-            'create',
-            'edit',
-            'delete',
-            'list',
-            'pdf'
-        ];
-
-
-        if (!modulosValidos.includes(modulo)) {
+        if (!MODULOS_VALIDOS.includes(modulo)) {
             return '⚠️ Não consegui identificar se o comando é de orçamento, agenda ou despesa.';
         }
 
-        if (!actionsValidas.includes(action)) {
+        if (!ACTIONS_VALIDAS.includes(action)) {
             return '⚠️ Não consegui identificar a ação solicitada.';
         }
 
 
         // =========================================================
-        // 4. DELETE
+        // 5. DELETE
         // =========================================================
-        // Delete continua sendo tratado diretamente porque não
-        // precisa passar por uma segunda interpretação GPT.
+        //
+        // Delete não precisa de uma segunda interpretação GPT.
+        // O classificador já informou módulo, ação e ID.
         // =========================================================
 
         if (action === 'delete') {
+
             return await executeDelete(
                 {
                     modulo,
@@ -310,7 +373,7 @@ Contexto principal da mensagem:
 
 
         // =========================================================
-        // 5. OBTENÇÃO DO PROMPT ESPECIALIZADO
+        // 6. PROMPT ESPECIALIZADO
         // =========================================================
 
         let prompt;
@@ -322,6 +385,7 @@ Contexto principal da mensagem:
         // ---------------------------------------------------------
 
         if (action === 'create') {
+
             prompt = await getCreatePrompt(
                 modulo,
                 userMessage,
@@ -335,6 +399,7 @@ Contexto principal da mensagem:
         // ---------------------------------------------------------
 
         else if (action === 'edit') {
+
             const result = await getEditPrompt(
                 modulo,
                 userMessage,
@@ -343,7 +408,6 @@ Contexto principal da mensagem:
             );
 
 
-            // Erro retornado pelo getEditPrompt
             if (
                 result &&
                 typeof result === 'object' &&
@@ -353,24 +417,21 @@ Contexto principal da mensagem:
             }
 
 
-            // Novo formato:
-            // {
-            //     prompt,
-            //     currentData
-            // }
             if (
                 result &&
                 typeof result === 'object' &&
                 result.prompt
             ) {
+
                 prompt = result.prompt;
 
                 editContext = {
                     currentData: result.currentData
                 };
+
             } else {
-                // Compatibilidade caso algum módulo ainda retorne
-                // apenas uma string.
+
+                // Compatibilidade com módulos antigos.
                 prompt = result;
             }
         }
@@ -381,10 +442,10 @@ Contexto principal da mensagem:
         // ---------------------------------------------------------
 
         else if (action === 'list') {
+
             prompt = await getListPrompt(
                 modulo,
-                userMessage,
-                userPhone
+                userMessage
             );
         }
 
@@ -394,6 +455,7 @@ Contexto principal da mensagem:
         // ---------------------------------------------------------
 
         else if (action === 'pdf') {
+
             prompt = await getPdfPrompt(
                 modulo,
                 userMessage
@@ -401,51 +463,57 @@ Contexto principal da mensagem:
         }
 
 
-        if (!prompt || typeof prompt !== 'string') {
+        if (
+            !prompt ||
+            typeof prompt !== 'string'
+        ) {
             return '⚠️ Não consegui preparar a interpretação do comando.';
         }
 
 
         // =========================================================
-        // 6. SEGUNDA ETAPA — INTERPRETAÇÃO ESPECIALIZADA
+        // 7. INTERPRETAÇÃO ESPECIALIZADA
         // =========================================================
 
         const finalPrompt = `
 ${prompt}
 
-REGRAS GERAIS OBRIGATÓRIAS:
+REGRAS GERAIS:
 
 1. Retorne SOMENTE JSON válido.
 2. Não utilize markdown.
-3. Não coloque explicações antes ou depois do JSON.
-4. Não invente informações que não estejam na mensagem do usuário ou nos dados fornecidos.
-5. Não invente IDs.
-6. Não altere IDs existentes.
-7. Não invente datas, horários, telefones, valores ou nomes.
-8. Quando uma informação não foi solicitada para alteração, preserve-a conforme as regras do prompt.
-9. Respeite exatamente o módulo e a ação solicitados.
+3. Não coloque explicações fora do JSON.
+4. Não invente informações.
+5. Não invente IDs, datas, horários, telefones, valores ou nomes.
+6. Respeite exatamente o módulo e a ação definidos pelo sistema.
+7. Para edição, retorne somente as alterações solicitadas conforme o formato definido no prompt.
 `;
 
 
-        const response = await openai.chat.completions.create({
-            model: 'gpt-6-luna',
-            messages: [
-                {
-                    role: 'system',
-                    content: finalPrompt
-                },
-                {
-                    role: 'user',
-                    content: userMessage
+        const response =
+            await openai.chat.completions.create({
+                model: 'gpt-6-luna',
+
+                messages: [
+                    {
+                        role: 'system',
+                        content: finalPrompt
+                    },
+                    {
+                        role: 'user',
+                        content: userMessage
+                    }
+                ],
+
+                response_format: {
+                    type: 'json_object'
                 }
-            ],
-            response_format: {
-                type: 'json_object'
-            }
-        });
+            });
 
 
-        let content = response.choices?.[0]?.message?.content;
+        let content =
+            response.choices?.[0]?.message?.content;
+
 
         if (!content) {
             return '⚠️ Não consegui interpretar os dados do comando.';
@@ -460,10 +528,20 @@ REGRAS GERAIS OBRIGATÓRIAS:
         let gptData;
 
         try {
+
             gptData = JSON.parse(content);
+
         } catch (error) {
-            console.error('❌ Erro ao interpretar resposta final do GPT:', error);
-            console.error('Resposta recebida:', content);
+
+            console.error(
+                '❌ Erro ao interpretar resposta final do GPT:',
+                error
+            );
+
+            console.error(
+                'Resposta recebida:',
+                content
+            );
 
             return '⚠️ Não consegui interpretar corretamente o comando.';
         }
@@ -479,22 +557,25 @@ REGRAS GERAIS OBRIGATÓRIAS:
 
 
         // =========================================================
-        // 7. GARANTIR MÓDULO / AÇÃO / ID
+        // 8. MÓDULO E AÇÃO SÃO DEFINIDOS PELO CLASSIFICADOR
         // =========================================================
-
-        // O classificador inicial é a fonte oficial para módulo
-        // e ação. O GPT especializado não deve conseguir trocar
-        // o tipo de operação no meio do processo.
 
         gptData.modulo = modulo;
         gptData.action = action;
 
 
-        // Para operações que possuem ID, preservamos o ID
-        // identificado na primeira etapa.
+        // =========================================================
+        // 9. ID OFICIAL
+        // =========================================================
+        //
+        // O segundo GPT não pode trocar o ID identificado
+        // pelo classificador.
+        // =========================================================
 
-        if (action === 'edit' || action === 'pdf' || action === 'delete') {
+        if (action === 'edit') {
+
             if (id !== null) {
+
                 if (modulo === 'orcamento') {
                     gptData.orcamento_numero = id;
                 }
@@ -509,99 +590,99 @@ REGRAS GERAIS OBRIGATÓRIAS:
             }
         }
 
+        if (action === 'pdf') {
 
-        // =========================================================
-        // 8. INJETAR DADOS ATUAIS DA EDIÇÃO
-        // =========================================================
-        //
-        // IMPORTANTE:
-        //
-        // getEditPrompt() já consultou o Supabase.
-        //
-        // Portanto NÃO fazemos uma segunda consulta aqui.
-        //
-        // Os dados atuais são mantidos internamente em _currentData
-        // e usados pelo executeEdit().
-        //
-        // Esse campo não veio do GPT.
-        // =========================================================
-
-        if (action === 'edit' && editContext?.currentData) {
-            gptData._currentData = editContext.currentData;
+            if (modulo === 'orcamento' && id !== null) {
+                gptData.id = id;
+            }
         }
 
 
         // =========================================================
-        // 9. NORMALIZAÇÃO DAS DATAS DA AGENDA
+        // 10. DADOS ATUAIS DA EDIÇÃO
+        // =========================================================
+        //
+        // getEditPrompt() já buscou o registro.
+        //
+        // Não fazer outra consulta aqui.
+        // =========================================================
+
+        if (
+            action === 'edit' &&
+            editContext?.currentData
+        ) {
+
+            gptData._currentData =
+                editContext.currentData;
+        }
+
+
+        // =========================================================
+        // 11. NORMALIZAÇÃO DAS DATAS DA AGENDA
         // =========================================================
 
         if (modulo === 'agenda') {
 
             // -----------------------------------------------------
+            // CREATE / EDIT
             // datetime
             // -----------------------------------------------------
 
             if (gptData.datetime) {
-                const dt = DateTime.fromISO(
-                    gptData.datetime,
-                    {
-                        setZone: true
-                    }
-                );
 
-                if (dt.isValid) {
-                    gptData.datetime = dt
-                        .setZone('America/Sao_Paulo')
-                        .toISO();
+                const normalized =
+                    normalizeAgendaDateTime(
+                        gptData.datetime
+                    );
+
+                if (!normalized) {
+                    return '⚠️ A data ou horário informado não é válido.';
                 }
+
+                gptData.datetime = normalized;
             }
 
 
             // -----------------------------------------------------
-            // start_date
+            // LIST
+            // Datas vindas do prompt são datas locais BRT.
             // -----------------------------------------------------
 
             if (gptData.start_date) {
-                const start = DateTime.fromISO(
-                    gptData.start_date,
-                    {
-                        setZone: true
-                    }
-                );
 
-                if (start.isValid) {
-                    gptData.start_date = start
-                        .setZone('America/Sao_Paulo')
-                        .toUTC()
-                        .toISO();
+                const normalized =
+                    normalizeAgendaDateOnly(
+                        gptData.start_date,
+                        false
+                    );
+
+                if (!normalized) {
+                    return '⚠️ A data inicial informada não é válida.';
                 }
+
+                gptData.start_date = normalized;
             }
 
 
-            // -----------------------------------------------------
-            // end_date
-            // -----------------------------------------------------
-
             if (gptData.end_date) {
-                const end = DateTime.fromISO(
-                    gptData.end_date,
-                    {
-                        setZone: true
-                    }
-                );
 
-                if (end.isValid) {
-                    gptData.end_date = end
-                        .setZone('America/Sao_Paulo')
-                        .toUTC()
-                        .toISO();
+                const normalized =
+                    normalizeAgendaDateOnly(
+                        gptData.end_date,
+                        true
+                    );
+
+                if (!normalized) {
+                    return '⚠️ A data final informada não é válida.';
                 }
+
+                gptData.end_date = normalized;
             }
         }
 
 
         // =========================================================
-        // 10. VALIDAÇÕES FINAIS
+        // 12. VALIDAÇÕES FINAIS
         // =========================================================
 
         if (gptData.modulo !== modulo) {
@@ -613,10 +694,6 @@ REGRAS GERAIS OBRIGATÓRIAS:
         }
 
 
-        // Para edição, o registro atual é obrigatório.
-        // Sem ele, não devemos correr o risco de atualizar
-        // dados sem a referência original.
-
         if (
             action === 'edit' &&
             !editContext?.currentData
@@ -626,7 +703,7 @@ REGRAS GERAIS OBRIGATÓRIAS:
 
 
         // =========================================================
-        // 11. EXECUÇÃO
+        // 13. EXECUÇÃO
         // =========================================================
 
         switch (`${modulo}_${action}`) {
@@ -634,6 +711,7 @@ REGRAS GERAIS OBRIGATÓRIAS:
             case 'orcamento_create':
             case 'agenda_create':
             case 'despesas_create':
+
                 return await executeCreate(
                     gptData,
                     userPhone
@@ -643,6 +721,7 @@ REGRAS GERAIS OBRIGATÓRIAS:
             case 'orcamento_edit':
             case 'agenda_edit':
             case 'despesas_edit':
+
                 return await executeEdit(
                     gptData,
                     userPhone
@@ -652,6 +731,7 @@ REGRAS GERAIS OBRIGATÓRIAS:
             case 'orcamento_list':
             case 'agenda_list':
             case 'despesas_list':
+
                 return await executeList(
                     gptData,
                     userPhone
@@ -659,6 +739,7 @@ REGRAS GERAIS OBRIGATÓRIAS:
 
 
             case 'orcamento_pdf':
+
                 return await executePdf(
                     gptData,
                     userPhone
@@ -666,11 +747,16 @@ REGRAS GERAIS OBRIGATÓRIAS:
 
 
             default:
+
                 return '⚠️ Comando não reconhecido.';
         }
 
     } catch (error) {
-        console.error('❌ Erro em processCommand:', error);
+
+        console.error(
+            '❌ Erro em processCommand:',
+            error
+        );
 
         return '⚠️ Ocorreu um erro ao processar seu comando. Tente novamente.';
     }
