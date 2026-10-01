@@ -24,6 +24,8 @@ const {
     sendWhatsAppRaw
 } = require('../services/whatsappService');
 
+const { DateTime } = require('luxon');
+
 
 // ================================================================
 // UTILITÁRIOS
@@ -80,6 +82,9 @@ function normalizeTipoDespesa(tipo) {
 
         alimentacao: 'alimentacao',
         alimentação: 'alimentacao',
+
+        ferramentas: 'ferramentas',
+        ferramenta: 'ferramentas',
 
         outras: 'outras',
         outra: 'outras',
@@ -809,6 +814,9 @@ Exemplos:
 "Qual o total gasto com materiais?"
 → resumo=true
 
+"Quanto gastei com ferramentas?"
+→ resumo=true
+
 
 IMPORTANTE:
 
@@ -830,6 +838,7 @@ Tipos permitidos:
 - conducao
 - materiais
 - alimentacao
+- ferramentas
 - outras
 - todos
 
@@ -846,7 +855,23 @@ Materiais:
 - material
 - materiais
 - material elétrico
-- ferramentas, quando utilizado como categoria de material
+
+Ferramentas:
+
+- ferramenta
+- ferramentas
+- equipamentos
+- equipamentos de trabalho
+
+IMPORTANTE:
+
+Quando "ferramentas" for utilizado claramente como categoria de despesa,
+use:
+
+por_tipo=true
+tipo="ferramentas"
+
+Não classifique "ferramentas" como materiais.
 
 Alimentação:
 
@@ -876,6 +901,11 @@ Exemplos:
 
 → por_tipo=true
 → tipo="alimentacao"
+
+"Lista minhas despesas de ferramentas"
+
+→ por_tipo=true
+→ tipo="ferramentas"
 
 
 ============================================================
@@ -944,6 +974,9 @@ Não transforme automaticamente uma descrição específica em tipo.
 
 "tomada" não significa que o filtro por tipo deve ser usado.
 
+"ferramenta" pode ser uma categoria quando o usuário estiver
+claramente se referindo ao tipo/categoria da despesa.
+
 
 ============================================================
 QUANDO USAR TIPO E DESCRIÇÃO
@@ -953,6 +986,14 @@ QUANDO USAR TIPO E DESCRIÇÃO
 
 → por_tipo=true
 → tipo="materiais"
+→ por_descricao=false
+→ descricao=null
+
+
+"Lista minhas despesas com ferramentas"
+
+→ por_tipo=true
+→ tipo="ferramentas"
 → por_descricao=false
 → descricao=null
 
@@ -1105,6 +1146,7 @@ REGRAS FINAIS
 - Não invente descrições.
 - Não invente períodos.
 - Não invente tipos.
+- Os tipos válidos são: conducao, materiais, alimentacao, ferramentas e outras.
 - Lista detalhada = resumo=false.
 - Resumo/relatório/total = resumo=true.
 - Retorne somente JSON válido.
@@ -1356,10 +1398,6 @@ async function executeList(command, userPhone) {
             let endDT;
 
 
-            // ----------------------------------------------------
-            // ID
-            // ----------------------------------------------------
-
             if (hasId) {
 
                 query = query.eq(
@@ -1369,10 +1407,6 @@ async function executeList(command, userPhone) {
             }
 
 
-            // ----------------------------------------------------
-            // TÍTULO
-            // ----------------------------------------------------
-
             else if (hasTitle) {
 
                 query = query.ilike(
@@ -1381,10 +1415,6 @@ async function executeList(command, userPhone) {
                 );
             }
 
-
-            // ----------------------------------------------------
-            // PERÍODO
-            // ----------------------------------------------------
 
             else {
 
@@ -1578,6 +1608,7 @@ Dia ${formatLocal(event.date)}${telefone}`;
                 'conducao',
                 'materiais',
                 'alimentacao',
+                'ferramentas',
                 'outras',
                 'todos'
             ];
@@ -1655,78 +1686,78 @@ Dia ${formatLocal(event.date)}${telefone}`;
                 return '⚠️ O filtro por período foi identificado, mas as datas não foram informadas.';
             }
 
-const startDate =
-    DateTime
-        .fromISO(
-            command.periodo_start,
-            {
-                zone: 'America/Sao_Paulo'
+
+            const startDate =
+                DateTime
+                    .fromISO(
+                        command.periodo_start,
+                        {
+                            zone: 'America/Sao_Paulo'
+                        }
+                    )
+                    .startOf('day');
+
+
+            const endDate =
+                DateTime
+                    .fromISO(
+                        command.periodo_end,
+                        {
+                            zone: 'America/Sao_Paulo'
+                        }
+                    )
+                    .endOf('day');
+
+
+            if (
+                !startDate.isValid ||
+                !endDate.isValid
+            ) {
+
+                console.error(
+                    '❌ Datas inválidas no filtro de despesas:',
+                    {
+                        periodo_start:
+                            command.periodo_start,
+
+                        periodo_end:
+                            command.periodo_end
+                    }
+                );
+
+                return '⚠️ As datas do período informado são inválidas.';
             }
-        )
-        .startOf('day');
-
-const endDate =
-    DateTime
-        .fromISO(
-            command.periodo_end,
-            {
-                zone: 'America/Sao_Paulo'
-            }
-        )
-        .endOf('day');
 
 
-if (
-    !startDate.isValid ||
-    !endDate.isValid
-) {
+            /*
+             * A coluna despesas.data está armazenando
+             * a data/hora local de Brasília.
+             *
+             * Portanto a consulta utiliza o mesmo
+             * formato local, sem conversão para UTC.
+             */
 
-    console.error(
-        '❌ Datas inválidas no filtro de despesas:',
-        {
-            periodo_start:
-                command.periodo_start,
-
-            periodo_end:
-                command.periodo_end
-        }
-    );
-
-    return '⚠️ As datas do período informado são inválidas.';
-}
+            const startValue =
+                startDate.toFormat(
+                    'yyyy-MM-dd HH:mm:ss.SSS'
+                );
 
 
-/*
- * A coluna despesas.data está armazenando
- * a data/hora local de Brasília.
- *
- * Exemplo:
- * 2026-10-01 00:20:37
- *
- * Portanto a consulta precisa usar o mesmo
- * formato de horário local, sem converter para UTC.
- */
-
-const startValue =
-    startDate.toFormat(
-        'yyyy-MM-dd HH:mm:ss.SSS'
-    );
-
-const endValue =
-    endDate.toFormat(
-        'yyyy-MM-dd HH:mm:ss.SSS'
-    );
+            const endValue =
+                endDate.toFormat(
+                    'yyyy-MM-dd HH:mm:ss.SSS'
+                );
 
 
-query = query
-    .gte(
-        'data',
-        startValue
-    )
-    .lte(
-        'data',
-        endValue
-    );
+            query = query
+                .gte(
+                    'data',
+                    startValue
+                )
+                .lte(
+                    'data',
+                    endValue
+                );
 
 
             // ----------------------------------------------------
@@ -1740,26 +1771,41 @@ query = query
                 }
             );
 
-console.log('🔎 FILTRO DESPESAS:', {
-    userPhone,
-    tipo,
-    porTipo,
-    descricao,
-    porDescricao,
-    periodo_start: command.periodo_start,
-    periodo_end: command.periodo_end,
-    startValue,
-    endValue
-});
+
+            console.log(
+                '🔎 FILTRO DESPESAS:',
+                {
+                    userPhone,
+                    tipo,
+                    porTipo,
+                    descricao,
+                    porDescricao,
+                    periodo_start:
+                        command.periodo_start,
+                    periodo_end:
+                        command.periodo_end,
+                    startValue,
+                    endValue
+                }
+            );
+
+
             const {
                 data,
                 error
             } = await query;
 
-console.log('🔎 RESULTADO DESPESAS:', {
-    quantidade: data?.length || 0,
-    data
-});
+
+            console.log(
+                '🔎 RESULTADO DESPESAS:',
+                {
+                    quantidade:
+                        data?.length || 0,
+                    data
+                }
+            );
+
+
             if (error) {
 
                 console.error(
@@ -1806,6 +1852,7 @@ console.log('🔎 RESULTADO DESPESAS:', {
                     conducao: 0,
                     materiais: 0,
                     alimentacao: 0,
+                    ferramentas: 0,
                     outras: 0
                 };
 
@@ -1890,6 +1937,10 @@ console.log('🔎 RESULTADO DESPESAS:', {
 
                     linhas.push(
                         `🍽️ Alimentação:    ${formatCurrency(totais.alimentacao)}`
+                    );
+
+                    linhas.push(
+                        `🛠️ Ferramentas:    ${formatCurrency(totais.ferramentas)}`
                     );
 
                     linhas.push(
@@ -2168,10 +2219,6 @@ console.log('🔎 RESULTADO DESPESAS:', {
             // ----------------------------------------------------
             // DATA DO ORÇAMENTO
             // ----------------------------------------------------
-            //
-            // Para finalizados, usamos finalizado_em.
-            // Para as demais consultas, usamos criado_em.
-            //
 
             const etapaFinalizado =
                 porEtapa &&
