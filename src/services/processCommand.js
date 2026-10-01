@@ -9,71 +9,60 @@ const { executeDelete } = require('../cases/delete');
 
 const { getContextWords } = require('../utils/processFunctions');
 
-const GPT_MODEL = 'gpt-6-luna';
-
 
 async function processCommand(userMessage, userPhone) {
     try {
-        userMessage = String(userMessage || '').trim();
-
-        if (!userMessage) {
-            return '⚠️ Não encontrei nenhuma instrução para processar.';
+        if (!userMessage || typeof userMessage !== 'string') {
+            return '⚠️ Não consegui entender a mensagem.';
         }
 
-        /*
-        ============================================================
-        1. CONTEXTO REDUZIDO PARA O CLASSIFICADOR
-        ============================================================
-        */
+        userMessage = userMessage.trim();
+
+        if (!userMessage) {
+            return '⚠️ Envie uma mensagem com o que deseja fazer.';
+        }
+
+
+        // =========================================================
+        // 1. CONTEXTO REDUZIDO PARA A CLASSIFICAÇÃO
+        // =========================================================
 
         const contextWords = getContextWords(userMessage);
 
 
-        /*
-        ============================================================
-        2. PRIMEIRA CHAMADA — CLASSIFICAÇÃO
-        ============================================================
-        */
+        // =========================================================
+        // 2. CLASSIFICAÇÃO INICIAL
+        // =========================================================
 
         const classifierPrompt = `
-Você é o classificador de comandos de um assistente empresarial.
+Você é o classificador inicial de comandos de um assistente de WhatsApp.
 
-Sua única função é identificar:
+Sua função é identificar SOMENTE:
+- módulo
+- ação
+- ID, quando existir
 
-- modulo
-- action
-- id
+Não execute o comando.
+Não invente dados.
+Não tente responder ao usuário.
 
-NÃO execute o comando.
-NÃO explique nada.
-NÃO faça alterações.
-Retorne SOMENTE JSON válido.
+MÓDULOS POSSÍVEIS:
 
-FORMATO OBRIGATÓRIO:
-
-{
-  "modulo": "orcamento" | "agenda" | "despesas" | "outro",
-  "action": "create" | "edit" | "delete" | "list" | "pdf",
-  "id": number | null
-}
-
-REGRAS:
-
-MÓDULOS:
-
-1. "orcamento"
+1. orcamento
 Use quando o usuário estiver falando de:
 - orçamento
 - cliente
 - proposta
-- materiais de orçamento
-- serviços de orçamento
-- desconto de orçamento
+- materiais de um orçamento
+- serviços de um orçamento
+- valor de orçamento
 - etapa de orçamento
-- observações de orçamento
-- número de orçamento
+- desconto de orçamento
+- alteração de orçamento
+- PDF de orçamento
+- ordem de serviço, recibo, proposta comercial ou outros documentos relacionados ao orçamento
 
-2. "agenda"
+2. agenda
 Use quando estiver falando de:
 - compromisso
 - evento
@@ -83,107 +72,139 @@ Use quando estiver falando de:
 - serviço agendado
 - horário marcado
 - lembrete
-- número de evento
+- alteração ou exclusão de evento
 
-ATENÇÃO:
-Atendimento, visita, reunião ou compromisso futuro são AGENDA,
-mesmo que o usuário use a palavra "serviço".
+IMPORTANTE:
+Atendimento, visita, reunião ou serviço marcado para determinado dia/horário pertence à AGENDA, mesmo que o usuário use palavras relacionadas a cliente ou serviço.
 
-3. "despesas"
+3. despesas
 Use quando estiver falando de:
 - gasto
 - despesa
 - gasolina
 - combustível
-- alimentação
-- almoço
-- jantar
-- marmita
 - estacionamento
 - pedágio
-- materiais comprados como despesa
-- manutenção paga
-- outros gastos
+- Uber
+- alimentação
+- comida
+- marmita
+- material comprado
+- ferramenta comprada
+- gasto diverso
+- lançamento, alteração, exclusão ou consulta de despesas
 
-4. "outro"
+4. outro
 Use quando não for possível identificar nenhum dos módulos acima.
 
-AÇÕES:
+AÇÕES POSSÍVEIS:
 
-1. "create"
-Quando o usuário quer:
+create:
 - criar
+- adicionar
 - cadastrar
-- adicionar um novo registro
-- lançar uma nova despesa
+- lançar
+- registrar
 - marcar um novo evento
-- fazer um novo orçamento
+- criar novo orçamento
+- lançar nova despesa
 
-2. "edit"
-Quando o usuário quer alterar algo que JÁ EXISTE.
+edit:
+- alterar
+- editar
+- mudar
+- corrigir
+- atualizar
+- trocar
+- ajustar algo que já existe
 
-Exemplos:
-- "altera o orçamento 123"
-- "muda o valor do fio no orçamento 123"
-- "troca o horário do evento 456"
-- "altera a descrição da despesa 789"
-- "corrige o nome do cliente"
+delete:
+- excluir
+- apagar
+- remover
+- cancelar um registro existente
 
-Se existe um registro identificado e o usuário quer modificar esse registro, é EDIT.
+list:
+- listar
+- mostrar
+- consultar
+- buscar
+- ver registros
+- quais são
+- quanto gastei
+- meus orçamentos
+- meus eventos
+- minhas despesas
 
-3. "delete"
-Quando quer apagar/excluir/remover um registro inteiro.
+pdf:
+- gerar PDF
+- gerar documento
+- imprimir
+- criar orçamento em PDF
+- gerar ordem de serviço
+- gerar recibo
+- gerar proposta
+- gerar relatório
+- gerar nota de serviço
+- gerar pedido
 
-IMPORTANTE:
-"remover um material do orçamento" continua sendo EDIT do orçamento,
-e NÃO DELETE do orçamento inteiro.
+REGRAS IMPORTANTES SOBRE ID:
 
-4. "list"
-Quando quer consultar, listar, procurar, mostrar ou pesquisar registros.
+O ID pode aparecer como:
+- número isolado
+- número de orçamento
+- número de evento
+- número de despesa
+- "orçamento 123456"
+- "evento 123456"
+- "despesa 123456"
+- "o 123456"
+- "número 123456"
 
-Exemplos:
-- "me mostra os orçamentos"
-- "liste minhas despesas"
-- "quais eventos tenho amanhã?"
-- "procura o orçamento do João"
+Retorne o número identificado no campo "id".
 
-5. "pdf"
-Quando quer gerar, enviar ou criar um PDF/documento relacionado a um orçamento.
+NÃO confunda telefone com ID.
 
-Exemplos:
-- "gera o PDF do orçamento 123"
-- "manda a proposta em PDF"
-- "gera uma ordem de serviço"
+Se houver um telefone, não coloque o telefone em "id".
 
-ID:
+Se não houver ID claramente identificável:
+"id": null
 
-Extraia o número do registro quando ele estiver claramente identificado.
+Se houver dúvida entre um número ser telefone ou ID:
+"id": null
 
-Tipos de ID:
-- orçamento → orcamento_numero
-- agenda → event_numero
-- despesa → despesa_numero
+REGRAS DE PRIORIDADE:
 
-Se não houver ID claramente identificável, use null.
+- Se o usuário estiver alterando algo que já existe, use "edit".
+- Se estiver apenas consultando registros, use "list".
+- Se estiver excluindo algo existente, use "delete".
+- Se estiver criando um novo registro, use "create".
+- Se estiver pedindo geração de documento/PDF, use "pdf".
 
-NÃO confunda:
-- telefone
-- valor em dinheiro
-- quantidade
-- data
-- horário
-com ID.
+Não confunda "adicionar item a um orçamento existente" com criar novo orçamento.
+Nesse caso é "orcamento" + "edit".
 
-Se houver vários números na mensagem, procure primeiro pelo número explicitamente associado ao registro.
+Não confunda "adicionar uma nova despesa" com editar uma despesa existente.
+Nesse caso é "despesas" + "create".
 
-CONTEXTO DA MENSAGEM:
+Responda SOMENTE JSON válido neste formato:
 
-${contextWords}
+{
+  "modulo": "orcamento" | "agenda" | "despesas" | "outro",
+  "action": "create" | "edit" | "delete" | "list" | "pdf",
+  "id": number | null
+}
+
+Mensagem completa:
+"${userMessage}"
+
+Contexto principal da mensagem:
+"${contextWords}"
 `;
 
 
         const classifierResponse = await openai.chat.completions.create({
-            model: GPT_MODEL,
+            model: 'gpt-6-luna',
             messages: [
                 {
                     role: 'system',
@@ -196,40 +217,50 @@ ${contextWords}
         });
 
 
-        let classifierData;
+        let quickJSON = classifierResponse.choices?.[0]?.message?.content;
+
+        if (!quickJSON) {
+            return '⚠️ Não consegui interpretar o comando.';
+        }
+
+        quickJSON = quickJSON
+            .replace(/```json\s*|```/g, '')
+            .trim();
+
+
+        let classification;
 
         try {
-            const content =
-                classifierResponse?.choices?.[0]?.message?.content || '';
-
-            classifierData = JSON.parse(content);
+            classification = JSON.parse(quickJSON);
         } catch (error) {
-            console.error('Erro ao interpretar classificador:', error);
-            return '⚠️ Não consegui identificar corretamente o comando.';
+            console.error('❌ Erro ao interpretar classificação:', error);
+            console.error('Resposta recebida:', quickJSON);
+
+            return '⚠️ Não consegui interpretar o comando.';
         }
 
 
-        /*
-        ============================================================
-        3. NORMALIZAÇÃO DA CLASSIFICAÇÃO
-        ============================================================
-        */
+        // =========================================================
+        // 3. NORMALIZAÇÃO DA CLASSIFICAÇÃO
+        // =========================================================
 
-        const modulo = classifierData.modulo;
-        const action = classifierData.action;
+        const modulo = classification.modulo;
+        const action = classification.action;
 
-        let id = classifierData.id;
+        let id = classification.id ?? null;
 
         if (
             id !== null &&
             id !== undefined &&
             id !== ''
         ) {
-            const numericId = Number(id);
+            const parsedId = Number(id);
 
-            id = Number.isFinite(numericId)
-                ? numericId
-                : null;
+            if (Number.isFinite(parsedId)) {
+                id = parsedId;
+            } else {
+                id = null;
+            }
         } else {
             id = null;
         }
@@ -258,25 +289,15 @@ ${contextWords}
             return '⚠️ Não consegui identificar a ação solicitada.';
         }
 
-        if (action === 'pdf' && modulo !== 'orcamento') {
-            return '⚠️ A geração de PDF está disponível apenas para orçamentos.';
-        }
 
-
-        /*
-        ============================================================
-        4. DELETE
-        ============================================================
-        
-        Delete não precisa passar pela segunda interpretação do GPT.
-        A classificação já identificou módulo, ação e ID.
-        */
+        // =========================================================
+        // 4. DELETE
+        // =========================================================
+        // Delete continua sendo tratado diretamente porque não
+        // precisa passar por uma segunda interpretação GPT.
+        // =========================================================
 
         if (action === 'delete') {
-            if (id === null) {
-                return '⚠️ Informe o número do registro que deseja excluir.';
-            }
-
             return await executeDelete(
                 {
                     modulo,
@@ -288,184 +309,134 @@ ${contextWords}
         }
 
 
-        /*
-        ============================================================
-        5. BUSCA DO PROMPT ESPECIALIZADO
-        ============================================================
-        
-        EDIT e LIST podem retornar:
+        // =========================================================
+        // 5. OBTENÇÃO DO PROMPT ESPECIALIZADO
+        // =========================================================
 
-        {
-            prompt: '...',
-            currentData: ...
-        }
-
-        CREATE e PDF continuam podendo retornar apenas uma string.
-
-        O currentData nunca é enviado para o GPT como parte do
-        comando final. Ele é mantido internamente para o execute.
-        ============================================================
-        */
-
-        let promptResult;
         let prompt;
-        let currentData = null;
-
-        switch (`${modulo}_${action}`) {
-
-            case 'orcamento_create':
-            case 'agenda_create':
-            case 'despesas_create':
-
-                promptResult = await getCreatePrompt(
-                    modulo,
-                    userMessage,
-                    userPhone
-                );
-
-                break;
+        let editContext = null;
 
 
-            case 'orcamento_edit':
-            case 'agenda_edit':
-            case 'despesas_edit':
+        // ---------------------------------------------------------
+        // CREATE
+        // ---------------------------------------------------------
 
-                if (id === null) {
-                    return '⚠️ Informe o número do registro que deseja alterar.';
-                }
-
-                promptResult = await getEditPrompt(
-                    modulo,
-                    userMessage,
-                    id,
-                    userPhone
-                );
-
-                break;
-
-
-            case 'orcamento_list':
-            case 'agenda_list':
-            case 'despesas_list':
-
-                promptResult = await getListPrompt(
-                    modulo,
-                    userMessage,
-                    userPhone
-                );
-
-                break;
-
-
-            case 'orcamento_pdf':
-
-                if (id === null) {
-                    return '⚠️ Informe o número do orçamento para gerar o PDF.';
-                }
-
-                promptResult = await getPdfPrompt(
-                    modulo,
-                    userMessage
-                );
-
-                break;
-
-
-            default:
-                return '⚠️ Não consegui identificar o tipo de comando.';
+        if (action === 'create') {
+            prompt = await getCreatePrompt(
+                modulo,
+                userMessage,
+                userPhone
+            );
         }
 
 
-        /*
-        ============================================================
-        6. TRATAMENTO DO RESULTADO DO PROMPT
-        ============================================================
-        
-        Agora aceitamos dois formatos:
+        // ---------------------------------------------------------
+        // EDIT
+        // ---------------------------------------------------------
 
-        A) Prompt normal:
-           "texto do prompt"
+        else if (action === 'edit') {
+            const result = await getEditPrompt(
+                modulo,
+                userMessage,
+                id,
+                userPhone
+            );
 
-        B) Prompt com contexto já pesquisado:
-           {
-               prompt: "texto do prompt",
-               currentData: {...}
-           }
 
-        Isso permite que edit/list façam a consulta apenas uma vez.
-        */
-
-        if (
-            promptResult &&
-            typeof promptResult === 'object' &&
-            !Array.isArray(promptResult)
-        ) {
-
-            /*
-            Erro retornado pelo case
-            */
-            if (promptResult.error) {
-                return promptResult.error;
+            // Erro retornado pelo getEditPrompt
+            if (
+                result &&
+                typeof result === 'object' &&
+                result.error
+            ) {
+                return result.error;
             }
 
-            /*
-            Contexto retornado pelo edit/list
-            */
-            if (typeof promptResult.prompt === 'string') {
 
-                prompt = promptResult.prompt;
+            // Novo formato:
+            // {
+            //     prompt,
+            //     currentData
+            // }
+            if (
+                result &&
+                typeof result === 'object' &&
+                result.prompt
+            ) {
+                prompt = result.prompt;
 
-                if (
-                    Object.prototype.hasOwnProperty.call(
-                        promptResult,
-                        'currentData'
-                    )
-                ) {
-                    currentData = promptResult.currentData;
-                }
-
+                editContext = {
+                    currentData: result.currentData
+                };
             } else {
-                return '⚠️ Não consegui preparar corretamente o comando.';
+                // Compatibilidade caso algum módulo ainda retorne
+                // apenas uma string.
+                prompt = result;
             }
-
-        } else {
-
-            prompt = promptResult;
         }
 
 
-        if (typeof prompt !== 'string' || !prompt.trim()) {
-            return '⚠️ Não consegui preparar corretamente a interpretação do comando.';
+        // ---------------------------------------------------------
+        // LIST
+        // ---------------------------------------------------------
+
+        else if (action === 'list') {
+            prompt = await getListPrompt(
+                modulo,
+                userMessage,
+                userPhone
+            );
         }
 
 
-        /*
-        ============================================================
-        7. SEGUNDA CHAMADA — INTERPRETAÇÃO ESPECIALIZADA
-        ============================================================
-        */
+        // ---------------------------------------------------------
+        // PDF
+        // ---------------------------------------------------------
+
+        else if (action === 'pdf') {
+            prompt = await getPdfPrompt(
+                modulo,
+                userMessage
+            );
+        }
+
+
+        if (!prompt || typeof prompt !== 'string') {
+            return '⚠️ Não consegui preparar a interpretação do comando.';
+        }
+
+
+        // =========================================================
+        // 6. SEGUNDA ETAPA — INTERPRETAÇÃO ESPECIALIZADA
+        // =========================================================
 
         const finalPrompt = `
 ${prompt}
 
-REGRAS FINAIS OBRIGATÓRIAS:
+REGRAS GERAIS OBRIGATÓRIAS:
 
-- Retorne SOMENTE JSON válido.
-- Não use markdown.
-- Não coloque \`\`\`json.
-- Não escreva explicações fora do JSON.
-- Não invente dados que não estejam na mensagem ou no contexto fornecido.
-- Não invente números, IDs, telefones, valores ou datas.
-- Respeite exatamente o formato JSON solicitado pelo prompt.
+1. Retorne SOMENTE JSON válido.
+2. Não utilize markdown.
+3. Não coloque explicações antes ou depois do JSON.
+4. Não invente informações que não estejam na mensagem do usuário ou nos dados fornecidos.
+5. Não invente IDs.
+6. Não altere IDs existentes.
+7. Não invente datas, horários, telefones, valores ou nomes.
+8. Quando uma informação não foi solicitada para alteração, preserve-a conforme as regras do prompt.
+9. Respeite exatamente o módulo e a ação solicitados.
 `;
 
 
         const response = await openai.chat.completions.create({
-            model: GPT_MODEL,
+            model: 'gpt-6-luna',
             messages: [
                 {
                     role: 'system',
                     content: finalPrompt
+                },
+                {
+                    role: 'user',
+                    content: userMessage
                 }
             ],
             response_format: {
@@ -474,115 +445,154 @@ REGRAS FINAIS OBRIGATÓRIAS:
         });
 
 
-        let gptData;
+        let content = response.choices?.[0]?.message?.content;
 
-        try {
-            const content =
-                response?.choices?.[0]?.message?.content || '';
-
-            gptData = JSON.parse(content);
-
-        } catch (error) {
-            console.error(
-                'Erro ao interpretar resposta final do GPT:',
-                error
-            );
-
-            return '⚠️ Não consegui interpretar corretamente os dados do comando.';
+        if (!content) {
+            return '⚠️ Não consegui interpretar os dados do comando.';
         }
 
 
-        /*
-        ============================================================
-        8. DADOS AUTORITATIVOS DA PRIMEIRA ETAPA
-        ============================================================
-        
-        O segundo GPT não pode alterar:
-        - módulo
-        - ação
-        - ID
+        content = content
+            .replace(/```json\s*|```/g, '')
+            .trim();
 
-        Essas informações já foram classificadas antes.
-        */
+
+        let gptData;
+
+        try {
+            gptData = JSON.parse(content);
+        } catch (error) {
+            console.error('❌ Erro ao interpretar resposta final do GPT:', error);
+            console.error('Resposta recebida:', content);
+
+            return '⚠️ Não consegui interpretar corretamente o comando.';
+        }
+
+
+        if (
+            !gptData ||
+            typeof gptData !== 'object' ||
+            Array.isArray(gptData)
+        ) {
+            return '⚠️ A resposta interpretada não possui um formato válido.';
+        }
+
+
+        // =========================================================
+        // 7. GARANTIR MÓDULO / AÇÃO / ID
+        // =========================================================
+
+        // O classificador inicial é a fonte oficial para módulo
+        // e ação. O GPT especializado não deve conseguir trocar
+        // o tipo de operação no meio do processo.
 
         gptData.modulo = modulo;
         gptData.action = action;
 
 
-        if (id !== null) {
-            if (modulo === 'orcamento') {
-                gptData.orcamento_numero = id;
-            }
+        // Para operações que possuem ID, preservamos o ID
+        // identificado na primeira etapa.
 
-            if (modulo === 'agenda') {
-                gptData.event_numero = id;
-            }
+        if (action === 'edit' || action === 'pdf' || action === 'delete') {
+            if (id !== null) {
+                if (modulo === 'orcamento') {
+                    gptData.orcamento_numero = id;
+                }
 
-            if (modulo === 'despesas') {
-                gptData.despesa_numero = String(id);
+                if (modulo === 'agenda') {
+                    gptData.event_numero = id;
+                }
+
+                if (modulo === 'despesas') {
+                    gptData.despesa_numero = String(id);
+                }
             }
         }
 
 
-        /*
-        ============================================================
-        9. NORMALIZAÇÃO DAS DATAS DA AGENDA
-        ============================================================
-        */
+        // =========================================================
+        // 8. INJETAR DADOS ATUAIS DA EDIÇÃO
+        // =========================================================
+        //
+        // IMPORTANTE:
+        //
+        // getEditPrompt() já consultou o Supabase.
+        //
+        // Portanto NÃO fazemos uma segunda consulta aqui.
+        //
+        // Os dados atuais são mantidos internamente em _currentData
+        // e usados pelo executeEdit().
+        //
+        // Esse campo não veio do GPT.
+        // =========================================================
+
+        if (action === 'edit' && editContext?.currentData) {
+            gptData._currentData = editContext.currentData;
+        }
+
+
+        // =========================================================
+        // 9. NORMALIZAÇÃO DAS DATAS DA AGENDA
+        // =========================================================
 
         if (modulo === 'agenda') {
 
-            /*
-            O GPT trabalha com GMT-3.
-
-            Antes de enviar ao Supabase, convertemos para UTC.
-            */
+            // -----------------------------------------------------
+            // datetime
+            // -----------------------------------------------------
 
             if (gptData.datetime) {
-
-                const dateTime = DateTime.fromISO(
+                const dt = DateTime.fromISO(
                     gptData.datetime,
                     {
                         setZone: true
                     }
                 );
 
-                if (dateTime.isValid) {
-                    gptData.datetime = dateTime
-                        .toUTC()
+                if (dt.isValid) {
+                    gptData.datetime = dt
+                        .setZone('America/Sao_Paulo')
                         .toISO();
                 }
             }
 
 
-            if (gptData.start_date) {
+            // -----------------------------------------------------
+            // start_date
+            // -----------------------------------------------------
 
-                const startDate = DateTime.fromISO(
+            if (gptData.start_date) {
+                const start = DateTime.fromISO(
                     gptData.start_date,
                     {
                         setZone: true
                     }
                 );
 
-                if (startDate.isValid) {
-                    gptData.start_date = startDate
+                if (start.isValid) {
+                    gptData.start_date = start
+                        .setZone('America/Sao_Paulo')
                         .toUTC()
                         .toISO();
                 }
             }
 
 
-            if (gptData.end_date) {
+            // -----------------------------------------------------
+            // end_date
+            // -----------------------------------------------------
 
-                const endDate = DateTime.fromISO(
+            if (gptData.end_date) {
+                const end = DateTime.fromISO(
                     gptData.end_date,
                     {
                         setZone: true
                     }
                 );
 
-                if (endDate.isValid) {
-                    gptData.end_date = endDate
+                if (end.isValid) {
+                    gptData.end_date = end
+                        .setZone('America/Sao_Paulo')
                         .toUTC()
                         .toISO();
                 }
@@ -590,41 +600,40 @@ REGRAS FINAIS OBRIGATÓRIAS:
         }
 
 
-        /*
-        ============================================================
-        10. ANEXA CONTEXTO DO SUPABASE
-        ============================================================
-        
-        IMPORTANTE:
+        // =========================================================
+        // 10. VALIDAÇÕES FINAIS
+        // =========================================================
 
-        _currentData NÃO faz parte do JSON produzido pelo GPT.
+        if (gptData.modulo !== modulo) {
+            return '⚠️ O módulo identificado não corresponde ao comando.';
+        }
 
-        Ele é adicionado somente depois da interpretação.
-
-        Assim:
-        
-        GPT → interpreta o pedido
-        currentData → dados reais já consultados no Supabase
-        execute → junta os dois
-        */
-
-        if (currentData !== null) {
-            gptData._currentData = currentData;
+        if (gptData.action !== action) {
+            return '⚠️ A ação identificada não corresponde ao comando.';
         }
 
 
-        /*
-        ============================================================
-        11. EXECUÇÃO
-        ============================================================
-        */
+        // Para edição, o registro atual é obrigatório.
+        // Sem ele, não devemos correr o risco de atualizar
+        // dados sem a referência original.
+
+        if (
+            action === 'edit' &&
+            !editContext?.currentData
+        ) {
+            return '⚠️ Não foi possível carregar os dados atuais para realizar a alteração com segurança.';
+        }
+
+
+        // =========================================================
+        // 11. EXECUÇÃO
+        // =========================================================
 
         switch (`${modulo}_${action}`) {
 
             case 'orcamento_create':
             case 'agenda_create':
             case 'despesas_create':
-
                 return await executeCreate(
                     gptData,
                     userPhone
@@ -634,7 +643,6 @@ REGRAS FINAIS OBRIGATÓRIAS:
             case 'orcamento_edit':
             case 'agenda_edit':
             case 'despesas_edit':
-
                 return await executeEdit(
                     gptData,
                     userPhone
@@ -644,7 +652,6 @@ REGRAS FINAIS OBRIGATÓRIAS:
             case 'orcamento_list':
             case 'agenda_list':
             case 'despesas_list':
-
                 return await executeList(
                     gptData,
                     userPhone
@@ -652,7 +659,6 @@ REGRAS FINAIS OBRIGATÓRIAS:
 
 
             case 'orcamento_pdf':
-
                 return await executePdf(
                     gptData,
                     userPhone
@@ -664,15 +670,13 @@ REGRAS FINAIS OBRIGATÓRIAS:
         }
 
     } catch (error) {
+        console.error('❌ Erro em processCommand:', error);
 
-        console.error(
-            'Erro geral no processCommand:',
-            error
-        );
-
-        return '⚠️ Ocorreu um erro ao processar o comando.';
+        return '⚠️ Ocorreu um erro ao processar seu comando. Tente novamente.';
     }
 }
 
 
-module.exports = processCommand;
+module.exports = {
+    processCommand
+};
