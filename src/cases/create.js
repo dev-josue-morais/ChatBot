@@ -68,14 +68,16 @@ Retorne somente JSON válido:
       "nome": "string",
       "qtd": number,
       "und": "string",
-      "valor": number
+      "valor": number,
+      "observacao": "string" | null
     }
   ],
   "servicos": [
     {
       "titulo": "string",
       "qtd": number,
-      "valor": number
+      "valor": number,
+      "observacao": "string" | null
     }
   ],
   "desconto_materiais": number | "10%" | null,
@@ -100,11 +102,123 @@ Regras:
 - "descricoes" e "observacoes" devem ser arrays.
 - Se não houver descrições, observações, materiais ou serviços, use [].
 
-Importante:
-"25 m de fio 4mm azul e verde" representa dois materiais se azul e verde forem itens distintos:
+OBSERVAÇÃO DOS ITENS:
+
+Cada material e cada serviço pode possuir uma observação própria.
+
+A observação do item deve ficar dentro do próprio objeto:
+
+Material:
+{
+  "nome": "Cabo 10mm",
+  "qtd": 50,
+  "und": "m",
+  "valor": 12.50,
+  "observacao": "Cabo flexível azul"
+}
+
+Serviço:
+{
+  "titulo": "Instalação de tomadas",
+  "qtd": 10,
+  "valor": 35,
+  "observacao": "Inclui instalação e testes"
+}
+
+Regras para "observacao":
+
+- Use "observacao" somente para informações específicas daquele item.
+- Não coloque observação geral do orçamento dentro do item.
+- Se o usuário mencionar uma observação claramente relacionada a um material, coloque-a naquele material.
+- Se o usuário mencionar uma observação claramente relacionada a um serviço, coloque-a naquele serviço.
+- Se o item não tiver observação, use null.
+- Não invente observações.
+- Preserve o conteúdo informado pelo usuário.
+- Não transforme uma observação de um item em uma observação geral.
+- Uma observação pode conter informações como marca, cor, modelo, especificação, local de instalação, condição de fornecimento ou qualquer detalhe específico daquele item.
+
+Exemplo:
+
+"50 metros de cabo 10mm, sendo azul, marca X"
+
+→
+
+{
+  "nome": "Cabo 10mm",
+  "qtd": 50,
+  "und": "m",
+  "valor": 0,
+  "observacao": "Cabo azul, marca X"
+}
+
+Outro exemplo:
+
+"Instalação de 10 tomadas, incluindo instalação e testes"
+
+→
+
+{
+  "titulo": "Instalação de tomadas",
+  "qtd": 10,
+  "valor": 0,
+  "observacao": "Inclui instalação e testes"
+}
+
+IMPORTANTE:
+
+"observacao" do item é diferente de "observacoes" do orçamento.
+
+- "observacoes": informações gerais do orçamento.
+- "materiais[].observacao": informação específica do material.
+- "servicos[].observacao": informação específica do serviço.
+
+
+Exemplo com vários materiais:
+
+"25 m de fio 4mm azul e 25 m de fio 4mm verde"
+
+representa dois materiais:
+
 [
-  {"nome":"fio 4mm azul",...},
-  {"nome":"fio 4mm verde",...}
+  {
+    "nome": "fio 4mm azul",
+    "qtd": 25,
+    "und": "m",
+    "valor": 0,
+    "observacao": null
+  },
+  {
+    "nome": "fio 4mm verde",
+    "qtd": 25,
+    "und": "m",
+    "valor": 0,
+    "observacao": null
+  }
+]
+
+
+Exemplo com observações diferentes:
+
+"10 tomadas 20A, branca, e 5 tomadas 10A, preta"
+
+deve separar os itens e preservar as respectivas características
+nas observações:
+
+[
+  {
+    "nome": "tomada 20A",
+    "qtd": 10,
+    "und": "und",
+    "valor": 0,
+    "observacao": "branca"
+  },
+  {
+    "nome": "tomada 10A",
+    "qtd": 5,
+    "und": "und",
+    "valor": 0,
+    "observacao": "preta"
+  }
 ]
 
 Mensagem:
@@ -167,12 +281,12 @@ Retorne somente JSON válido:
 {
   "modulo": "despesas",
   "action": "create",
-  "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
+  "tipo": "conducao" | "materiais" | "alimentacao" | "ferramentas" | "outras",
   "valor": number,
   "descricao": "string"
 }
 
-Classifique pelo significado da despesa:
+Classifique pelo significado da despesa.
 
 conducao:
 combustível, gasolina, diesel, etanol, estacionamento, pedágio,
@@ -180,8 +294,13 @@ Uber, táxi, transporte, manutenção de veículo e despesas de deslocamento.
 
 materiais:
 tomada, interruptor, fio, cabo, disjuntor, eletroduto, eletrocalha,
-condulete, lâmpada, fita de LED, ferramentas e materiais utilizados
-em serviços ou obras.
+condulete, lâmpada, fita de LED e materiais utilizados em serviços
+ou obras.
+
+ferramentas:
+furadeira, parafusadeira, serra, alicate, multímetro, trena,
+chave, ferramenta elétrica, ferramenta manual, equipamento de trabalho
+e outras ferramentas compradas ou utilizadas no trabalho.
 
 alimentacao:
 marmita, almoço, jantar, café, lanche, comida, alimentação e bebidas
@@ -190,12 +309,19 @@ sem álcool.
 outras:
 qualquer despesa que não se enquadre claramente nas categorias acima.
 
-Regras:
+REGRAS DE CLASSIFICAÇÃO:
 
 - Classifique pelo contexto, não apenas por uma palavra isolada.
 - "gasolina" → conducao.
 - "tomada" → materiais.
 - "marmita" → alimentacao.
+- "furadeira" → ferramentas.
+- "parafusadeira" → ferramentas.
+- "alicate" → ferramentas.
+- "multímetro" → ferramentas.
+- "trena" → ferramentas.
+- Não classifique ferramentas como materiais quando o usuário estiver
+claramente registrando uma ferramenta como despesa.
 - Não invente informações.
 - A descrição deve representar o que o usuário informou.
 - O valor deve ser somente número, sem R$.
@@ -213,6 +339,12 @@ Exemplos:
 
 "adiciona tomada 15 reais"
 → tipo="materiais", valor=15, descricao="tomada"
+
+"comprei uma furadeira por 500 reais"
+→ tipo="ferramentas", valor=500, descricao="furadeira"
+
+"gastei 80 em ferramentas"
+→ tipo="ferramentas", valor=80, descricao="ferramentas"
 
 Mensagem:
 """${userMessage}"""
@@ -261,17 +393,31 @@ async function executeCreate(command, userPhone) {
             const materiais =
                 Array.isArray(command.materiais)
                     ? command.materiais.map(m => ({
-                        ...m,
 
-                        qtd: normalizeMoney(
-                            m.qtd
-                        ),
+                        nome:
+                            m.nome,
 
-                        valor: normalizeMoney(
-                            m.valor
-                        ),
+                        qtd:
+                            normalizeMoney(
+                                m.qtd
+                            ),
 
-                        unidade: m.und
+                        unidade:
+                            m.und,
+
+                        valor:
+                            normalizeMoney(
+                                m.valor
+                            ),
+
+                        observacao:
+                            m.observacao
+                                ? String(
+                                    m.observacao
+                                )
+                                    .trim()
+                                : null
+
                     }))
                     : [];
 
@@ -279,15 +425,28 @@ async function executeCreate(command, userPhone) {
             const servicos =
                 Array.isArray(command.servicos)
                     ? command.servicos.map(s => ({
-                        ...s,
 
-                        quantidade: normalizeMoney(
-                            s.qtd
-                        ),
+                        titulo:
+                            s.titulo,
 
-                        valor: normalizeMoney(
-                            s.valor
-                        )
+                        quantidade:
+                            normalizeMoney(
+                                s.qtd
+                            ),
+
+                        valor:
+                            normalizeMoney(
+                                s.valor
+                            ),
+
+                        observacao:
+                            s.observacao
+                                ? String(
+                                    s.observacao
+                                )
+                                    .trim()
+                                : null
+
                     }))
                     : [];
 
@@ -295,6 +454,11 @@ async function executeCreate(command, userPhone) {
             const observacoes =
                 Array.isArray(command.observacoes)
                     ? command.observacoes
+                        .filter(Boolean)
+                        .map(obs =>
+                            String(obs)
+                                .trim()
+                        )
                         .filter(Boolean)
                     : [];
 
@@ -500,9 +664,28 @@ dia ${formatLocal(data[0].date)}${telefonetext}`;
             }
 
 
+            /*
+             * "ferramentas" foi incluído como novo
+             * tipo de despesa.
+             *
+             * Mantemos TIPOS_DESPESA como fonte principal,
+             * mas também aceitamos ferramentas aqui para
+             * evitar falha caso este arquivo seja atualizado
+             * antes do processFunctions.js.
+             */
+
+            const tiposValidos =
+                Array.from(
+                    new Set([
+                        ...TIPOS_DESPESA,
+                        'ferramentas'
+                    ])
+                );
+
+
             if (
                 !tipo ||
-                !TIPOS_DESPESA.includes(tipo)
+                !tiposValidos.includes(tipo)
             ) {
 
                 return '⚠️ Tipo de despesa inválido.';
