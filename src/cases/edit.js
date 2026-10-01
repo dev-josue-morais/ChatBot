@@ -85,13 +85,15 @@ FORMATO:
           "nome": "nome completo",
           "qtd": número,
           "und": "m",
-          "valor": número
+          "valor": número,
+          "observacao": "string" | null
         },
         "alteracoes": {
           "nome": "novo nome",
           "qtd": número,
           "und": "m",
-          "valor": número
+          "valor": número,
+          "observacao": "string" | null
         }
       }
     ],
@@ -103,12 +105,14 @@ FORMATO:
         "item": {
           "titulo": "título completo",
           "qtd": número,
-          "valor": número
+          "valor": número,
+          "observacao": "string" | null
         },
         "alteracoes": {
           "titulo": "novo título",
           "qtd": número,
-          "valor": número
+          "valor": número,
+          "observacao": "string" | null
         }
       }
     ]
@@ -132,6 +136,8 @@ REGRAS GERAIS:
 - Se o usuário alterar somente um campo, retorne somente esse campo.
 - Não altere o número do orçamento.
 - Não crie propriedades fora da estrutura definida.
+- Ao editar um item, preserve todos os outros campos desse item.
+- A observação de um material ou serviço pertence AO ITEM, e não ao campo geral "observacoes" do orçamento.
 
 CAMPOS SIMPLES:
 
@@ -139,7 +145,7 @@ CAMPOS SIMPLES:
 - "telefone_cliente": somente se o telefone mudar.
 - "etapa": somente se a etapa mudar.
 - "descricoes": somente se o usuário solicitar alteração nas descrições.
-- "observacoes": somente se o usuário solicitar alteração nas observações.
+- "observacoes": somente se o usuário solicitar alteração nas observações gerais do orçamento.
 - "desconto_materiais": somente se o desconto dos materiais mudar.
 - "desconto_servicos": somente se o desconto dos serviços mudar.
 
@@ -150,24 +156,94 @@ DESCONTOS:
 - Valor monetário deve ser número.
 - Não faça cálculos.
 
-MATERIAIS:
+============================================================
+MATERIAIS
+============================================================
 
-Para alterar um material existente:
+Cada material possui:
+
+- nome
+- qtd
+- unidade
+- valor
+- observacao
+
+A "observacao" é uma informação específica daquele material.
+
+Exemplo do item atual:
+
+{
+  "nome": "Cabo 10mm",
+  "qtd": 100,
+  "unidade": "m",
+  "valor": 8.5,
+  "observacao": "Cor preta"
+}
+
+ALTERAR MATERIAL:
+
+Para alterar somente a quantidade:
 
 {
   "acao": "alterar",
-  "nome_atual": "nome exato ou claramente correspondente ao item atual",
+  "nome_atual": "Cabo 10mm",
   "alteracoes": {
     "qtd": 250
   }
 }
 
-Exemplo:
-Usuário: "muda o cabo 10mm para 250 metros"
+Para alterar somente a observação:
 
-Retorne somente a alteração da quantidade do cabo correspondente.
+{
+  "acao": "alterar",
+  "nome_atual": "Cabo 10mm",
+  "alteracoes": {
+    "observacao": "Instalar no trecho subterrâneo"
+  }
+}
 
-Para adicionar material:
+Para substituir a observação existente:
+
+{
+  "acao": "alterar",
+  "nome_atual": "Cabo 10mm",
+  "alteracoes": {
+    "observacao": "Nova observação do cabo"
+  }
+}
+
+Para remover a observação:
+
+{
+  "acao": "alterar",
+  "nome_atual": "Cabo 10mm",
+  "alteracoes": {
+    "observacao": null
+  }
+}
+
+IMPORTANTE:
+
+- Se o usuário disser "coloca uma observação no cabo 10mm", altere a "observacao" desse material.
+- Se o usuário disser "troca a observação do cabo 10mm", altere somente a "observacao".
+- Se o usuário disser "remove a observação do cabo 10mm", use "observacao": null.
+- Não coloque observações específicas de materiais dentro do array geral "observacoes".
+- Se o usuário alterar somente a observação, NÃO altere nome, quantidade, unidade ou valor.
+
+ADICIONAR MATERIAL:
+
+{
+  "acao": "adicionar",
+  "item": {
+    "nome": "fio 2,5mm azul",
+    "qtd": 30,
+    "und": "m",
+    "valor": 2.5,
+    "observacao": "Usar no circuito de iluminação"
+  }
+}
+
+Se o usuário não informar observação:
 
 {
   "acao": "adicionar",
@@ -179,13 +255,6 @@ Para adicionar material:
   }
 }
 
-Para remover material:
-
-{
-  "acao": "remover",
-  "nome_atual": "fio 2,5mm azul"
-}
-
 REGRAS DOS MATERIAIS:
 
 - Use o nome completo do item.
@@ -194,11 +263,34 @@ REGRAS DOS MATERIAIS:
 - "und" pode ser "und", "m", "cm", "kit", "caixa" etc.
 - Valores monetários são números.
 - Se adicionar um item sem valor informado, use 0.
+- Se adicionar um item sem observação, não invente uma.
 - Nunca altere outro material sem solicitação.
+- Para localizar um material existente, use "nome_atual".
+- Se houver mais de um item com nome muito semelhante, use o item claramente correspondente à solicitação do usuário.
 
-SERVIÇOS:
+REMOVER MATERIAL:
 
-Para alterar:
+{
+  "acao": "remover",
+  "nome_atual": "fio 2,5mm azul"
+}
+
+============================================================
+SERVIÇOS
+============================================================
+
+Cada serviço possui:
+
+- titulo
+- quantidade
+- valor
+- observacao
+
+A "observacao" é uma informação específica daquele serviço.
+
+ALTERAR SERVIÇO:
+
+Para alterar somente a quantidade:
 
 {
   "acao": "alterar",
@@ -208,7 +300,47 @@ Para alterar:
   }
 }
 
-Para adicionar:
+Para alterar somente a observação:
+
+{
+  "acao": "alterar",
+  "titulo_atual": "Instalação de tomada",
+  "alteracoes": {
+    "observacao": "Instalar com caixa 4x2"
+  }
+}
+
+Para remover a observação:
+
+{
+  "acao": "alterar",
+  "titulo_atual": "Instalação de tomada",
+  "alteracoes": {
+    "observacao": null
+  }
+}
+
+IMPORTANTE:
+
+- Se o usuário disser "coloca uma observação nesse serviço", altere a "observacao" do serviço correspondente.
+- Se disser "troca a observação", substitua a observação existente.
+- Se disser "remove a observação", use "observacao": null.
+- Se alterar somente a observação, não altere título, quantidade ou valor.
+- Não confunda observação do serviço com observações gerais do orçamento.
+
+ADICIONAR SERVIÇO:
+
+{
+  "acao": "adicionar",
+  "item": {
+    "titulo": "Instalação de tomada",
+    "qtd": 10,
+    "valor": 25,
+    "observacao": "Inclui instalação da caixa 4x2"
+  }
+}
+
+Se o usuário não informar observação:
 
 {
   "acao": "adicionar",
@@ -219,30 +351,42 @@ Para adicionar:
   }
 }
 
-Para remover:
+REGRAS DOS SERVIÇOS:
+
+- Não altere serviços que não foram mencionados.
+- Valores monetários são números.
+- Se adicionar serviço sem valor informado, use 0.
+- Se adicionar serviço sem observação, não invente uma.
+- Use "titulo_atual" para localizar o serviço existente.
+
+REMOVER SERVIÇO:
 
 {
   "acao": "remover",
   "titulo_atual": "Instalação de tomada"
 }
 
-REGRAS DOS SERVIÇOS:
+============================================================
+DESCRIÇÕES E OBSERVAÇÕES GERAIS
+============================================================
 
-- Não altere serviços que não foram mencionados.
-- Valores monetários são números.
-- Se adicionar serviço sem valor informado, use 0.
+O orçamento possui dois conceitos diferentes:
 
-DESCRIÇÕES E OBSERVAÇÕES:
+1. "observacoes" = observações gerais do orçamento.
+2. "observacao" dentro de materiais/servicos = observação específica daquele item.
 
-Se o usuário pedir para substituir completamente as descrições ou observações, retorne o novo array.
+Nunca confunda os dois.
 
-Se pedir para adicionar uma descrição ou observação, indique a alteração de forma que o sistema possa preservar as existentes.
+Se o usuário pedir para substituir completamente as descrições ou observações gerais, retorne o novo array.
 
-Se pedir para remover uma descrição ou observação específica, indique somente a remoção solicitada.
+Se pedir para adicionar uma descrição ou observação geral, indique a alteração de forma que o sistema possa preservar as existentes.
+
+Se pedir para remover uma descrição ou observação geral específica, indique somente a remoção solicitada.
 
 IMPORTANTE:
 
 Não retorne o orçamento completo.
+
 Retorne somente:
 
 {
@@ -441,7 +585,7 @@ Retorne SOMENTE JSON válido:
 
 {
   "alteracoes": {
-    "tipo": "conducao" | "materiais" | "alimentacao" | "outras",
+    "tipo": "conducao" | "materiais" | "alimentacao" | "ferramentas" | "outras",
     "valor": número,
     "descricao": "string"
   }
@@ -464,6 +608,8 @@ REGRAS:
 - Valores monetários devem ser números.
 - Valor não pode ser negativo.
 - Se a descrição mudar e ficar evidente que a categoria também mudou, altere "tipo".
+- Não altere o tipo apenas porque a descrição mudou, caso não exista evidência suficiente.
+- "ferramentas" deve ser usado para ferramentas e equipamentos de trabalho.
 
 EXEMPLOS:
 
@@ -479,11 +625,32 @@ EXEMPLOS:
 → descricao = "tomada"
 → tipo = "materiais"
 
+"altera para furadeira"
+→ descricao = "furadeira"
+→ tipo = "ferramentas"
+
+"altera para parafusadeira"
+→ descricao = "parafusadeira"
+→ tipo = "ferramentas"
+
+"altera para alicate"
+→ descricao = "alicate"
+→ tipo = "ferramentas"
+
+"altera para multímetro"
+→ descricao = "multímetro"
+→ tipo = "ferramentas"
+
+"altera para trena"
+→ descricao = "trena"
+→ tipo = "ferramentas"
+
 TIPOS PERMITIDOS:
 
 - conducao
 - materiais
 - alimentacao
+- ferramentas
 - outras
 
 IMPORTANTE:
@@ -533,6 +700,10 @@ function normalizeText(value) {
 }
 
 
+// ============================================================
+// LOCALIZA MATERIAL
+// ============================================================
+
 function findMaterialIndex(
     materiais,
     nome
@@ -556,6 +727,10 @@ function findMaterialIndex(
 }
 
 
+// ============================================================
+// LOCALIZA SERVIÇO
+// ============================================================
+
 function findServicoIndex(
     servicos,
     titulo
@@ -578,6 +753,10 @@ function findServicoIndex(
     );
 }
 
+
+// ============================================================
+// ALTERA MATERIAIS
+// ============================================================
 
 function applyMaterialChanges(
     materiais,
@@ -611,18 +790,31 @@ function applyMaterialChanges(
                 continue;
             }
 
-            result.push({
+            const novoMaterial = {
                 nome: String(item.nome).trim(),
                 qtd: normalizeMoney(item.qtd),
                 unidade: item.und || item.unidade || 'und',
                 valor: normalizeMoney(item.valor)
-            });
+            };
+
+            // Só cria a propriedade quando realmente houver
+            // observação informada.
+            if (
+                item.observacao !== undefined &&
+                item.observacao !== null &&
+                String(item.observacao).trim() !== ''
+            ) {
+                novoMaterial.observacao =
+                    String(item.observacao).trim();
+            }
+
+            result.push(novoMaterial);
 
             continue;
         }
 
         // ----------------------------------------------------
-        // ALTERAR
+        // LOCALIZAR ITEM EXISTENTE
         // ----------------------------------------------------
 
         const index =
@@ -634,6 +826,10 @@ function applyMaterialChanges(
         if (index === -1) {
             continue;
         }
+
+        // ----------------------------------------------------
+        // ALTERAR
+        // ----------------------------------------------------
 
         if (change.acao === 'alterar') {
 
@@ -676,6 +872,33 @@ function applyMaterialChanges(
                     normalizeMoney(changes.valor);
             }
 
+            // ------------------------------------------------
+            // OBSERVAÇÃO DO MATERIAL
+            // ------------------------------------------------
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    changes,
+                    'observacao'
+                )
+            ) {
+
+                if (
+                    changes.observacao === null ||
+                    String(changes.observacao).trim() === ''
+                ) {
+
+                    delete material.observacao;
+
+                } else {
+
+                    material.observacao =
+                        String(
+                            changes.observacao
+                        ).trim();
+                }
+            }
+
             continue;
         }
 
@@ -691,6 +914,10 @@ function applyMaterialChanges(
     return result;
 }
 
+
+// ============================================================
+// ALTERA SERVIÇOS
+// ============================================================
 
 function applyServicoChanges(
     servicos,
@@ -724,17 +951,30 @@ function applyServicoChanges(
                 continue;
             }
 
-            result.push({
+            const novoServico = {
                 titulo: String(item.titulo).trim(),
                 quantidade: normalizeMoney(item.qtd),
                 valor: normalizeMoney(item.valor)
-            });
+            };
+
+            // Só cria a propriedade quando realmente houver
+            // observação informada.
+            if (
+                item.observacao !== undefined &&
+                item.observacao !== null &&
+                String(item.observacao).trim() !== ''
+            ) {
+                novoServico.observacao =
+                    String(item.observacao).trim();
+            }
+
+            result.push(novoServico);
 
             continue;
         }
 
         // ----------------------------------------------------
-        // ALTERAR
+        // LOCALIZAR ITEM EXISTENTE
         // ----------------------------------------------------
 
         const index =
@@ -746,6 +986,10 @@ function applyServicoChanges(
         if (index === -1) {
             continue;
         }
+
+        // ----------------------------------------------------
+        // ALTERAR
+        // ----------------------------------------------------
 
         if (change.acao === 'alterar') {
 
@@ -777,6 +1021,33 @@ function applyServicoChanges(
             ) {
                 servico.valor =
                     normalizeMoney(changes.valor);
+            }
+
+            // ------------------------------------------------
+            // OBSERVAÇÃO DO SERVIÇO
+            // ------------------------------------------------
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    changes,
+                    'observacao'
+                )
+            ) {
+
+                if (
+                    changes.observacao === null ||
+                    String(changes.observacao).trim() === ''
+                ) {
+
+                    delete servico.observacao;
+
+                } else {
+
+                    servico.observacao =
+                        String(
+                            changes.observacao
+                        ).trim();
+                }
             }
 
             continue;
@@ -837,7 +1108,6 @@ async function executeEdit(
 
             const alteracoes =
                 command.alteracoes || {};
-
 
             const updates = {};
 
