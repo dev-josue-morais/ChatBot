@@ -1659,8 +1659,7 @@ Dia ${formatLocal(event.date)}${telefone}`;
             const range =
                 getDateRange(
                     command.periodo_start,
-                    command.periodo_end,
-                    'America/Sao_Paulo'
+                    command.periodo_end
                 );
 
 
@@ -1703,13 +1702,26 @@ Dia ${formatLocal(event.date)}${telefone}`;
                 }
             );
 
-
+console.log('🔎 FILTRO DESPESAS:', {
+    userPhone,
+    tipo,
+    porTipo,
+    descricao,
+    porDescricao,
+    periodo_start: command.periodo_start,
+    periodo_end: command.periodo_end,
+    startIso: range.startIso,
+    endIso: range.endIso
+});
             const {
                 data,
                 error
             } = await query;
 
-
+console.log('🔎 RESULTADO DESPESAS:', {
+    quantidade: data?.length || 0,
+    data
+});
             if (error) {
 
                 console.error(
