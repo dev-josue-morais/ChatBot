@@ -732,7 +732,7 @@ REGRAS GERAIS:
             case 'orcamento_list':
             case 'agenda_list':
             case 'despesas_list':
-
+console.log('📋 LIST COMMAND:', JSON.stringify(gptData, null, 2));
                 return await executeList(
                     gptData,
                     userPhone
