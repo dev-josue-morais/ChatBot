@@ -1,111 +1,133 @@
 const supabase = require('../services/supabase');
 const formatCurrency = require('../utils/formatCurrency');
 
+function hasValidId(id) {
+    return (
+        id !== null &&
+        id !== undefined &&
+        id !== '' &&
+        !Number.isNaN(Number(id))
+    );
+}
+
 async function executeDelete(command, userPhone) {
 
-  if (command.modulo === 'agenda') {
+    if (!hasValidId(command.id)) {
+        if (command.modulo === 'agenda') {
+            return '⚠️ É necessário informar o ID do evento para deletar.';
+        }
 
-    if (!command.id) {
-      return '⚠️ É necessário informar o ID do evento para deletar.';
+        if (command.modulo === 'despesas') {
+            return '⚠️ É necessário informar o ID da despesa para excluir.';
+        }
+
+        if (command.modulo === 'orcamento') {
+            return '⚠️ É necessário informar o ID do orçamento para deletar.';
+        }
+
+        return '⚠️ É necessário informar o ID para exclusão.';
     }
-
-    const { data, error } = await supabase
-      .from('events')
-      .delete()
-      .eq('event_numero', command.id)
-      .eq('user_telefone', userPhone)
-      .select('event_numero, title');
-
-    if (error) {
-      console.error('❌ Erro ao deletar evento:', error);
-      return '⚠️ Erro ao deletar evento.';
-    }
-
-    if (!data?.length) {
-      return `⚠️ Nenhum evento encontrado com o ID "${command.id}".`;
-    }
-
-    return `🗑 Evento ID ${data[0].event_numero} "${data[0].title}" removido com sucesso.`;
-  }
-
-  if (command.modulo === 'despesas') {
 
     const id = command.id;
 
-    if (!id) {
-      return '⚠️ É necessário informar o ID da despesa para excluir.';
+    // ================================
+    // AGENDA
+    // ================================
+
+    if (command.modulo === 'agenda') {
+
+        const { data, error } = await supabase
+            .from('events')
+            .delete()
+            .eq('event_numero', id)
+            .eq('user_telefone', userPhone)
+            .select('event_numero, title');
+
+        if (error) {
+            console.error(
+                '❌ Erro ao deletar evento:',
+                error
+            );
+
+            return '⚠️ Erro ao deletar evento.';
+        }
+
+        if (!data?.length) {
+            return `⚠️ Nenhum evento encontrado com o ID "${id}".`;
+        }
+
+        return `🗑 Evento ID ${data[0].event_numero} "${data[0].title}" removido com sucesso.`;
     }
 
-    // Verifica primeiro se a despesa pertence ao usuário
-    const {
-      data: current,
-      error: fetchError
-    } = await supabase
-      .from('despesas')
-      .select('*')
-      .eq('despesa_numero', String(id))
-      .eq('user_phone', userPhone)
-      .single();
+    // ================================
+    // DESPESAS
+    // ================================
 
-    if (fetchError || !current) {
-      return `⚠️ Não encontrei a despesa ID ${id}.`;
+    if (command.modulo === 'despesas') {
+
+        const { data, error } = await supabase
+            .from('despesas')
+            .delete()
+            .eq('despesa_numero', String(id))
+            .eq('user_phone', userPhone)
+            .select('despesa_numero, descricao, valor');
+
+        if (error) {
+            console.error(
+                'Erro ao deletar despesa:',
+                error
+            );
+
+            return '❌ Falha ao excluir despesa.';
+        }
+
+        if (!data?.length) {
+            return `⚠️ Não encontrei a despesa ID ${id}.`;
+        }
+
+        const despesa = data[0];
+
+        return [
+            '🗑️ Despesa excluída com sucesso!',
+            '',
+            `🆔 ${despesa.despesa_numero}`,
+            `📘 ${despesa.descricao}`,
+            `💰 ${formatCurrency(despesa.valor)}`
+        ].join('\n');
     }
 
-    // DELETE
-    const {
-      error: deleteError
-    } = await supabase
-      .from('despesas')
-      .delete()
-      .eq('despesa_numero', String(id))
-      .eq('user_phone', userPhone);
+    // ================================
+    // ORÇAMENTO
+    // ================================
 
-    if (deleteError) {
-      console.error(
-        'Erro ao deletar despesa:',
-        deleteError
-      );
+    if (command.modulo === 'orcamento') {
 
-      return '❌ Falha ao excluir despesa.';
+        const { data, error } = await supabase
+            .from('orcamentos')
+            .delete()
+            .eq('orcamento_numero', id)
+            .eq('user_telefone', userPhone)
+            .select('orcamento_numero');
+
+        if (error) {
+            console.error(
+                'Erro ao deletar orçamento:',
+                error
+            );
+
+            return `⚠️ Não consegui deletar o orçamento ${id}.`;
+        }
+
+        if (!data?.length) {
+            return `⚠️ Orçamento ${id} não encontrado.`;
+        }
+
+        return `🗑 Orçamento ${id} deletado com sucesso.`;
     }
 
-    return [
-      '🗑️ Despesa excluída com sucesso!',
-      '',
-      `🆔 ${current.despesa_numero}`,
-      `📘 ${current.descricao}`,
-      `💰 ${formatCurrency(current.valor)}`
-    ].join('\n');
-  }
-
-  if (command.modulo === 'orcamento') {
-
-    if (!command.id) {
-      return '⚠️ É necessário informar o ID do orçamento para deletar.';
-    }
-
-    const { data, error } = await supabase
-      .from('orcamentos')
-      .delete()
-      .eq('orcamento_numero', command.id)
-      .eq('user_telefone', userPhone)
-      .select();
-
-    if (error) {
-      console.error('Erro ao deletar orçamento:', error);
-      return `⚠️ Não consegui deletar o orçamento ${command.id}.`;
-    }
-
-    if (!data || data.length === 0) {
-      return `⚠️ Orçamento ${command.id} não encontrado.`;
-    }
-
-    return `🗑 Orçamento ${command.id} deletado com sucesso.`;
-  }
-
-  return '⚠️ Módulo não reconhecido para exclusão.';
+    return '⚠️ Módulo não reconhecido para exclusão.';
 }
 
 module.exports = {
-  executeDelete
+    executeDelete
 };
